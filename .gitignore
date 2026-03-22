@@ -1,6 +1,6 @@
 # Binaries
-chardam
-chardam-*
+frame-bin
+frame-bin-*
 *.exe
 
 # Build output
@@ -13,7 +13,7 @@ chardam-*
 *.db-shm
 
 # Config (user-specific, lives on the drive)
-chardam.toml
+frame.toml
 
 # Assets directory (lives on the drive, not in repo)
 /assets/
