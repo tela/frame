@@ -1,9 +1,32 @@
 package main
 
-import "fmt"
+import (
+	"log"
+	"path/filepath"
+
+	"github.com/tela/frame/pkg/config"
+	"github.com/tela/frame/pkg/database"
+	"github.com/tela/frame/pkg/server"
+)
 
 var version = "dev"
 
 func main() {
-	fmt.Printf("frame %s\n", version)
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("config: %v", err)
+	}
+
+	dbPath := filepath.Join(cfg.Root, "frame.db")
+	db, err := database.Open(dbPath)
+	if err != nil {
+		log.Fatalf("database: %v", err)
+	}
+	defer db.Close()
+
+	srv := server.New(db, version)
+
+	if err := srv.ListenAndServe(cfg.Port); err != nil {
+		log.Fatalf("server: %v", err)
+	}
 }
