@@ -1,0 +1,40 @@
+# Binaries
+chardam
+chardam-*
+*.exe
+
+# Build output
+/dist/
+
+# Database
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Config (user-specific, lives on the drive)
+chardam.toml
+
+# Assets directory (lives on the drive, not in repo)
+/assets/
+
+# Go
+/vendor/
+
+# Frontend
+/ui/node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.*
