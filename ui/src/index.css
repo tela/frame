@@ -1,111 +1,117 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+@import "tailwindcss";
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+/* ===== Design System: The Curated Monolith ===== */
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=Instrument+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+/* Theme tokens */
+@theme {
+  --color-background: #FAF9F8;
+  --color-on-surface: #2F3333;
+  --color-primary: #111111;
+  --color-primary-dim: #535252;
+  --color-muted: #8C8C8A;
+  --color-accent: #D9422B;
+
+  --color-surface-lowest: #FFFFFF;
+  --color-surface-low: #F3F4F3;
+  --color-surface: #EDEEED;
+  --color-surface-high: #E6E9E8;
+  --color-surface-highest: #DFE3E2;
+  --color-border-subtle: #E6E6E4;
+  --color-outline-variant: #C4C7C5;
+
+  /* Dark mode */
+  --color-background-dark: #111111;
+  --color-surface-dark: #1A1A1A;
+  --color-border-dark: #2A2A2A;
+
+  /* Fonts */
+  --font-display: 'Newsreader', serif;
+  --font-ui: 'Instrument Sans', sans-serif;
+  --font-body: 'Inter', sans-serif;
+
+  /* Border radius — Swiss precision */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+
+  /* Letter spacing */
+  --tracking-display: -0.02em;
+  --tracking-ui: 0.05em;
+
+  /* Shadows — ambient light, never harsh */
+  --shadow-ambient: 0 20px 40px rgba(47, 51, 51, 0.04);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+/* Base styles */
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  background: var(--color-background);
+  color: var(--color-on-surface);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
   min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
 }
 
-body {
-  margin: 0;
+/* Material Symbols configuration */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+  font-size: 20px;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-subtle);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
+}
+
+/* Utility classes */
+@utility text-ui {
+  font-family: var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-ui);
   font-weight: 500;
-  color: var(--text-h);
+  font-size: 0.6875rem;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
+@utility text-display {
+  font-family: var(--font-display);
+  letter-spacing: var(--tracking-display);
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+@utility text-meta {
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  color: var(--color-muted);
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+@utility glass-header {
+  background: rgba(250, 249, 248, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+@utility ghost-border {
+  border: 1px solid rgba(196, 199, 197, 0.2);
+}
+
+@utility ghost-border-hover {
+  border: 1px solid rgba(196, 199, 197, 0.4);
 }
