@@ -16,6 +16,28 @@ func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
+// GetCharacterImage returns the first character_image link for an image.
+func (s *Store) GetCharacterImage(imageID string) (*CharacterImage, error) {
+	var ci CharacterImage
+	var createdAt string
+	var isFaceRef, isBodyRef int
+	err := s.db.QueryRow(
+		`SELECT image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, created_at
+		 FROM character_images WHERE image_id = ? LIMIT 1`, imageID,
+	).Scan(&ci.ImageID, &ci.CharacterID, &ci.EraID, &ci.SetType, &ci.TriageStatus,
+		&ci.Rating, &isFaceRef, &isBodyRef, &ci.RefScore, &ci.RefRank, &createdAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get character image: %w", err)
+	}
+	ci.IsFaceRef = isFaceRef != 0
+	ci.IsBodyRef = isBodyRef != 0
+	ci.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+	return &ci, nil
+}
+
 // Create inserts a new image record.
 func (s *Store) Create(img *Image) error {
 	_, err := s.db.Exec(
