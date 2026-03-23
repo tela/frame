@@ -6,6 +6,17 @@ import (
 	"time"
 )
 
+// parseTime handles both RFC3339 and SQLite datetime formats.
+func parseTime(s string) time.Time {
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return t
+	}
+	if t, err := time.Parse("2006-01-02 15:04:05", s); err == nil {
+		return t
+	}
+	return time.Time{}
+}
+
 // Store provides character and era persistence operations.
 type Store struct {
 	db *sql.DB
@@ -43,8 +54,8 @@ func (s *Store) Get(id string) (*Character, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get character: %w", err)
 	}
-	c.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-	c.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+	c.CreatedAt = parseTime(createdAt)
+	c.UpdatedAt = parseTime(updatedAt)
 	return c, nil
 }
 
@@ -133,8 +144,8 @@ func (s *Store) GetEra(id string) (*Era, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get era: %w", err)
 	}
-	e.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-	e.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+	e.CreatedAt = parseTime(createdAt)
+	e.UpdatedAt = parseTime(updatedAt)
 	return e, nil
 }
 

@@ -6,6 +6,16 @@ import (
 	"time"
 )
 
+func parseTime(s string) time.Time {
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return t
+	}
+	if t, err := time.Parse("2006-01-02 15:04:05", s); err == nil {
+		return t
+	}
+	return time.Time{}
+}
+
 // Store provides media item persistence operations.
 type Store struct {
 	db *sql.DB
@@ -44,8 +54,8 @@ func (s *Store) Get(id string) (*Item, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get media item: %w", err)
 	}
-	item.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-	item.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+	item.CreatedAt = parseTime(createdAt)
+	item.UpdatedAt = parseTime(updatedAt)
 	return item, nil
 }
 
@@ -105,7 +115,7 @@ func (s *Store) ListImages(mediaItemID string) ([]ItemImage, error) {
 		if err := rows.Scan(&mi.MediaItemID, &mi.ImageID, &mi.SortOrder, &createdAt); err != nil {
 			return nil, fmt.Errorf("scan media image: %w", err)
 		}
-		mi.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+		mi.CreatedAt = parseTime(createdAt)
 		images = append(images, mi)
 	}
 	return images, rows.Err()

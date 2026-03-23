@@ -6,6 +6,16 @@ import (
 	"time"
 )
 
+func parseTime(s string) time.Time {
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return t
+	}
+	if t, err := time.Parse("2006-01-02 15:04:05", s); err == nil {
+		return t
+	}
+	return time.Time{}
+}
+
 // Store provides image persistence operations.
 type Store struct {
 	db *sql.DB
@@ -34,7 +44,7 @@ func (s *Store) GetCharacterImage(imageID string) (*CharacterImage, error) {
 	}
 	ci.IsFaceRef = isFaceRef != 0
 	ci.IsBodyRef = isBodyRef != 0
-	ci.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+	ci.CreatedAt = parseTime(createdAt)
 	return &ci, nil
 }
 
@@ -66,7 +76,7 @@ func (s *Store) Get(id string) (*Image, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get image: %w", err)
 	}
-	img.IngestedAt, _ = time.Parse(time.RFC3339, ingestedAt)
+	img.IngestedAt = parseTime(ingestedAt)
 	return img, nil
 }
 
@@ -84,7 +94,7 @@ func (s *Store) GetByHash(hash string) (*Image, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get image by hash: %w", err)
 	}
-	img.IngestedAt, _ = time.Parse(time.RFC3339, ingestedAt)
+	img.IngestedAt = parseTime(ingestedAt)
 	return img, nil
 }
 
@@ -138,7 +148,7 @@ func (s *Store) ListByCharacter(characterID string, eraID *string) ([]CharacterI
 		}
 		ci.IsFaceRef = isFaceRef != 0
 		ci.IsBodyRef = isBodyRef != 0
-		ci.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+		ci.CreatedAt = parseTime(createdAt)
 		images = append(images, ci)
 	}
 	return images, rows.Err()
@@ -171,7 +181,7 @@ func (s *Store) ListFaceRefs(characterID, eraID string) ([]CharacterImage, error
 		}
 		ci.IsFaceRef = isFaceRef != 0
 		ci.IsBodyRef = isBodyRef != 0
-		ci.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+		ci.CreatedAt = parseTime(createdAt)
 		refs = append(refs, ci)
 	}
 	return refs, rows.Err()
@@ -204,7 +214,7 @@ func (s *Store) ListBodyRefs(characterID, eraID string) ([]CharacterImage, error
 		}
 		ci.IsFaceRef = isFaceRef != 0
 		ci.IsBodyRef = isBodyRef != 0
-		ci.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+		ci.CreatedAt = parseTime(createdAt)
 		refs = append(refs, ci)
 	}
 	return refs, rows.Err()
