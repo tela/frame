@@ -9,6 +9,7 @@ import type {
   IngestResult,
   ReferencePackage,
 } from './types'
+import { SEED_CHARACTERS, SEED_CHARACTER_DETAILS, SEED_MEDIA } from './seed-data'
 
 // ===== HTTP Helpers =====
 
@@ -64,14 +65,23 @@ async function postFormData<T>(path: string, formData: FormData): Promise<T> {
 export function useCharacters() {
   return useQuery({
     queryKey: ['characters'],
-    queryFn: () => fetchJSON<Character[]>('/api/v1/characters'),
+    queryFn: async () => {
+      const data = await fetchJSON<Character[]>('/api/v1/characters')
+      return data.length > 0 ? data : SEED_CHARACTERS
+    },
   })
 }
 
 export function useCharacter(id: string) {
   return useQuery({
     queryKey: ['characters', id],
-    queryFn: () => fetchJSON<CharacterWithEras>(`/api/v1/characters/${id}`),
+    queryFn: async () => {
+      if (id.startsWith('seed-')) {
+        const seed = SEED_CHARACTER_DETAILS[id]
+        if (seed) return seed
+      }
+      return fetchJSON<CharacterWithEras>(`/api/v1/characters/${id}`)
+    },
     enabled: !!id,
   })
 }
@@ -153,7 +163,10 @@ export function useIngestImage() {
 export function useMediaItems(type: MediaContentType) {
   return useQuery({
     queryKey: ['media', type],
-    queryFn: () => fetchJSON<MediaItem[]>(`/api/v1/media/${type}`),
+    queryFn: async () => {
+      const data = await fetchJSON<MediaItem[]>(`/api/v1/media/${type}`)
+      return data.length > 0 ? data : (SEED_MEDIA[type] ?? [])
+    },
   })
 }
 
