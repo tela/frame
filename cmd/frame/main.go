@@ -4,6 +4,7 @@ import (
 	"log"
 	"path/filepath"
 
+	"github.com/tela/frame/internal/frontend"
 	"github.com/tela/frame/pkg/config"
 	"github.com/tela/frame/pkg/database"
 	"github.com/tela/frame/pkg/server"
@@ -25,6 +26,7 @@ func main() {
 	defer db.Close()
 
 	srv := server.New(db, version)
+	srv.Mux().Handle("GET /", frontend.Handler())
 
 	if err := srv.ListenAndServe(cfg.Port); err != nil {
 		log.Fatalf("server: %v", err)
