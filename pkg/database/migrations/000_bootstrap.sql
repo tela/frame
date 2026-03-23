@@ -1,0 +1,2 @@
+-- Bootstrap migration: no-op, ensures migration system works.
+-- Core tables are created in subsequent migrations.
