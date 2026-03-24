@@ -307,6 +307,44 @@ export function useBulkTag() {
   })
 }
 
+export function useRenameTag() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { namespace: string; old_value: string; new_value: string }) =>
+      postJSON<{ affected: number }>('/api/v1/tags/rename', body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tags'] }) },
+  })
+}
+
+export function useMergeTag() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { namespace: string; from_value: string; to_value: string }) =>
+      postJSON<{ affected: number }>('/api/v1/tags/merge', body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tags'] }) },
+  })
+}
+
+export function useDeleteTag() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { namespace: string; value: string }) =>
+      postJSON<{ affected: number }>('/api/v1/tags/delete', body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tags'] }) },
+  })
+}
+
+export function useImportDirectory() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { path: string; character_id?: string; era_id?: string; source?: string; tags?: string[] }) =>
+      postJSON<{ imported: number; skipped: number; failed: number; total: number; errors?: string[] }>('/api/v1/import/directory', body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['characters'] })
+    },
+  })
+}
+
 // ===== Datasets =====
 
 export function useDatasets() {
