@@ -33,11 +33,7 @@ func NewIngester(store *Store, rootPath string) *Ingester {
 // Ingest processes an incoming image: hashes, deduplicates, writes to disk,
 // generates a thumbnail, and creates database records.
 func (ing *Ingester) Ingest(req *IngestRequest) (*IngestResult, error) {
-	// Resolve folder name
-	folderName := req.CharacterSlug
-	if folderName == "" {
-		folderName = req.CharacterID
-	}
+	isCharacterImage := req.CharacterID != ""
 
 	// Hash for dedup
 	hash := sha256sum(req.Data)
@@ -49,16 +45,18 @@ func (ing *Ingester) Ingest(req *IngestRequest) (*IngestResult, error) {
 	}
 	if existing != nil {
 		// Link existing image to character if not already linked
-		ci := &CharacterImage{
-			ImageID:      existing.ID,
-			CharacterID:  req.CharacterID,
-			EraID:        req.EraID,
-			SetType:      SetStaging,
-			TriageStatus: TriagePending,
-			CreatedAt:    time.Now().UTC(),
+		if isCharacterImage {
+			ci := &CharacterImage{
+				ImageID:      existing.ID,
+				CharacterID:  req.CharacterID,
+				EraID:        req.EraID,
+				SetType:      SetStaging,
+				TriageStatus: TriagePending,
+				CreatedAt:    time.Now().UTC(),
+			}
+			// Ignore error if already linked (unique constraint)
+			ing.store.CreateCharacterImage(ci)
 		}
-		// Ignore error if already linked (unique constraint)
-		ing.store.CreateCharacterImage(ci)
 		return &IngestResult{
 			ImageID:     existing.ID,
 			Hash:        existing.Hash,
@@ -79,8 +77,25 @@ func (ing *Ingester) Ingest(req *IngestRequest) (*IngestResult, error) {
 	imageID := id.New()
 	now := time.Now().UTC()
 
+	// Resolve disk path
+	var origDir, thumbDir string
+	if isCharacterImage {
+		charFolder := req.CharacterSlug
+		if charFolder == "" {
+			charFolder = req.CharacterID
+		}
+		origDir = ing.characterImagePath(charFolder, req.EraID, "original")
+		thumbDir = ing.characterImagePath(charFolder, req.EraID, "thumb")
+	} else {
+		featureFolder := req.FeatureFolder
+		if featureFolder == "" {
+			featureFolder = "unsorted"
+		}
+		origDir = filepath.Join(ing.rootPath, "assets", "features", featureFolder, "original")
+		thumbDir = filepath.Join(ing.rootPath, "assets", "features", featureFolder, "thumb")
+	}
+
 	// Write original to disk
-	origDir := ing.imagePath(folderName, req.EraID, "original")
 	if err := os.MkdirAll(origDir, 0755); err != nil {
 		return nil, fmt.Errorf("create original dir: %w", err)
 	}
@@ -90,7 +105,6 @@ func (ing *Ingester) Ingest(req *IngestRequest) (*IngestResult, error) {
 	}
 
 	// Generate thumbnail
-	thumbDir := ing.imagePath(folderName, req.EraID, "thumb")
 	if err := os.MkdirAll(thumbDir, 0755); err != nil {
 		return nil, fmt.Errorf("create thumb dir: %w", err)
 	}
@@ -114,16 +128,18 @@ func (ing *Ingester) Ingest(req *IngestRequest) (*IngestResult, error) {
 		return nil, fmt.Errorf("create image record: %w", err)
 	}
 
-	ci := &CharacterImage{
-		ImageID:      imageID,
-		CharacterID:  req.CharacterID,
-		EraID:        req.EraID,
-		SetType:      SetStaging,
-		TriageStatus: TriagePending,
-		CreatedAt:    now,
-	}
-	if err := ing.store.CreateCharacterImage(ci); err != nil {
-		return nil, fmt.Errorf("create character image link: %w", err)
+	if isCharacterImage {
+		ci := &CharacterImage{
+			ImageID:      imageID,
+			CharacterID:  req.CharacterID,
+			EraID:        req.EraID,
+			SetType:      SetStaging,
+			TriageStatus: TriagePending,
+			CreatedAt:    now,
+		}
+		if err := ing.store.CreateCharacterImage(ci); err != nil {
+			return nil, fmt.Errorf("create character image link: %w", err)
+		}
 	}
 
 	return &IngestResult{
@@ -137,22 +153,37 @@ func (ing *Ingester) Ingest(req *IngestRequest) (*IngestResult, error) {
 }
 
 // OriginalPath returns the filesystem path for an original image.
-func (ing *Ingester) OriginalPath(imageID, characterID string, eraID *string, format string) string {
-	dir := ing.imagePath(characterID, eraID, "original")
+// folderName is the character's folder_name (e.g., "esme-a7f3b2c").
+func (ing *Ingester) OriginalPath(imageID, folderName string, eraID *string, format string) string {
+	dir := ing.characterImagePath(folderName, eraID, "original")
 	return filepath.Join(dir, imageID+"."+format)
 }
 
 // ThumbnailPath returns the filesystem path for a thumbnail.
-func (ing *Ingester) ThumbnailPath(imageID, characterID string, eraID *string) string {
-	dir := ing.imagePath(characterID, eraID, "thumb")
+func (ing *Ingester) ThumbnailPath(imageID, folderName string, eraID *string) string {
+	dir := ing.characterImagePath(folderName, eraID, "thumb")
 	return filepath.Join(dir, imageID+".jpg")
 }
 
-func (ing *Ingester) imagePath(characterID string, eraID *string, subdir string) string {
+// FeatureOriginalPath returns the filesystem path for a feature image original.
+func (ing *Ingester) FeatureOriginalPath(imageID, featureFolder, format string) string {
+	return filepath.Join(ing.featureImagePath(featureFolder, "original"), imageID+"."+format)
+}
+
+// FeatureThumbnailPath returns the filesystem path for a feature image thumbnail.
+func (ing *Ingester) FeatureThumbnailPath(imageID, featureFolder string) string {
+	return filepath.Join(ing.featureImagePath(featureFolder, "thumb"), imageID+".jpg")
+}
+
+func (ing *Ingester) characterImagePath(charFolder string, eraID *string, subdir string) string {
 	if eraID != nil {
-		return filepath.Join(ing.rootPath, "assets", "characters", characterID, "eras", *eraID, subdir)
+		return filepath.Join(ing.rootPath, "assets", "characters", charFolder, "eras", *eraID, subdir)
 	}
-	return filepath.Join(ing.rootPath, "assets", "characters", characterID, "staging", subdir)
+	return filepath.Join(ing.rootPath, "assets", "characters", charFolder, "staging", subdir)
+}
+
+func (ing *Ingester) featureImagePath(featureFolder, subdir string) string {
+	return filepath.Join(ing.rootPath, "assets", "features", featureFolder, subdir)
 }
 
 func sha256sum(data []byte) string {

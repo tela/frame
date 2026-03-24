@@ -75,9 +75,10 @@ type IngestRequest struct {
 	Filename      string
 	Data          []byte
 	Source        Source
-	CharacterID   string
-	CharacterSlug string // filesystem folder name, e.g. "esme-a7f3b2c"
+	CharacterID   string  // empty for standalone/feature images
+	CharacterSlug string  // filesystem folder name, e.g. "esme-a7f3b2c"
 	EraID         *string
+	FeatureFolder string  // for non-character images, e.g. "faces-a7f3b2c"
 }
 
 // IngestResult is returned after successful ingestion.
