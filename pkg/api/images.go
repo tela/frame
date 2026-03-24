@@ -7,6 +7,26 @@ import (
 	"github.com/tela/frame/pkg/image"
 )
 
+func (a *API) listCharacterImages(w http.ResponseWriter, r *http.Request) {
+	charID := r.PathValue("id")
+	eraID := r.URL.Query().Get("era_id")
+
+	var eraPtr *string
+	if eraID != "" {
+		eraPtr = &eraID
+	}
+
+	images, err := a.Images.ListByCharacter(charID, eraPtr)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if images == nil {
+		images = []image.CharacterImage{}
+	}
+	writeJSON(w, http.StatusOK, images)
+}
+
 func (a *API) ingestCharacterImage(w http.ResponseWriter, r *http.Request) {
 	charID := r.PathValue("id")
 	a.handleIngest(w, r, charID, nil)

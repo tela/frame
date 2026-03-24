@@ -41,6 +41,7 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/characters/{id}/eras", a.listEras)
 
 	// Character images
+	mux.HandleFunc("GET /api/v1/characters/{id}/images", a.listCharacterImages)
 	mux.HandleFunc("POST /api/v1/characters/{id}/images", a.ingestCharacterImage)
 	mux.HandleFunc("GET /api/v1/characters/{id}/avatar", a.getCharacterAvatar)
 
