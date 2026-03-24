@@ -116,28 +116,49 @@ function MediaCard({ item, isSelected, onToggleSelect }: {
   isSelected: boolean
   onToggleSelect: () => void
 }) {
+  const [expanded, setExpanded] = useState(false)
+
   return (
     <div
-      className={`relative group cursor-pointer rounded overflow-hidden border transition-colors ${
+      className={`relative group rounded overflow-hidden border transition-colors ${
         isSelected ? 'border-primary' : 'border-border-subtle hover:border-primary'
       }`}
-      onClick={onToggleSelect}
     >
-      <div className="aspect-square bg-surface flex items-center justify-center">
-        <span className="material-symbols-outlined text-[48px] text-muted/30">image</span>
+      {/* Select checkbox */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onToggleSelect() }}
+        className="absolute top-2 left-2 z-10 w-6 h-6 rounded-sm flex items-center justify-center transition-colors border border-border-subtle bg-background/80 hover:bg-primary hover:border-primary hover:text-white"
+      >
+        {isSelected && <span className="material-symbols-outlined text-primary text-[16px]">check</span>}
+      </button>
+
+      {/* Main clickable area */}
+      <div className="cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        <div className="aspect-square bg-surface flex items-center justify-center">
+          <span className="material-symbols-outlined text-[48px] text-muted/30">image</span>
+        </div>
+
+        <div className="p-3">
+          <h3 className="text-ui text-[13px] text-primary truncate">{item.name.toUpperCase()}</h3>
+          <p className="text-meta text-muted mt-1 capitalize">{item.content_type}</p>
+        </div>
       </div>
 
-      {/* Selection checkmark */}
-      {isSelected && (
-        <div className="absolute top-2 left-2 w-6 h-6 bg-primary rounded-sm flex items-center justify-center">
-          <span className="material-symbols-outlined text-white text-[16px]">check</span>
+      {/* Expanded detail */}
+      {expanded && (
+        <div className="px-3 pb-3 border-t border-border-subtle pt-2 flex flex-col gap-2">
+          <p className="text-xs text-muted">ID: {item.id}</p>
+          <p className="text-xs text-muted">Created: {new Date(item.created_at).toLocaleDateString()}</p>
+          <div className="flex gap-2 mt-1">
+            <button className="flex-1 border border-border-subtle text-[10px] uppercase font-bold py-1.5 hover:bg-surface transition-colors">
+              Edit
+            </button>
+            <button className="flex-1 border border-border-subtle text-[10px] uppercase font-bold py-1.5 hover:bg-surface transition-colors">
+              Add Images
+            </button>
+          </div>
         </div>
       )}
-
-      <div className="p-3">
-        <h3 className="text-ui text-[13px] text-primary truncate">{item.name.toUpperCase()}</h3>
-        <p className="text-meta text-muted mt-1 capitalize">{item.content_type}</p>
-      </div>
     </div>
   )
 }
