@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { useDatasets, useCreateDataset } from '@/lib/api'
+import { useDatasets, useCreateDataset, useCharacters } from '@/lib/api'
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import type { DatasetType, DatasetWithStats } from '@/lib/types'
@@ -16,6 +16,7 @@ const DATASET_TYPES: DatasetType[] = ['lora', 'ipadapter', 'reference', 'style',
 
 export function DatasetManager() {
   const { data: datasets, isLoading } = useDatasets()
+  const { data: characters } = useCharacters()
   const createDataset = useCreateDataset()
   const [typeFilter, setTypeFilter] = useState<DatasetType | 'all'>('all')
   const [search, setSearch] = useState('')
@@ -23,6 +24,7 @@ export function DatasetManager() {
   const [newName, setNewName] = useState('')
   const [newType, setNewType] = useState<DatasetType>('lora')
   const [newDescription, setNewDescription] = useState('')
+  const [newCharacterId, setNewCharacterId] = useState('')
 
   const filtered = (datasets ?? []).filter((d) => {
     if (typeFilter !== 'all' && d.type !== typeFilter) return false
@@ -30,16 +32,25 @@ export function DatasetManager() {
     return true
   })
 
+  const requiresCharacter = newType === 'ipadapter' || newType === 'lora'
+
   const handleCreate = () => {
     if (!newName.trim()) return
+    if (requiresCharacter && !newCharacterId) return
     createDataset.mutate(
-      { name: newName.trim(), type: newType, description: newDescription },
+      {
+        name: newName.trim(),
+        type: newType,
+        description: newDescription,
+        character_id: newCharacterId || undefined,
+      },
       {
         onSuccess: () => {
           setShowCreate(false)
           setNewName('')
           setNewType('lora')
           setNewDescription('')
+          setNewCharacterId('')
         },
       }
     )
@@ -154,6 +165,27 @@ export function DatasetManager() {
                   </button>
                 ))}
               </div>
+            </div>
+            <div>
+              <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">
+                Character
+                {requiresCharacter && <span className="text-accent ml-1">*</span>}
+              </label>
+              <select
+                value={newCharacterId}
+                onChange={(e) => setNewCharacterId(e.target.value)}
+                className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
+              >
+                <option value="">{requiresCharacter ? 'Select a character...' : 'No character (cross-character)'}</option>
+                {(characters ?? []).filter(c => c.status === 'cast').map((c) => (
+                  <option key={c.id} value={c.id}>{c.display_name || c.name}</option>
+                ))}
+              </select>
+              {requiresCharacter && !newCharacterId && (
+                <p className="text-[10px] text-accent mt-1">
+                  {newType === 'ipadapter' ? 'IPAdapter' : 'LoRA'} datasets require a character assignment
+                </p>
+              )}
             </div>
             <div>
               <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Description</label>
