@@ -1,14 +1,15 @@
 import { useState } from 'react'
-import { useCharacters } from '@/lib/api'
+import { useCharacters, useImportDirectory } from '@/lib/api'
 
 export function ImportScreen() {
   const { data: characters } = useCharacters()
+  const importDirectory = useImportDirectory()
   const [directoryPath, setDirectoryPath] = useState('')
   const [characterId, setCharacterId] = useState('')
   const [sourceOrigin, setSourceOrigin] = useState<'comfyui' | 'fig' | 'manual'>('manual')
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>([])
-  const [importing] = useState(false)
+  const [importResult, setImportResult] = useState<{ imported: number; skipped: number; failed: number; total: number } | null>(null)
 
   const addTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
@@ -158,19 +159,52 @@ export function ImportScreen() {
             </div>
 
             <button
-              disabled={importing}
+              disabled={importDirectory.isPending || !directoryPath.trim()}
+              onClick={() => {
+                const tagStrings = tags.map((t) => `misc:${t}`)
+                importDirectory.mutate(
+                  {
+                    path: directoryPath,
+                    character_id: characterId || undefined,
+                    source: sourceOrigin,
+                    tags: tagStrings.length > 0 ? tagStrings : undefined,
+                  },
+                  { onSuccess: (data) => setImportResult(data) }
+                )
+              }}
               className="w-full bg-accent text-white py-3 text-[11px] uppercase font-bold tracking-[0.15em] hover:opacity-90 transition-all disabled:opacity-50"
             >
-              Execute Import
+              {importDirectory.isPending ? 'Importing...' : 'Execute Import'}
             </button>
           </div>
 
-          {/* Active session */}
+          {/* Import Result */}
           <div className="mt-6 border border-border-subtle bg-background p-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-ui text-[13px] tracking-[0.15em]">Active Session</h3>
+              <h3 className="text-ui text-[13px] tracking-[0.15em]">
+                {importResult ? 'Import Complete' : 'Active Session'}
+              </h3>
             </div>
-            <p className="text-xs text-muted">No active import session</p>
+            {importResult ? (
+              <div className="space-y-2 text-sm">
+                <p className="text-on-surface"><strong>{importResult.imported}</strong> imported</p>
+                <p className="text-muted">{importResult.skipped} duplicates skipped</p>
+                {importResult.failed > 0 && <p className="text-accent">{importResult.failed} failed</p>}
+                <p className="text-muted">{importResult.total} total files processed</p>
+              </div>
+            ) : importDirectory.isPending ? (
+              <div className="flex items-center gap-3 text-sm text-muted">
+                <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
+                Importing...
+              </div>
+            ) : (
+              <p className="text-xs text-muted">No active import session</p>
+            )}
+            {importDirectory.isError && (
+              <p className="text-accent text-xs mt-2">
+                Error: {importDirectory.error?.message}
+              </p>
+            )}
           </div>
         </div>
       </div>
