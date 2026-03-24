@@ -65,6 +65,9 @@ func (a *API) Register(mux *http.ServeMux) {
 
 	// Tags
 	mux.HandleFunc("GET /api/v1/tags", a.listTags)
+	mux.HandleFunc("POST /api/v1/tags/rename", a.renameTag)
+	mux.HandleFunc("POST /api/v1/tags/merge", a.mergeTag)
+	mux.HandleFunc("POST /api/v1/tags/delete", a.deleteTag)
 
 	// Media items
 	mux.HandleFunc("POST /api/v1/media/{type}", a.createMediaItem)
@@ -85,6 +88,9 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/datasets/{id}/images", a.addDatasetImages)
 	mux.HandleFunc("DELETE /api/v1/datasets/{id}/images/{imgId}", a.removeDatasetImage)
 	mux.HandleFunc("PATCH /api/v1/datasets/{id}/images/{imgId}", a.updateDatasetImage)
+
+	// Import
+	mux.HandleFunc("POST /api/v1/import/directory", a.handleImportDirectory)
 
 	// Generation (Bifrost)
 	mux.HandleFunc("POST /api/v1/generate", a.handleGenerate)

@@ -146,3 +146,56 @@ func (a *API) bulkTag(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"affected": affected})
 }
+
+func (a *API) renameTag(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Namespace string `json:"namespace"`
+		OldValue  string `json:"old_value"`
+		NewValue  string `json:"new_value"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+	affected, err := a.Tags.RenameTag(req.Namespace, req.OldValue, req.NewValue)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"affected": affected})
+}
+
+func (a *API) mergeTag(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Namespace string `json:"namespace"`
+		FromValue string `json:"from_value"`
+		ToValue   string `json:"to_value"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+	affected, err := a.Tags.MergeTag(req.Namespace, req.FromValue, req.ToValue)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"affected": affected})
+}
+
+func (a *API) deleteTag(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Namespace string `json:"namespace"`
+		Value     string `json:"value"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+	affected, err := a.Tags.DeleteTag(req.Namespace, req.Value)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"affected": affected})
+}
