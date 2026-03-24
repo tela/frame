@@ -185,3 +185,89 @@ func TestGetCharacterImage(t *testing.T) {
 		t.Errorf("character_id = %q, want %q", ci.CharacterID, charID)
 	}
 }
+
+func TestUpdateCharacterImage(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	store := image.NewStore(db.DB)
+	charID := seedCharacter(t, db)
+
+	imgID := id.New()
+	store.Create(&image.Image{ID: imgID, Hash: id.New(), Format: "png", Source: image.SourceManual, IngestedAt: time.Now().UTC()})
+	store.CreateCharacterImage(&image.CharacterImage{
+		ImageID: imgID, CharacterID: charID,
+		SetType: image.SetStaging, TriageStatus: image.TriagePending,
+		CreatedAt: time.Now().UTC(),
+	})
+
+	// Update rating
+	rating := 4
+	store.UpdateCharacterImage(imgID, charID, &image.CharacterImageUpdate{Rating: &rating})
+
+	ci, _ := store.GetCharacterImage(imgID)
+	if ci.Rating == nil || *ci.Rating != 4 {
+		t.Errorf("rating = %v, want 4", ci.Rating)
+	}
+
+	// Update set type and triage status
+	setType := image.SetReference
+	triageStatus := image.TriageApproved
+	store.UpdateCharacterImage(imgID, charID, &image.CharacterImageUpdate{
+		SetType:      &setType,
+		TriageStatus: &triageStatus,
+	})
+
+	ci, _ = store.GetCharacterImage(imgID)
+	if ci.SetType != image.SetReference {
+		t.Errorf("set_type = %q, want %q", ci.SetType, image.SetReference)
+	}
+	if ci.TriageStatus != image.TriageApproved {
+		t.Errorf("triage_status = %q, want %q", ci.TriageStatus, image.TriageApproved)
+	}
+
+	// Promote to face ref
+	isFaceRef := true
+	score := 92.5
+	rank := 1
+	store.UpdateCharacterImage(imgID, charID, &image.CharacterImageUpdate{
+		IsFaceRef: &isFaceRef,
+		RefScore:  &score,
+		RefRank:   &rank,
+	})
+
+	ci, _ = store.GetCharacterImage(imgID)
+	if !ci.IsFaceRef {
+		t.Error("expected is_face_ref=true")
+	}
+	if ci.RefScore == nil || *ci.RefScore != 92.5 {
+		t.Errorf("ref_score = %v, want 92.5", ci.RefScore)
+	}
+}
+
+func TestListPendingByCharacter(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	store := image.NewStore(db.DB)
+	charID := seedCharacter(t, db)
+
+	// Create 3 images: 2 pending, 1 approved
+	for i := 0; i < 3; i++ {
+		imgID := id.New()
+		store.Create(&image.Image{ID: imgID, Hash: id.New(), Format: "png", Source: image.SourceManual, IngestedAt: time.Now().UTC()})
+		status := image.TriagePending
+		if i == 2 {
+			status = image.TriageApproved
+		}
+		store.CreateCharacterImage(&image.CharacterImage{
+			ImageID: imgID, CharacterID: charID,
+			SetType: image.SetStaging, TriageStatus: status,
+			CreatedAt: time.Now().UTC(),
+		})
+	}
+
+	pending, err := store.ListPendingByCharacter(charID, nil)
+	if err != nil {
+		t.Fatalf("list pending: %v", err)
+	}
+	if len(pending) != 2 {
+		t.Errorf("got %d pending, want 2", len(pending))
+	}
+}

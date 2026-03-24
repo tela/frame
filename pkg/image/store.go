@@ -220,6 +220,88 @@ func (s *Store) ListBodyRefs(characterID, eraID string) ([]CharacterImage, error
 	return refs, rows.Err()
 }
 
+// CharacterImageUpdate holds optional fields for updating a character image.
+type CharacterImageUpdate struct {
+	SetType      *SetType      `json:"set_type,omitempty"`
+	TriageStatus *TriageStatus `json:"triage_status,omitempty"`
+	Rating       *int          `json:"rating,omitempty"`
+	IsFaceRef    *bool         `json:"is_face_ref,omitempty"`
+	IsBodyRef    *bool         `json:"is_body_ref,omitempty"`
+	RefScore     *float64      `json:"ref_score,omitempty"`
+	RefRank      *int          `json:"ref_rank,omitempty"`
+	EraID        *string       `json:"era_id,omitempty"`
+}
+
+// UpdateCharacterImage updates fields on a character_images record.
+func (s *Store) UpdateCharacterImage(imageID, characterID string, update *CharacterImageUpdate) error {
+	if update.SetType != nil {
+		s.db.Exec(`UPDATE character_images SET set_type = ? WHERE image_id = ? AND character_id = ?`, *update.SetType, imageID, characterID)
+	}
+	if update.TriageStatus != nil {
+		s.db.Exec(`UPDATE character_images SET triage_status = ? WHERE image_id = ? AND character_id = ?`, *update.TriageStatus, imageID, characterID)
+	}
+	if update.Rating != nil {
+		s.db.Exec(`UPDATE character_images SET rating = ? WHERE image_id = ? AND character_id = ?`, *update.Rating, imageID, characterID)
+	}
+	if update.IsFaceRef != nil {
+		s.db.Exec(`UPDATE character_images SET is_face_ref = ? WHERE image_id = ? AND character_id = ?`, boolToInt(*update.IsFaceRef), imageID, characterID)
+	}
+	if update.IsBodyRef != nil {
+		s.db.Exec(`UPDATE character_images SET is_body_ref = ? WHERE image_id = ? AND character_id = ?`, boolToInt(*update.IsBodyRef), imageID, characterID)
+	}
+	if update.RefScore != nil {
+		s.db.Exec(`UPDATE character_images SET ref_score = ? WHERE image_id = ? AND character_id = ?`, *update.RefScore, imageID, characterID)
+	}
+	if update.RefRank != nil {
+		s.db.Exec(`UPDATE character_images SET ref_rank = ? WHERE image_id = ? AND character_id = ?`, *update.RefRank, imageID, characterID)
+	}
+	if update.EraID != nil {
+		s.db.Exec(`UPDATE character_images SET era_id = ? WHERE image_id = ? AND character_id = ?`, *update.EraID, imageID, characterID)
+	}
+	return nil
+}
+
+// ListPendingByCharacter returns images with triage_status='pending' for a character, optionally filtered by era.
+func (s *Store) ListPendingByCharacter(characterID string, eraID *string) ([]CharacterImage, error) {
+	var rows *sql.Rows
+	var err error
+	if eraID != nil {
+		rows, err = s.db.Query(
+			`SELECT image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, created_at
+			 FROM character_images WHERE character_id = ? AND era_id = ? AND triage_status = 'pending' ORDER BY created_at DESC`,
+			characterID, *eraID,
+		)
+	} else {
+		rows, err = s.db.Query(
+			`SELECT image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, created_at
+			 FROM character_images WHERE character_id = ? AND triage_status = 'pending' ORDER BY created_at DESC`,
+			characterID,
+		)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("list pending: %w", err)
+	}
+	defer rows.Close()
+
+	var images []CharacterImage
+	for rows.Next() {
+		var ci CharacterImage
+		var createdAt string
+		var isFaceRef, isBodyRef int
+		if err := rows.Scan(
+			&ci.ImageID, &ci.CharacterID, &ci.EraID, &ci.SetType, &ci.TriageStatus,
+			&ci.Rating, &isFaceRef, &isBodyRef, &ci.RefScore, &ci.RefRank, &createdAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan pending: %w", err)
+		}
+		ci.IsFaceRef = isFaceRef != 0
+		ci.IsBodyRef = isBodyRef != 0
+		ci.CreatedAt = parseTime(createdAt)
+		images = append(images, ci)
+	}
+	return images, rows.Err()
+}
+
 func boolToInt(b bool) int {
 	if b {
 		return 1
