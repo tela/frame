@@ -1,13 +1,15 @@
 import { Link, useParams } from '@tanstack/react-router'
-import { useCharacter, useReferencePackage, useIngestImage, useCharacterImages, thumbUrl } from '@/lib/api'
-import { useState } from 'react'
+import { useCharacter, useReferencePackage, useIngestImage, useCharacterImages, useUpdateCharacterImage, thumbUrl } from '@/lib/api'
+import { useState, useCallback } from 'react'
 import { Dropzone } from '@/components/dropzone'
 import type { CharacterImage } from '@/lib/types'
 
 export function EraWorkspace() {
   const { characterId, eraId } = useParams({ from: '/characters/$characterId/eras/$eraId' })
   const ingestImage = useIngestImage()
+  const updateImage = useUpdateCharacterImage()
   const [uploadStatus, setUploadStatus] = useState<string | null>(null)
+  const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set())
   const { data: character, isLoading: charLoading } = useCharacter(characterId)
   const { data: eraImages } = useCharacterImages(characterId, eraId)
   const { data: refPackage } = useReferencePackage(characterId, eraId)
@@ -52,6 +54,26 @@ export function EraWorkspace() {
       )
     }
   }
+
+  const toggleSelect = useCallback((imageId: string) => {
+    setSelectedImages((prev) => {
+      const next = new Set(prev)
+      if (next.has(imageId)) next.delete(imageId)
+      else next.add(imageId)
+      return next
+    })
+  }, [])
+
+  const bulkUpdate = useCallback((field: string, value: string) => {
+    for (const imageId of selectedImages) {
+      updateImage.mutate({ characterId, imageId, [field]: value })
+    }
+    setSelectedImages(new Set())
+  }, [selectedImages, characterId, updateImage])
+
+  const handleSingleUpdate = useCallback((imageId: string, field: string, value: unknown) => {
+    updateImage.mutate({ characterId, imageId, [field]: value })
+  }, [characterId, updateImage])
 
   return (
     <Dropzone onFiles={handleFileDrop} accept=".png,.jpg,.jpeg,.webp" className="flex-1 flex flex-col">
@@ -124,7 +146,21 @@ export function EraWorkspace() {
             Studio
           </Link>
         </div>
-        <span className="text-meta">{era.image_count} assets</span>
+        <div className="flex items-center gap-4">
+          {selectedImages.size > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-meta">{selectedImages.size} selected</span>
+              <button onClick={() => bulkUpdate('set_type', 'reference')} className="text-ui text-[11px] text-muted hover:text-primary px-2 py-1 border border-border-subtle hover:border-primary transition-colors">Reference</button>
+              <button onClick={() => bulkUpdate('set_type', 'curated')} className="text-ui text-[11px] text-muted hover:text-primary px-2 py-1 border border-border-subtle hover:border-primary transition-colors">Curated</button>
+              <button onClick={() => bulkUpdate('set_type', 'training')} className="text-ui text-[11px] text-muted hover:text-primary px-2 py-1 border border-border-subtle hover:border-primary transition-colors">Training</button>
+              <button onClick={() => bulkUpdate('set_type', 'archive')} className="text-ui text-[11px] text-muted hover:text-primary px-2 py-1 border border-border-subtle hover:border-primary transition-colors">Archive</button>
+              <button onClick={() => bulkUpdate('triage_status', 'approved')} className="text-ui text-[11px] text-muted hover:text-green-600 px-2 py-1 border border-border-subtle hover:border-green-600 transition-colors">Approve</button>
+              <button onClick={() => bulkUpdate('triage_status', 'rejected')} className="text-ui text-[11px] text-muted hover:text-accent px-2 py-1 border border-border-subtle hover:border-accent transition-colors">Reject</button>
+              <button onClick={() => setSelectedImages(new Set())} className="text-ui text-[11px] text-muted hover:text-primary transition-colors">Clear</button>
+            </div>
+          )}
+          <span className="text-meta">{(eraImages ?? []).length} assets</span>
+        </div>
       </section>
 
       {/* Image Grid */}
@@ -145,7 +181,13 @@ export function EraWorkspace() {
         ) : (
           <div className="masonry-grid">
             {(eraImages ?? []).map((ci) => (
-              <EraImageCard key={ci.image_id} ci={ci} />
+              <EraImageCard
+                key={ci.image_id}
+                ci={ci}
+                isSelected={selectedImages.has(ci.image_id)}
+                onToggleSelect={() => toggleSelect(ci.image_id)}
+                onUpdate={(field, value) => handleSingleUpdate(ci.image_id, field, value)}
+              />
             ))}
           </div>
         )}
@@ -168,9 +210,26 @@ export function EraWorkspace() {
   )
 }
 
-function EraImageCard({ ci }: { ci: CharacterImage }) {
+function EraImageCard({ ci, isSelected, onToggleSelect, onUpdate }: {
+  ci: CharacterImage
+  isSelected: boolean
+  onToggleSelect: () => void
+  onUpdate: (field: string, value: unknown) => void
+}) {
   return (
-    <div className="masonry-item relative group overflow-hidden">
+    <div className={`masonry-item relative group overflow-hidden ${isSelected ? 'ring-2 ring-accent' : ''}`}>
+      {/* Selection checkbox */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onToggleSelect() }}
+        className={`absolute top-2 left-2 z-20 w-6 h-6 rounded-sm flex items-center justify-center border transition-all ${
+          isSelected
+            ? 'bg-accent border-accent text-white'
+            : 'bg-background/80 border-border-subtle text-transparent group-hover:text-muted hover:text-primary hover:border-primary'
+        }`}
+      >
+        <span className="material-symbols-outlined text-[16px]">check</span>
+      </button>
+
       <div className="bg-surface-lowest p-1">
         <img
           alt={`Image ${ci.image_id}`}
@@ -180,43 +239,53 @@ function EraImageCard({ ci }: { ci: CharacterImage }) {
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
         />
       </div>
+
       {/* Hover overlay */}
-      <div className="absolute inset-0 bg-on-surface/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6 text-background">
-        <div className="flex justify-between items-end">
-          <div className="space-y-2">
-            {/* Rating */}
-            {ci.rating != null && (
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <span
-                    key={star}
-                    className="material-symbols-outlined text-sm"
-                    style={{ fontVariationSettings: star <= (ci.rating ?? 0) ? "'FILL' 1" : "'FILL' 0" }}
-                  >
-                    star
-                  </span>
-                ))}
-              </div>
-            )}
-            {/* Set type + status badges */}
-            <div className="flex flex-wrap gap-2">
-              <span className="text-[10px] tracking-widest uppercase bg-background/20 px-2 py-0.5 backdrop-blur-md">
-                {ci.set_type}
-              </span>
-              <span className="text-[10px] tracking-widest uppercase bg-background/20 px-2 py-0.5 backdrop-blur-md">
-                {ci.triage_status}
-              </span>
-              {ci.is_face_ref && (
-                <span className="text-[10px] tracking-widest uppercase bg-accent/80 px-2 py-0.5">face ref</span>
-              )}
-              {ci.is_body_ref && (
-                <span className="text-[10px] tracking-widest uppercase bg-accent/80 px-2 py-0.5">body ref</span>
-              )}
-            </div>
-          </div>
-          <button className="bg-background text-on-surface p-2 rounded-full flex items-center justify-center hover:bg-background/80 transition-colors">
-            <span className="material-symbols-outlined">north_east</span>
+      <div className="absolute inset-0 bg-on-surface/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-4 text-background">
+        {/* Top: quick actions */}
+        <div className="flex justify-end gap-1">
+          <button
+            onClick={() => onUpdate('is_face_ref', !ci.is_face_ref)}
+            className={`px-2 py-1 text-[9px] uppercase font-bold tracking-wider rounded-sm transition-colors ${
+              ci.is_face_ref ? 'bg-accent text-white' : 'bg-background/20 hover:bg-accent/60'
+            }`}
+          >
+            Face
           </button>
+          <button
+            onClick={() => onUpdate('is_body_ref', !ci.is_body_ref)}
+            className={`px-2 py-1 text-[9px] uppercase font-bold tracking-wider rounded-sm transition-colors ${
+              ci.is_body_ref ? 'bg-accent text-white' : 'bg-background/20 hover:bg-accent/60'
+            }`}
+          >
+            Body
+          </button>
+        </div>
+
+        {/* Bottom: rating + badges */}
+        <div className="space-y-2">
+          {/* Star rating */}
+          <div className="flex gap-0.5">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                onClick={() => onUpdate('rating', star === ci.rating ? 0 : star)}
+                className="material-symbols-outlined text-[16px] hover:scale-110 transition-transform"
+                style={{ fontVariationSettings: star <= (ci.rating ?? 0) ? "'FILL' 1" : "'FILL' 0" }}
+              >
+                star
+              </button>
+            ))}
+          </div>
+          {/* Badges */}
+          <div className="flex flex-wrap gap-1">
+            <span className="text-[9px] tracking-widest uppercase bg-background/20 px-1.5 py-0.5 backdrop-blur-md">
+              {ci.set_type}
+            </span>
+            <span className="text-[9px] tracking-widest uppercase bg-background/20 px-1.5 py-0.5 backdrop-blur-md">
+              {ci.triage_status}
+            </span>
+          </div>
         </div>
       </div>
     </div>
