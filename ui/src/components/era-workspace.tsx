@@ -1,13 +1,15 @@
 import { Link, useParams } from '@tanstack/react-router'
-import { useCharacter, useReferencePackage, useIngestImage } from '@/lib/api'
+import { useCharacter, useReferencePackage, useIngestImage, useCharacterImages, thumbUrl } from '@/lib/api'
 import { useState } from 'react'
 import { Dropzone } from '@/components/dropzone'
+import type { CharacterImage } from '@/lib/types'
 
 export function EraWorkspace() {
   const { characterId, eraId } = useParams({ from: '/characters/$characterId/eras/$eraId' })
   const ingestImage = useIngestImage()
   const [uploadStatus, setUploadStatus] = useState<string | null>(null)
   const { data: character, isLoading: charLoading } = useCharacter(characterId)
+  const { data: eraImages } = useCharacterImages(characterId, eraId)
   const { data: refPackage } = useReferencePackage(characterId, eraId)
 
   if (charLoading) {
@@ -125,9 +127,9 @@ export function EraWorkspace() {
         <span className="text-meta">{era.image_count} assets</span>
       </section>
 
-      {/* Masonry Grid */}
+      {/* Image Grid */}
       <section className="px-12 pb-24">
-        {era.image_count === 0 ? (
+        {(eraImages ?? []).length === 0 ? (
           <div className="py-20 text-center">
             <p className="text-muted text-[15px] mb-4">No images in this era yet.</p>
             <p className="text-muted text-[13px] mb-6">Drag and drop images here, or</p>
@@ -142,8 +144,9 @@ export function EraWorkspace() {
           </div>
         ) : (
           <div className="masonry-grid">
-            {/* Images would be rendered here from the character images query */}
-            <p className="text-muted text-[13px]">Image grid will render from API data</p>
+            {(eraImages ?? []).map((ci) => (
+              <EraImageCard key={ci.image_id} ci={ci} />
+            ))}
           </div>
         )}
       </section>
@@ -162,5 +165,60 @@ export function EraWorkspace() {
         }
       `}</style>
     </Dropzone>
+  )
+}
+
+function EraImageCard({ ci }: { ci: CharacterImage }) {
+  return (
+    <div className="masonry-item relative group overflow-hidden">
+      <div className="bg-surface-lowest p-1">
+        <img
+          alt={`Image ${ci.image_id}`}
+          className="w-full h-auto rounded-[2px]"
+          src={thumbUrl(ci.image_id)}
+          loading="lazy"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+        />
+      </div>
+      {/* Hover overlay */}
+      <div className="absolute inset-0 bg-on-surface/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6 text-background">
+        <div className="flex justify-between items-end">
+          <div className="space-y-2">
+            {/* Rating */}
+            {ci.rating != null && (
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <span
+                    key={star}
+                    className="material-symbols-outlined text-sm"
+                    style={{ fontVariationSettings: star <= (ci.rating ?? 0) ? "'FILL' 1" : "'FILL' 0" }}
+                  >
+                    star
+                  </span>
+                ))}
+              </div>
+            )}
+            {/* Set type + status badges */}
+            <div className="flex flex-wrap gap-2">
+              <span className="text-[10px] tracking-widest uppercase bg-background/20 px-2 py-0.5 backdrop-blur-md">
+                {ci.set_type}
+              </span>
+              <span className="text-[10px] tracking-widest uppercase bg-background/20 px-2 py-0.5 backdrop-blur-md">
+                {ci.triage_status}
+              </span>
+              {ci.is_face_ref && (
+                <span className="text-[10px] tracking-widest uppercase bg-accent/80 px-2 py-0.5">face ref</span>
+              )}
+              {ci.is_body_ref && (
+                <span className="text-[10px] tracking-widest uppercase bg-accent/80 px-2 py-0.5">body ref</span>
+              )}
+            </div>
+          </div>
+          <button className="bg-background text-on-surface p-2 rounded-full flex items-center justify-center hover:bg-background/80 transition-colors">
+            <span className="material-symbols-outlined">north_east</span>
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
