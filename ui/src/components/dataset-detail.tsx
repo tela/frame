@@ -8,7 +8,8 @@ export function DatasetDetail() {
   if (isLoading) return <div className="p-12 text-muted">Loading...</div>
   if (!data) return <div className="p-12 text-muted">Dataset not found</div>
 
-  const { dataset: ds, images } = data
+  const { dataset: ds, images: rawImages } = data
+  const images = rawImages ?? []
   const includedCount = images.filter((i) => i.included).length
 
   return (
