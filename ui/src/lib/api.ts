@@ -8,6 +8,11 @@ import type {
   MediaContentType,
   IngestResult,
   ReferencePackage,
+  TagFamily,
+  TagSummary,
+  Dataset,
+  DatasetWithStats,
+  DatasetImage,
 } from './types'
 import { SEED_CHARACTERS, SEED_CHARACTER_DETAILS, SEED_MEDIA } from './seed-data'
 
@@ -262,6 +267,87 @@ export function useBifrostStatus() {
     queryKey: ['bifrost', 'status'],
     queryFn: () => fetchJSON<BifrostStatus>('/api/v1/bifrost/status'),
     refetchInterval: 30_000, // poll every 30s
+  })
+}
+
+// ===== Tag Families =====
+
+export function useTagFamilies() {
+  return useQuery({
+    queryKey: ['tag-families'],
+    queryFn: () => fetchJSON<TagFamily[]>('/api/v1/tag-families'),
+  })
+}
+
+export function useTags(familyId?: string) {
+  return useQuery({
+    queryKey: ['tags', familyId],
+    queryFn: () => {
+      const params = familyId ? `?family=${familyId}` : ''
+      return fetchJSON<TagSummary[]>(`/api/v1/tags${params}`)
+    },
+  })
+}
+
+export function useCreateTagFamily() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { name: string; description?: string; color?: string }) =>
+      postJSON<TagFamily>('/api/v1/tag-families', body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tag-families'] }) },
+  })
+}
+
+export function useBulkTag() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { image_ids: string[]; tag_namespace: string; tag_value: string; family_id?: string; action: 'add' | 'remove' }) =>
+      postJSON<{ affected: number }>('/api/v1/images/bulk-tag', body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tags'] }) },
+  })
+}
+
+// ===== Datasets =====
+
+export function useDatasets() {
+  return useQuery({
+    queryKey: ['datasets'],
+    queryFn: () => fetchJSON<DatasetWithStats[]>('/api/v1/datasets'),
+  })
+}
+
+export function useDataset(id: string) {
+  return useQuery({
+    queryKey: ['datasets', id],
+    queryFn: () => fetchJSON<{ dataset: Dataset; images: DatasetImage[] }>(`/api/v1/datasets/${id}`),
+    enabled: !!id,
+  })
+}
+
+export function useCreateDataset() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { name: string; type?: string; description?: string; character_id?: string }) =>
+      postJSON<Dataset>('/api/v1/datasets', body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['datasets'] }) },
+  })
+}
+
+export function useForkDataset() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      postJSON<Dataset>(`/api/v1/datasets/${id}/fork`, { name }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['datasets'] }) },
+  })
+}
+
+export function useAddDatasetImages() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ datasetId, imageIds }: { datasetId: string; imageIds: string[] }) =>
+      postJSON<{ added: number }>(`/api/v1/datasets/${datasetId}/images`, { image_ids: imageIds }),
+    onSuccess: (_, vars) => { qc.invalidateQueries({ queryKey: ['datasets', vars.datasetId] }) },
   })
 }
 
