@@ -27,12 +27,15 @@ func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
-// Create inserts a new character.
+// Create inserts a new character. Sets FolderName automatically if empty.
 func (s *Store) Create(c *Character) error {
+	if c.FolderName == "" {
+		c.FolderName = c.Slug()
+	}
 	_, err := s.db.Exec(
-		`INSERT INTO characters (id, name, display_name, status, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?)`,
-		c.ID, c.Name, c.DisplayName, c.Status, c.CreatedAt.UTC().Format(time.RFC3339), c.UpdatedAt.UTC().Format(time.RFC3339),
+		`INSERT INTO characters (id, name, display_name, folder_name, status, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		c.ID, c.Name, c.DisplayName, c.FolderName, c.Status, c.CreatedAt.UTC().Format(time.RFC3339), c.UpdatedAt.UTC().Format(time.RFC3339),
 	)
 	if err != nil {
 		return fmt.Errorf("insert character: %w", err)
@@ -45,9 +48,9 @@ func (s *Store) Get(id string) (*Character, error) {
 	c := &Character{}
 	var createdAt, updatedAt string
 	err := s.db.QueryRow(
-		`SELECT id, name, display_name, status, created_at, updated_at
+		`SELECT id, name, display_name, folder_name, status, created_at, updated_at
 		 FROM characters WHERE id = ?`, id,
-	).Scan(&c.ID, &c.Name, &c.DisplayName, &c.Status, &createdAt, &updatedAt)
+	).Scan(&c.ID, &c.Name, &c.DisplayName, &c.FolderName, &c.Status, &createdAt, &updatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -62,7 +65,7 @@ func (s *Store) Get(id string) (*Character, error) {
 // List returns all characters, ordered by creation time.
 func (s *Store) List() ([]Character, error) {
 	rows, err := s.db.Query(
-		`SELECT id, name, display_name, status, created_at, updated_at
+		`SELECT id, name, display_name, folder_name, status, created_at, updated_at
 		 FROM characters ORDER BY created_at DESC`,
 	)
 	if err != nil {
@@ -74,7 +77,7 @@ func (s *Store) List() ([]Character, error) {
 	for rows.Next() {
 		var c Character
 		var createdAt, updatedAt string
-		if err := rows.Scan(&c.ID, &c.Name, &c.DisplayName, &c.Status, &createdAt, &updatedAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.Name, &c.DisplayName, &c.FolderName, &c.Status, &createdAt, &updatedAt); err != nil {
 			return nil, fmt.Errorf("scan character: %w", err)
 		}
 		c.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)

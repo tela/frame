@@ -9,6 +9,47 @@ import (
 	"github.com/tela/frame/pkg/id"
 )
 
+func TestSlug(t *testing.T) {
+	tests := []struct {
+		name        string
+		displayName string
+		id          string
+		want        string
+	}{
+		{"Esme Thornton", "Esme", "a7f3b2c1d9e04f6a", "esme-a7f3b2c"},
+		{"Dr. John Montague", "Montague", "d4e5f67890123456", "montague-d4e5f67"},
+		{"Sarah Mitchell", "", "abc1234567890def", "sarah-mitchell-abc1234"},
+		{"Mrs. O'Brien-Smith", "Mrs. O'B", "1234567890abcdef", "mrs-o-b-1234567"},
+	}
+	for _, tt := range tests {
+		c := &character.Character{ID: tt.id, Name: tt.name, DisplayName: tt.displayName}
+		got := c.Slug()
+		if got != tt.want {
+			t.Errorf("Slug(%q, %q) = %q, want %q", tt.name, tt.displayName, got, tt.want)
+		}
+	}
+}
+
+func TestCreateSetsFolderName(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	store := character.NewStore(db.DB)
+
+	now := time.Now().UTC()
+	c := &character.Character{
+		ID: "a7f3b2c1d9e04f6a", Name: "Esme Thornton", DisplayName: "Esme",
+		Status: character.StatusCast, CreatedAt: now, UpdatedAt: now,
+	}
+	store.Create(c)
+
+	got, _ := store.Get(c.ID)
+	if got.FolderName == "" {
+		t.Error("folder_name should be set automatically")
+	}
+	if got.FolderName != "esme-a7f3b2c" {
+		t.Errorf("folder_name = %q, want %q", got.FolderName, "esme-a7f3b2c")
+	}
+}
+
 func TestCreateAndGetCharacter(t *testing.T) {
 	db := testutil.NewTestDB(t)
 	store := character.NewStore(db.DB)
