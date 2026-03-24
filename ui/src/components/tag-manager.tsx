@@ -1,179 +1,213 @@
 import { useState } from 'react'
-import { Badge } from '@/components/ui/badge'
+import { useTagFamilies, useTags } from '@/lib/api'
+import type { TagSummary } from '@/lib/types'
 
-interface TagItem {
-  name: string
-  count: number
+const FAMILY_ICONS: Record<string, string> = {
+  'fam_character': 'fingerprint',
+  'fam_nsfw': 'explicit',
+  'fam_technical': 'settings_ethernet',
+  'fam_training': 'model_training',
 }
 
-// TODO: Replace with real data from API
-const MOCK_TAGS: TagItem[] = [
-  { name: 'Cyberpunk', count: 142 },
-  { name: 'Moody Lighting', count: 98 },
-  { name: 'Portrait', count: 86 },
-  { name: 'Profile', count: 72 },
-  { name: 'Neon', count: 64 },
-  { name: 'Sci-Fi', count: 51 },
-  { name: 'High Contrast', count: 48 },
-  { name: 'Close Up', count: 42 },
-  { name: 'Gritty', count: 37 },
-  { name: 'Monochrome', count: 31 },
-]
-
 export function TagManager() {
-  const [selectedTag, setSelectedTag] = useState<string>('Cyberpunk')
+  const { data: families } = useTagFamilies()
+  const [activeFamily, setActiveFamily] = useState<string | null>(null)
+  const [selectedTag, setSelectedTag] = useState<TagSummary | null>(null)
   const [search, setSearch] = useState('')
 
-  const tags = MOCK_TAGS.filter((t) =>
-    t.name.toLowerCase().includes(search.toLowerCase())
+  const activeFamilyId = activeFamily ?? families?.[0]?.id ?? null
+  const { data: tags } = useTags(activeFamilyId ?? undefined)
+  const activeF = families?.find((f) => f.id === activeFamilyId)
+
+  const filteredTags = (tags ?? []).filter((t) =>
+    t.tag_value.toLowerCase().includes(search.toLowerCase()) ||
+    t.tag_namespace.toLowerCase().includes(search.toLowerCase())
   )
-  const selected = MOCK_TAGS.find((t) => t.name === selectedTag)
 
   return (
     <div className="flex h-full overflow-hidden">
-      {/* Header */}
-      <div className="absolute top-0 left-0 right-0 h-[88px] flex items-center justify-between px-8 border-b border-border-subtle bg-background z-10">
-        <div className="flex flex-col">
-          <h2 className="font-display text-3xl">Taxonomy</h2>
-          <p className="text-muted text-sm">Manage global tags, synonyms, and relationships</p>
+      {/* Family Sidebar */}
+      <aside className="w-64 flex-shrink-0 bg-surface-low flex flex-col py-6 px-4 gap-4 h-full">
+        <div className="mb-8">
+          <span className="text-lg font-display italic text-on-surface">Frame Archive</span>
         </div>
-      </div>
 
-      {/* Two Column Layout */}
-      <div className="flex flex-1 overflow-hidden mt-[88px]">
-        {/* Left Column: Tag List */}
-        <section className="w-[320px] flex flex-col border-r border-border-subtle bg-background shrink-0">
-          <div className="p-4 border-b border-border-subtle flex flex-col gap-3">
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted text-[18px]">search</span>
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-surface border-none rounded pl-9 pr-3 py-2 text-sm placeholder:text-muted focus:ring-1 focus:ring-primary focus:outline-none transition-shadow"
-                placeholder="Search tags..."
-                type="text"
-              />
-            </div>
-            <div className="flex items-center justify-between px-1">
-              <span className="text-ui text-[11px] text-muted">{tags.length} Tags Indexed</span>
-              <button className="flex items-center gap-1 text-muted hover:text-primary text-ui text-[11px] transition-colors">
-                Sort: Count
-                <span className="material-symbols-outlined text-[14px]">expand_more</span>
-              </button>
-            </div>
-          </div>
+        <div className="flex flex-col gap-1">
+          <h2 className="text-ui text-[11px] text-muted px-3 mb-2">Tag Families</h2>
+          <p className="text-xs text-muted px-3 mb-4">Domain Management</p>
 
-          <div className="flex-1 overflow-y-auto">
-            {tags.map((tag) => (
+          {(families ?? []).map((family) => {
+            const isActive = family.id === activeFamilyId
+            const icon = FAMILY_ICONS[family.id] ?? 'label'
+            return (
               <button
-                key={tag.name}
-                onClick={() => setSelectedTag(tag.name)}
-                className={`flex items-center justify-between px-4 py-3 border-b border-border-subtle border-l-2 text-left w-full transition-colors group ${
-                  tag.name === selectedTag
-                    ? 'bg-surface border-l-primary'
-                    : 'border-l-transparent hover:bg-surface/50'
+                key={family.id}
+                onClick={() => { setActiveFamily(family.id); setSelectedTag(null); setSearch('') }}
+                className={`flex items-center gap-3 px-3 py-2 text-left transition-all duration-200 hover:translate-x-1 ${
+                  isActive
+                    ? 'bg-surface-lowest text-primary rounded-l-sm shadow-sm'
+                    : 'text-muted hover:bg-surface'
                 }`}
               >
-                <span className={`font-body text-primary ${tag.name === selectedTag ? 'font-medium' : ''}`}>{tag.name}</span>
-                <span className="text-meta text-muted group-hover:text-primary transition-colors">{tag.count}</span>
+                <span className="material-symbols-outlined text-[20px]">{icon}</span>
+                <span className="text-ui text-[11px] font-bold">{family.name}</span>
               </button>
-            ))}
+            )
+          })}
+        </div>
+
+        <button className="mt-4 mx-3 py-3 border border-border-subtle bg-surface hover:bg-surface-high text-on-surface text-[10px] uppercase font-bold tracking-[0.15em] transition-all">
+          Create New Family
+        </button>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col h-full bg-background">
+        {/* Top Bar */}
+        <header className="flex justify-between items-center px-8 py-4 border-b border-border-subtle/50">
+          <div className="flex items-center gap-8">
+            <span className="text-xl font-bold font-display text-on-surface">Tag Manager</span>
           </div>
-        </section>
+        </header>
 
-        {/* Right Column: Detail Pane */}
-        <section className="flex-1 flex flex-col overflow-y-auto bg-background">
-          {selected ? (
-            <div className="max-w-[720px] w-full mx-auto p-12 flex flex-col gap-12">
-              <div className="flex flex-col gap-2">
-                <h2 className="font-display text-[48px] leading-none text-primary">{selected.name}</h2>
-                <div className="flex items-center gap-3">
-                  <Badge variant="secondary" className="text-meta bg-surface border-border-subtle rounded">
-                    {selected.count} Assets
-                  </Badge>
-                  <span className="text-muted text-sm font-body">Created Oct 12, 2023</span>
-                </div>
-              </div>
-
-              {/* Usage Statistics */}
-              <div className="flex flex-col gap-4">
-                <h3 className="text-ui text-[13px] text-muted border-b border-border-subtle pb-2">Usage Statistics</h3>
-                <div className="grid grid-cols-2 gap-8">
-                  <div>
-                    <p className="text-meta text-muted mb-1">Associated Characters</p>
-                    <p className="font-body text-primary text-sm">4 Characters</p>
-                  </div>
-                  <div>
-                    <p className="text-meta text-muted mb-1">Dominant Eras</p>
-                    <p className="font-body text-primary text-sm">—</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Relationships */}
-              <div className="flex flex-col gap-4">
-                <h3 className="text-ui text-[13px] text-muted border-b border-border-subtle pb-2">Relationships</h3>
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left Column: Tag List */}
+          <section className="w-1/3 flex flex-col border-r border-border-subtle/20 bg-background">
+            <div className="p-8 border-b border-border-subtle/10">
+              <div className="flex justify-between items-end mb-6">
                 <div>
-                  <p className="text-meta text-muted mb-2">Synonyms (Auto-mapped during search)</p>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="px-3 py-1 bg-surface border border-border-subtle rounded text-sm flex items-center gap-2 group cursor-pointer hover:border-primary transition-colors">
-                      sci-fi
-                      <span className="material-symbols-outlined text-[14px] text-muted group-hover:text-primary">close</span>
+                  <h1 className="text-3xl font-display tracking-display text-on-surface">{activeF?.name ?? 'Tags'}</h1>
+                  <p className="text-[10px] uppercase font-bold tracking-[0.15em] text-muted mt-1">Namespace Registry</p>
+                </div>
+              </div>
+              <div className="relative">
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full bg-surface-low border-none text-sm py-3 px-4 focus:bg-surface-lowest focus:ring-1 focus:ring-on-surface transition-all placeholder-muted"
+                  placeholder={`Filter ${activeF?.name ?? ''} Tags...`}
+                  type="text"
+                />
+                <span className="absolute right-4 top-3.5 material-symbols-outlined text-muted">search</span>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto py-4 px-6 space-y-1">
+              {filteredTags.map((tag) => {
+                const isActive = selectedTag?.tag_namespace === tag.tag_namespace && selectedTag?.tag_value === tag.tag_value
+                return (
+                  <button
+                    key={`${tag.tag_namespace}:${tag.tag_value}`}
+                    onClick={() => setSelectedTag(tag)}
+                    className={`group flex items-center justify-between p-4 w-full text-left transition-all ${
+                      isActive
+                        ? 'bg-surface shadow-sm border-l-2 border-on-surface'
+                        : 'hover:bg-surface-low border-l-2 border-transparent'
+                    }`}
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-[9px] uppercase font-bold tracking-tight text-muted mb-0.5">
+                        {tag.tag_namespace}
+                      </span>
+                      <span className={`text-sm ${isActive ? 'font-bold' : 'font-medium'} text-on-surface`}>
+                        {tag.tag_value}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-[10px] font-body tabular-nums px-2 py-0.5 ${
+                        isActive ? 'bg-primary text-background' : 'bg-surface text-muted'
+                      }`}>
+                        {tag.count}
+                      </span>
+                      <span className={`material-symbols-outlined text-muted ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
+                        chevron_right
+                      </span>
+                    </div>
+                  </button>
+                )
+              })}
+              {filteredTags.length === 0 && (
+                <p className="text-muted text-sm text-center py-8">No tags found</p>
+              )}
+            </div>
+          </section>
+
+          {/* Right Column: Detail Pane */}
+          <section className="flex-1 overflow-y-auto bg-background p-12">
+            {selectedTag ? (
+              <div className="max-w-4xl mx-auto">
+                {/* Header */}
+                <div className="flex justify-between items-start mb-16">
+                  <div className="space-y-4">
+                    <span className="inline-block px-3 py-1 bg-surface-high text-on-surface text-[10px] uppercase font-bold tracking-[0.15em]">
+                      Active Definition
                     </span>
-                    <button className="px-3 py-1 border border-dashed border-muted text-muted rounded text-sm hover:text-primary hover:border-primary transition-colors flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px]">add</span> Add Synonym
+                    <h2 className="text-5xl font-display italic tracking-display text-on-surface">
+                      {selectedTag.tag_value}
+                    </h2>
+                    <p className="text-lg font-display text-muted italic">
+                      Namespace: {selectedTag.tag_namespace}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <button className="bg-on-surface text-background px-8 py-3 text-xs uppercase font-bold tracking-[0.15em] hover:opacity-90 transition-all">
+                      Merge Tag
+                    </button>
+                    <button className="border border-border-subtle px-8 py-3 text-xs uppercase font-bold tracking-[0.15em] hover:bg-surface transition-all">
+                      Archive Entry
+                    </button>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-8 mb-20">
+                  <div className="bg-surface-low p-8">
+                    <span className="text-[10px] uppercase font-bold tracking-[0.15em] text-muted mb-4 block">Total Usage</span>
+                    <span className="text-4xl font-display text-on-surface">{selectedTag.count.toLocaleString()}</span>
+                    <div className="mt-4 h-1 w-full bg-surface">
+                      <div className="h-full bg-on-surface" style={{ width: '65%' }} />
+                    </div>
+                  </div>
+                  <div className="bg-surface-low p-8">
+                    <span className="text-[10px] uppercase font-bold tracking-[0.15em] text-muted mb-4 block">Family</span>
+                    <span className="text-2xl font-display text-on-surface">{activeF?.name ?? '—'}</span>
+                  </div>
+                  <div className="bg-surface-low p-8">
+                    <span className="text-[10px] uppercase font-bold tracking-[0.15em] text-muted mb-4 block">Namespace</span>
+                    <span className="text-2xl font-display text-on-surface">{selectedTag.tag_namespace}</span>
+                  </div>
+                </div>
+
+                {/* Synonyms */}
+                <div className="space-y-8 mb-20">
+                  <div className="flex justify-between items-baseline border-b border-border-subtle/20 pb-4">
+                    <h3 className="text-2xl font-display tracking-display">Synonym Registry</h3>
+                    <button className="text-[10px] uppercase font-bold text-accent hover:underline">Add New Reference</button>
+                  </div>
+                  <p className="text-sm text-muted">No synonyms defined. Add synonyms to auto-map during search.</p>
+                </div>
+
+                {/* Danger Zone */}
+                <div className="border-t border-border-subtle pt-8">
+                  <h3 className="text-ui text-[13px] text-accent mb-4">Danger Zone</h3>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted max-w-[400px]">
+                      Permanently remove this tag from the taxonomy. This will strip the tag from {selectedTag.count} assets.
+                    </p>
+                    <button className="border border-accent text-accent px-4 py-2 rounded text-ui text-[13px] hover:bg-accent hover:text-white transition-colors">
+                      Delete Tag
                     </button>
                   </div>
                 </div>
               </div>
-
-              {/* Merge */}
-              <div className="flex flex-col gap-4 bg-surface p-6 rounded border border-border-subtle">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="material-symbols-outlined text-primary text-[20px]">call_merge</span>
-                  <h3 className="text-ui text-[13px] text-primary">Merge Tag</h3>
-                </div>
-                <p className="text-sm text-muted">
-                  Reassign all assets currently tagged with <strong className="text-primary font-medium">{selected.name}</strong> to a parent tag. This tag will be removed.
-                </p>
-                <div className="flex items-end gap-4">
-                  <div className="flex-1 flex flex-col gap-1.5">
-                    <label className="text-meta text-muted">Target Parent Tag</label>
-                    <div className="relative">
-                      <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted text-[18px]">search</span>
-                      <input
-                        className="w-full bg-background border border-border-subtle rounded pl-9 pr-3 py-2 text-sm focus:border-primary focus:ring-0 transition-colors"
-                        placeholder="Select target tag..."
-                        type="text"
-                      />
-                    </div>
-                  </div>
-                  <button className="bg-primary text-background px-6 py-2 rounded text-ui text-[13px] hover:bg-primary/90 transition-colors h-[38px] disabled:opacity-50" disabled>
-                    Merge
-                  </button>
-                </div>
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted">
+                <p className="text-sm">Select a tag to view details</p>
               </div>
-
-              {/* Danger Zone */}
-              <div className="flex flex-col gap-4 mt-8 pt-8 border-t border-border-subtle">
-                <h3 className="text-ui text-[13px] text-accent">Danger Zone</h3>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted max-w-[400px]">
-                    Permanently remove this tag from the taxonomy. This will strip the tag from {selected.count} assets.
-                  </p>
-                  <button className="border border-accent text-accent px-4 py-2 rounded text-ui text-[13px] hover:bg-accent hover:text-white transition-colors">
-                    Delete Tag
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-muted">
-              Select a tag to view details
-            </div>
-          )}
-        </section>
-      </div>
+            )}
+          </section>
+        </div>
+      </main>
     </div>
   )
 }
