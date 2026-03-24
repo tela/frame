@@ -42,12 +42,20 @@ func (a *API) handleIngest(w http.ResponseWriter, r *http.Request, charID string
 		source = image.SourceManual
 	}
 
+	// Resolve character folder name
+	var charSlug string
+	char, lookupErr := a.Characters.Get(charID)
+	if lookupErr == nil && char != nil {
+		charSlug = char.FolderName
+	}
+
 	req := &image.IngestRequest{
-		Filename:    header.Filename,
-		Data:        data,
-		Source:      source,
-		CharacterID: charID,
-		EraID:       eraID,
+		Filename:      header.Filename,
+		Data:          data,
+		Source:        source,
+		CharacterID:   charID,
+		CharacterSlug: charSlug,
+		EraID:         eraID,
 	}
 
 	result, err := a.Ingester.Ingest(req)
@@ -90,11 +98,18 @@ func (a *API) serveImageFile(w http.ResponseWriter, r *http.Request, imageID str
 		return
 	}
 
+	// Resolve character folder name for disk path
+	folderName := ci.CharacterID
+	char, err := a.Characters.Get(ci.CharacterID)
+	if err == nil && char != nil && char.FolderName != "" {
+		folderName = char.FolderName
+	}
+
 	var filePath string
 	if thumb {
-		filePath = a.Ingester.ThumbnailPath(imageID, ci.CharacterID, ci.EraID)
+		filePath = a.Ingester.ThumbnailPath(imageID, folderName, ci.EraID)
 	} else {
-		filePath = a.Ingester.OriginalPath(imageID, ci.CharacterID, ci.EraID, img.Format)
+		filePath = a.Ingester.OriginalPath(imageID, folderName, ci.EraID, img.Format)
 	}
 
 	http.ServeFile(w, r, filePath)
@@ -114,6 +129,11 @@ func (a *API) getCharacterAvatar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	first := images[0]
-	thumbPath := a.Ingester.ThumbnailPath(first.ImageID, charID, first.EraID)
+	folderName := charID
+	char, err := a.Characters.Get(charID)
+	if err == nil && char != nil && char.FolderName != "" {
+		folderName = char.FolderName
+	}
+	thumbPath := a.Ingester.ThumbnailPath(first.ImageID, folderName, first.EraID)
 	http.ServeFile(w, r, thumbPath)
 }

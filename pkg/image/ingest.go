@@ -33,6 +33,12 @@ func NewIngester(store *Store, rootPath string) *Ingester {
 // Ingest processes an incoming image: hashes, deduplicates, writes to disk,
 // generates a thumbnail, and creates database records.
 func (ing *Ingester) Ingest(req *IngestRequest) (*IngestResult, error) {
+	// Resolve folder name
+	folderName := req.CharacterSlug
+	if folderName == "" {
+		folderName = req.CharacterID
+	}
+
 	// Hash for dedup
 	hash := sha256sum(req.Data)
 
@@ -74,7 +80,7 @@ func (ing *Ingester) Ingest(req *IngestRequest) (*IngestResult, error) {
 	now := time.Now().UTC()
 
 	// Write original to disk
-	origDir := ing.imagePath(req.CharacterID, req.EraID, "original")
+	origDir := ing.imagePath(folderName, req.EraID, "original")
 	if err := os.MkdirAll(origDir, 0755); err != nil {
 		return nil, fmt.Errorf("create original dir: %w", err)
 	}
@@ -84,7 +90,7 @@ func (ing *Ingester) Ingest(req *IngestRequest) (*IngestResult, error) {
 	}
 
 	// Generate thumbnail
-	thumbDir := ing.imagePath(req.CharacterID, req.EraID, "thumb")
+	thumbDir := ing.imagePath(folderName, req.EraID, "thumb")
 	if err := os.MkdirAll(thumbDir, 0755); err != nil {
 		return nil, fmt.Errorf("create thumb dir: %w", err)
 	}
