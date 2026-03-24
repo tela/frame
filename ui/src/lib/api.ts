@@ -199,6 +199,72 @@ export function useReferencePackage(characterId: string, eraId: string) {
   })
 }
 
+// ===== Generation (Bifrost) =====
+
+export interface GenerateRequest {
+  character_id: string
+  era_id?: string
+  prompt: string
+  negative_prompt?: string
+  style_prompt?: string
+  width?: number
+  height?: number
+  steps?: number
+  batch_size?: number
+  seed?: number
+  lora_adapter?: string
+  lora_strength?: number
+  content_rating?: string
+  provider_name?: string
+  include_refs?: boolean
+  ref_image_ids?: string[]
+}
+
+export interface GenerateImageResult {
+  image_id: string
+  width: number
+  height: number
+  format: string
+}
+
+export interface GenerateResponse {
+  job_id: string
+  images: GenerateImageResult[]
+}
+
+export interface BifrostStatus {
+  available: boolean
+  reason?: string
+  providers?: Array<{
+    name: string
+    tiers: string[]
+    modalities: string[]
+    tasks: string[]
+    nsfw_safe: boolean
+    state: string
+    healthy: boolean
+  }>
+}
+
+export function useGenerate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (req: GenerateRequest) =>
+      postJSON<GenerateResponse>('/api/v1/generate', req),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['characters', vars.character_id] })
+    },
+  })
+}
+
+export function useBifrostStatus() {
+  return useQuery({
+    queryKey: ['bifrost', 'status'],
+    queryFn: () => fetchJSON<BifrostStatus>('/api/v1/bifrost/status'),
+    refetchInterval: 30_000, // poll every 30s
+  })
+}
+
 // ===== Image URLs =====
 
 export function imageUrl(imageId: string) {
