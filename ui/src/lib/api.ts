@@ -141,6 +141,39 @@ export function useCharacterImages(characterId: string, eraId?: string) {
   })
 }
 
+export function useUpdateCharacterImage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ characterId, imageId, ...update }: {
+      characterId: string
+      imageId: string
+      set_type?: string
+      triage_status?: string
+      rating?: number
+      is_face_ref?: boolean
+      is_body_ref?: boolean
+      ref_score?: number
+      ref_rank?: number
+      era_id?: string
+    }) => patchJSON<CharacterImage>(`/api/v1/characters/${characterId}/images/${imageId}`, update),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'images'] })
+      qc.invalidateQueries({ queryKey: ['characters', vars.characterId] })
+    },
+  })
+}
+
+export function usePendingImages(characterId: string, eraId?: string) {
+  return useQuery({
+    queryKey: ['characters', characterId, 'images', 'pending', eraId],
+    queryFn: () => {
+      const params = eraId ? `?era_id=${eraId}` : ''
+      return fetchJSON<CharacterImage[]>(`/api/v1/characters/${characterId}/images/pending${params}`)
+    },
+    enabled: !!characterId,
+  })
+}
+
 export function useIngestImage() {
   const qc = useQueryClient()
   return useMutation({
