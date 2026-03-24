@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/tela/frame/pkg/bifrost"
 	"github.com/tela/frame/pkg/character"
 	"github.com/tela/frame/pkg/image"
 	"github.com/tela/frame/pkg/media"
@@ -16,7 +17,9 @@ type API struct {
 	Images     *image.Store
 	Ingester   *image.Ingester
 	Media      *media.Store
-	RootPath   string // drive root for file serving
+	Bifrost    *bifrost.Client // nil if Bifrost not configured
+	RootPath   string          // drive root for file serving
+	Port       int             // server port (for self-referencing URLs in generation requests)
 }
 
 // Register mounts all API routes on the given mux.
@@ -50,6 +53,10 @@ func (a *API) Register(mux *http.ServeMux) {
 
 	// Reference packages
 	mux.HandleFunc("GET /api/v1/characters/{id}/eras/{era}/reference-package", a.getReferencePackage)
+
+	// Generation (Bifrost)
+	mux.HandleFunc("POST /api/v1/generate", a.handleGenerate)
+	mux.HandleFunc("GET /api/v1/bifrost/status", a.handleBifrostStatus)
 }
 
 // JSON response helpers
