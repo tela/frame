@@ -50,6 +50,9 @@ func (a *API) Register(mux *http.ServeMux) {
 	// Post-cast era ingest
 	mux.HandleFunc("POST /api/v1/characters/{id}/eras/{era}/ingest", a.ingestEraImage)
 
+	// Image search
+	mux.HandleFunc("GET /api/v1/images/search", a.searchImages)
+
 	// Image serving
 	mux.HandleFunc("GET /api/v1/images/{id}", a.getImage)
 	mux.HandleFunc("GET /api/v1/images/{id}/thumb", a.getImageThumb)
