@@ -1,9 +1,12 @@
-import { useState } from 'react'
-import { useCharacters, useImportDirectory } from '@/lib/api'
+import { useRef, useState } from 'react'
+import { useCharacters, useImportDirectory, useIngestImage } from '@/lib/api'
 
 export function ImportScreen() {
   const { data: characters } = useCharacters()
   const importDirectory = useImportDirectory()
+  const ingestImage = useIngestImage()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
   const [directoryPath, setDirectoryPath] = useState('')
   const [characterId, setCharacterId] = useState('')
   const [sourceOrigin, setSourceOrigin] = useState<'comfyui' | 'fig' | 'manual'>('manual')
@@ -45,14 +48,38 @@ export function ImportScreen() {
               <span className="material-symbols-outlined text-[48px] text-muted group-hover:text-on-surface transition-colors">cloud_upload</span>
               <p className="text-sm text-muted">Drag and drop directories or files here</p>
               <p className="text-xs text-muted">Supports PNG, WEBP, and TIFF up to 50MB</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".png,.jpg,.jpeg,.webp,.tiff,.tif"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files) {
+                    setUploadedFiles(Array.from(e.target.files))
+                  }
+                }}
+              />
               <div className="flex gap-3 mt-2">
-                <button className="border border-on-surface text-on-surface px-4 py-2 text-[11px] uppercase font-bold tracking-[0.1em] hover:bg-on-surface hover:text-background transition-colors">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border border-on-surface text-on-surface px-4 py-2 text-[11px] uppercase font-bold tracking-[0.1em] hover:bg-on-surface hover:text-background transition-colors"
+                >
                   Browse Files
                 </button>
-                <button className="border border-on-surface text-on-surface px-4 py-2 text-[11px] uppercase font-bold tracking-[0.1em] hover:bg-on-surface hover:text-background transition-colors">
+                <button
+                  onClick={() => {
+                    const path = prompt('Enter directory path:')
+                    if (path) setDirectoryPath(path)
+                  }}
+                  className="border border-on-surface text-on-surface px-4 py-2 text-[11px] uppercase font-bold tracking-[0.1em] hover:bg-on-surface hover:text-background transition-colors"
+                >
                   Link Directory
                 </button>
               </div>
+              {uploadedFiles.length > 0 && (
+                <p className="text-sm text-on-surface mt-3">{uploadedFiles.length} file(s) selected</p>
+              )}
             </div>
 
             {/* Directory path */}
@@ -159,22 +186,53 @@ export function ImportScreen() {
             </div>
 
             <button
-              disabled={importDirectory.isPending || !directoryPath.trim()}
+              disabled={(importDirectory.isPending || ingestImage.isPending) || (!directoryPath.trim() && uploadedFiles.length === 0)}
               onClick={() => {
-                const tagStrings = tags.map((t) => `misc:${t}`)
-                importDirectory.mutate(
-                  {
-                    path: directoryPath,
-                    character_id: characterId || undefined,
-                    source: sourceOrigin,
-                    tags: tagStrings.length > 0 ? tagStrings : undefined,
-                  },
-                  { onSuccess: (data) => setImportResult(data) }
-                )
+                if (uploadedFiles.length > 0) {
+                  // File upload mode
+                  let completed = 0
+                  const total = uploadedFiles.length
+                  for (const file of uploadedFiles) {
+                    ingestImage.mutate(
+                      {
+                        characterId: characterId || 'standalone',
+                        file,
+                        source: sourceOrigin,
+                      },
+                      {
+                        onSuccess: () => {
+                          completed++
+                          if (completed === total) {
+                            setImportResult({ imported: completed, skipped: 0, failed: 0, total })
+                            setUploadedFiles([])
+                          }
+                        },
+                        onError: () => {
+                          completed++
+                          if (completed === total) {
+                            setImportResult({ imported: completed - 1, skipped: 0, failed: 1, total })
+                          }
+                        },
+                      }
+                    )
+                  }
+                } else if (directoryPath.trim()) {
+                  // Directory mode
+                  const tagStrings = tags.map((t) => `misc:${t}`)
+                  importDirectory.mutate(
+                    {
+                      path: directoryPath,
+                      character_id: characterId || undefined,
+                      source: sourceOrigin,
+                      tags: tagStrings.length > 0 ? tagStrings : undefined,
+                    },
+                    { onSuccess: (data) => setImportResult(data) }
+                  )
+                }
               }}
               className="w-full bg-accent text-white py-3 text-[11px] uppercase font-bold tracking-[0.15em] hover:opacity-90 transition-all disabled:opacity-50"
             >
-              {importDirectory.isPending ? 'Importing...' : 'Execute Import'}
+              {(importDirectory.isPending || ingestImage.isPending) ? 'Importing...' : 'Execute Import'}
             </button>
           </div>
 
