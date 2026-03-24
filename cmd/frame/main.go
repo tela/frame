@@ -6,6 +6,7 @@ import (
 
 	"github.com/tela/frame/internal/frontend"
 	"github.com/tela/frame/pkg/api"
+	"github.com/tela/frame/pkg/bifrost"
 	"github.com/tela/frame/pkg/character"
 	"github.com/tela/frame/pkg/config"
 	"github.com/tela/frame/pkg/database"
@@ -35,6 +36,17 @@ func main() {
 	mediaStore := media.NewStore(db.DB)
 	ingester := image.NewIngester(imgStore, cfg.Root)
 
+	// Bifrost client (optional — generation features disabled without it)
+	var bifrostClient *bifrost.Client
+	if cfg.BifrostURL != "" {
+		bifrostClient = bifrost.NewClient(cfg.BifrostURL)
+		if bifrostClient.Available() {
+			log.Printf("bifrost connected at %s", cfg.BifrostURL)
+		} else {
+			log.Printf("bifrost configured at %s but not reachable (generation disabled until available)", cfg.BifrostURL)
+		}
+	}
+
 	// HTTP server
 	srv := server.New(db, version)
 
@@ -44,7 +56,9 @@ func main() {
 		Images:     imgStore,
 		Ingester:   ingester,
 		Media:      mediaStore,
+		Bifrost:    bifrostClient,
 		RootPath:   cfg.Root,
+		Port:       cfg.Port,
 	}
 	a.Register(srv.Mux())
 
