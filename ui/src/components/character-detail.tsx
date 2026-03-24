@@ -1,10 +1,12 @@
 import { Link, useParams } from '@tanstack/react-router'
-import { useCharacter, avatarUrl } from '@/lib/api'
+import { useCharacter, useDatasets, avatarUrl } from '@/lib/api'
 import type { EraWithStats } from '@/lib/types'
 
 export function CharacterDetail() {
   const { characterId } = useParams({ from: '/characters/$characterId' })
   const { data: character, isLoading } = useCharacter(characterId)
+  const { data: allDatasets } = useDatasets()
+  const characterDatasets = (allDatasets ?? []).filter((d) => d.character_id === characterId)
 
   if (isLoading) {
     return <div className="p-12 text-muted text-[15px]">Loading...</div>
@@ -89,6 +91,38 @@ export function CharacterDetail() {
               </button>
             </div>
           </>
+        )}
+
+        {/* Datasets Section */}
+        {character.status === 'cast' && characterDatasets.length > 0 && (
+          <div className="mb-12">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-[24px] font-display font-normal tracking-display text-primary">Datasets</h2>
+              <Link to="/datasets" className="text-ui text-[13px] text-muted hover:text-primary transition-colors">
+                View All
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {characterDatasets.map((ds) => (
+                <Link
+                  key={ds.id}
+                  to="/datasets/$datasetId"
+                  params={{ datasetId: ds.id }}
+                  className="group border border-border-subtle hover:border-primary p-4 transition-colors"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="px-2 py-0.5 text-[9px] uppercase font-bold tracking-widest bg-on-surface text-background">
+                      {ds.type}
+                    </span>
+                    <span className="text-meta text-muted">{ds.image_count} images</span>
+                  </div>
+                  <h3 className="text-sm font-medium text-primary group-hover:text-accent transition-colors">
+                    {ds.name}
+                  </h3>
+                </Link>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Pre-cast state */}
