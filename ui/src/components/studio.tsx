@@ -1,6 +1,7 @@
 import { useParams } from '@tanstack/react-router'
-import { useCharacter } from '@/lib/api'
+import { useCharacter, useGenerate, useBifrostStatus, thumbUrl } from '@/lib/api'
 import { useState } from 'react'
+import { ImagePickerModal } from '@/components/image-picker-modal'
 
 interface GeneratedImage {
   id: string
@@ -14,17 +15,24 @@ interface GeneratedImage {
 export function Studio() {
   const { characterId, eraId } = useParams({ from: '/characters/$characterId/eras/$eraId/studio' })
   const { data: character } = useCharacter(characterId)
+  const { data: bifrostStatus } = useBifrostStatus()
+  const generate = useGenerate()
 
   const [prompt, setPrompt] = useState('')
   const [template, setTemplate] = useState('Cinematic Close-up (35mm)')
   const [showParams, setShowParams] = useState(false)
   const [sessionImages, setSessionImages] = useState<GeneratedImage[]>([])
+  const [showRefPicker, setShowRefPicker] = useState(false)
+  const [selectedRefs, setSelectedRefs] = useState<string[]>([])
+  const [includeEraRefs, setIncludeEraRefs] = useState(true)
 
   const era = character?.eras.find((e) => e.id === eraId)
   const charCount = prompt.length
+  const bifrostAvailable = bifrostStatus?.available ?? false
 
   const handleGenerate = () => {
-    // TODO: Send generation request to Bifrost via Frame API
+    if (!prompt.trim()) return
+
     const placeholder: GeneratedImage = {
       id: crypto.randomUUID(),
       url: '',
@@ -34,6 +42,31 @@ export function Studio() {
       status: 'generating',
     }
     setSessionImages((prev) => [placeholder, ...prev])
+
+    generate.mutate(
+      {
+        character_id: characterId,
+        era_id: eraId,
+        prompt: prompt,
+        include_refs: includeEraRefs,
+        ref_image_ids: selectedRefs.length > 0 ? selectedRefs : undefined,
+        batch_size: 1,
+      },
+      {
+        onSuccess: (data) => {
+          setSessionImages((prev) =>
+            prev.map((img) =>
+              img.id === placeholder.id && data.images.length > 0
+                ? { ...img, id: data.images[0].image_id, url: thumbUrl(data.images[0].image_id), status: 'complete' as const }
+                : img
+            )
+          )
+        },
+        onError: () => {
+          setSessionImages((prev) => prev.filter((img) => img.id !== placeholder.id))
+        },
+      }
+    )
   }
 
   const insertVariable = (v: string) => {
@@ -49,6 +82,12 @@ export function Studio() {
           <p className="text-muted text-sm mt-1">
             {character?.display_name || character?.name}{era ? ` — ${era.label}` : ''}
           </p>
+          {!bifrostAvailable && (
+            <p className="text-accent text-xs mt-2 flex items-center gap-1">
+              <span className="material-symbols-outlined text-[14px]">warning</span>
+              Bifrost unavailable — generation disabled
+            </p>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-8">
@@ -74,6 +113,50 @@ export function Studio() {
             </div>
           </div>
 
+          {/* Reference Images */}
+          <div className="flex flex-col gap-2">
+            <label className="text-[13px] uppercase tracking-ui font-medium text-muted">
+              Reference Images
+            </label>
+
+            {/* Era refs toggle */}
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeEraRefs}
+                onChange={(e) => setIncludeEraRefs(e.target.checked)}
+                className="rounded border-border-subtle text-primary focus:ring-primary"
+              />
+              <span className="text-muted">Include era reference package</span>
+            </label>
+
+            {/* Selected custom refs */}
+            {selectedRefs.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {selectedRefs.map((refId) => (
+                  <div key={refId} className="relative w-10 h-10 border border-border-subtle overflow-hidden group">
+                    <img src={thumbUrl(refId)} alt="" className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => setSelectedRefs((prev) => prev.filter((id) => id !== refId))}
+                      className="absolute inset-0 bg-on-surface/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                    >
+                      <span className="material-symbols-outlined text-white text-[14px]">close</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Pick refs button */}
+            <button
+              onClick={() => setShowRefPicker(true)}
+              className="mt-1 border border-dashed border-border-subtle text-muted text-[12px] py-2 px-3 hover:border-primary hover:text-primary transition-colors flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-[16px]">add_photo_alternate</span>
+              {selectedRefs.length > 0 ? `${selectedRefs.length} custom refs · Change` : 'Select custom references'}
+            </button>
+          </div>
+
           {/* Prompt Textarea */}
           <div className="flex flex-col gap-2 flex-1">
             <label className="text-[13px] uppercase tracking-ui font-medium text-muted flex justify-between">
@@ -83,10 +166,9 @@ export function Studio() {
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              className="w-full h-[240px] resize-none bg-surface border border-border-subtle rounded-sm p-4 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
+              className="w-full h-[200px] resize-none bg-surface border border-border-subtle rounded-sm p-4 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
               placeholder="Describe the subject, environment, lighting, and camera details..."
             />
-            {/* Variable Pills */}
             <div className="flex flex-wrap gap-2 mt-2">
               {['SUBJECT', 'ERA', 'LIGHTING'].map((v) => (
                 <span
@@ -113,7 +195,7 @@ export function Studio() {
               <div className="mt-4 flex flex-col gap-4 text-sm">
                 <div className="flex justify-between items-center">
                   <span className="text-muted">Batch Size</span>
-                  <span className="text-primary tabular-nums">4</span>
+                  <span className="text-primary tabular-nums">1</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted">Steps</span>
@@ -136,20 +218,23 @@ export function Studio() {
         <div className="p-8 border-t border-border-subtle bg-surface/50">
           <button
             onClick={handleGenerate}
-            className="w-full bg-accent text-white py-4 rounded-sm font-medium tracking-ui hover:bg-accent/90 transition-colors flex items-center justify-center gap-2"
+            disabled={!bifrostAvailable || !prompt.trim() || generate.isPending}
+            className="w-full bg-accent text-white py-4 rounded-sm font-medium tracking-ui hover:bg-accent/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-            Generate Batch (4)
+            {generate.isPending ? 'Generating...' : 'Generate'}
           </button>
           <p className="text-center text-[11px] text-muted mt-3">
-            Press <kbd className="font-body bg-surface px-1 rounded text-[10px]">Cmd</kbd> + <kbd className="font-body bg-surface px-1 rounded text-[10px]">Enter</kbd> to generate
+            {bifrostAvailable
+              ? <>Press <kbd className="font-body bg-surface px-1 rounded text-[10px]">Cmd</kbd> + <kbd className="font-body bg-surface px-1 rounded text-[10px]">Enter</kbd> to generate</>
+              : 'Waiting for Bifrost connection...'
+            }
           </p>
         </div>
       </aside>
 
       {/* Preview & History Area (Right) */}
       <section className="flex-1 flex flex-col bg-surface overflow-hidden relative">
-        {/* Top Utility Bar */}
         <div className="h-[73px] border-b border-border-subtle bg-background flex items-center justify-between px-8 flex-shrink-0">
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium">Session History</span>
@@ -158,9 +243,6 @@ export function Studio() {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <button className="p-2 text-muted hover:text-primary border border-transparent hover:border-border-subtle rounded-sm transition-all" title="Toggle Layout">
-              <span className="material-symbols-outlined text-[20px]">splitscreen</span>
-            </button>
             <button
               onClick={() => setSessionImages([])}
               className="text-[13px] uppercase tracking-ui font-medium border border-border-subtle px-4 py-2 rounded-sm hover:bg-surface transition-colors"
@@ -170,7 +252,6 @@ export function Studio() {
           </div>
         </div>
 
-        {/* Grid */}
         <div className="flex-1 overflow-y-auto p-8">
           {sessionImages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-muted gap-4">
@@ -222,7 +303,16 @@ export function Studio() {
         </div>
       </section>
 
-      {/* Progress animation keyframes */}
+      {/* Reference Image Picker Modal */}
+      <ImagePickerModal
+        open={showRefPicker}
+        onClose={() => setShowRefPicker(false)}
+        onConfirm={setSelectedRefs}
+        characterId={characterId}
+        eraId={eraId}
+        initialSelected={selectedRefs}
+      />
+
       <style>{`
         @keyframes progress {
           0% { transform: translateX(-100%); }
