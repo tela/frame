@@ -91,6 +91,34 @@ export interface ImageTag {
   created_at: string
 }
 
+// Tag Taxonomy
+export interface TagNamespace {
+  id: string
+  family_id: string
+  name: string
+  description: string
+  sort_order: number
+  created_at: string
+}
+
+export interface TagAllowedValue {
+  id: string
+  namespace_id: string
+  value: string
+  description: string
+  sort_order: number
+  created_at: string
+}
+
+export interface NamespaceWithValues extends TagNamespace {
+  values: TagAllowedValue[]
+}
+
+export interface FamilyTaxonomy {
+  family: TagFamily
+  namespaces: NamespaceWithValues[]
+}
+
 // Media
 export type MediaContentType = 'wardrobe' | 'prop' | 'location'
 
@@ -107,6 +135,74 @@ export interface MediaItemImage {
   media_item_id: string
   image_id: string
   sort_order: number
+  created_at: string
+}
+
+// Tag Families
+export interface TagFamily {
+  id: string
+  name: string
+  description: string
+  color: string
+  sort_order: number
+  created_at: string
+}
+
+export interface TagSummary {
+  family_id: string | null
+  tag_namespace: string
+  tag_value: string
+  count: number
+}
+
+// Datasets
+export type DatasetType = 'lora' | 'ipadapter' | 'reference' | 'style' | 'general'
+
+export interface Dataset {
+  id: string
+  name: string
+  description: string
+  type: DatasetType
+  character_id: string | null
+  era_id: string | null
+  source_query: string
+  export_config: string
+  created_at: string
+  updated_at: string
+}
+
+export interface DatasetWithStats extends Dataset {
+  image_count: number
+  included_count: number
+}
+
+export interface DatasetImage {
+  dataset_id: string
+  image_id: string
+  sort_order: number
+  caption: string | null
+  included: boolean
+  created_at: string
+}
+
+// Derivatives
+export interface DerivativeOperation {
+  type: string
+  params: Record<string, unknown>
+  timestamp: string
+}
+
+export interface Derivative {
+  id: string
+  source_image_id: string
+  operations: DerivativeOperation[]
+  created_at: string
+}
+
+export interface PreprocessPreset {
+  id: string
+  name: string
+  operations: DerivativeOperation[]
   created_at: string
 }
 

@@ -42,10 +42,12 @@ The user, when:
 ### Selection and Bulk Actions
 
 - Multi-select images from results
-- **Add to training set** — assign selected images to a LoRA training dataset
+- **Add to dataset** — add selected images to an existing dataset, or create a new dataset from selection
+- **Save as dataset** — create a new dataset from the current selection, with the active filter saved as `source_query`
 - **Add to reference set** — promote to reference images for an era
-- **Bulk tag** — apply tags to all selected
+- **Bulk tag** — apply tags to all selected (with family-aware tag picker)
 - **Bulk rate** — set rating for all selected
+- **Send to preprocessor** — open selected images in batch preprocessing mode
 - **Export** — export selected images for external use (copy to a directory with chosen format/naming)
 
 ### Image Preview
@@ -68,9 +70,23 @@ The user, when:
 - Pagination for large result sets
 - Saved search persistence (stored in SQLite)
 
+## Enhancements for Tag Families
+
+- Filter sidebar organizes tags by family — collapsible sections per family
+- "Show/hide family" toggles control which tag families are visible in filters
+- NSFW family tags only visible when explicitly toggled on
+- Tag pills in results show family color accent for visual grouping
+
+## Enhancements for Standalone Images
+
+- "No character" filter option — find images not assigned to any character
+- "Has derivatives" filter — find images that have been preprocessed
+- "In dataset" filter — find images already in a specific dataset (or any dataset)
+
 ## Notes
 
 - Performance matters — the collection could have thousands of images. Pagination and lazy-loading thumbnails are essential.
 - The filter builder should be composable and visible — the user needs to see exactly what filters are active and be able to toggle them.
 - This screen is closely related to Tag Manager — searching by tags here and managing tags there are two sides of the same concern.
 - LoRA training dataset assembly is the most important use case. The user needs to build a set of images with specific properties (consistent character, consistent quality, specific poses/angles for coverage). The selection-to-dataset flow should be streamlined.
+- The "Save as dataset" flow should be one click: create dataset with name prompt, save the current filter as source_query, add all selected images.

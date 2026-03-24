@@ -14,6 +14,10 @@ import { MediaLibrary } from '@/components/media-library'
 import { ImageSearch } from '@/components/image-search'
 import { PromptTemplates } from '@/components/prompt-templates'
 import { TagManager } from '@/components/tag-manager'
+import { DatasetManager } from '@/components/dataset-manager'
+import { DatasetDetail } from '@/components/dataset-detail'
+import { ImportScreen } from '@/components/import-screen'
+import { ImagePreprocessor } from '@/components/image-preprocessor'
 
 // Root
 const rootRoute = createRootRoute({
@@ -89,6 +93,33 @@ const tagsRoute = createRoute({
   component: TagManager,
 })
 
+// Datasets
+const datasetsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/datasets',
+  component: DatasetManager,
+})
+
+const datasetDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/datasets/$datasetId',
+  component: DatasetDetail,
+})
+
+// Import
+const importRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/import',
+  component: ImportScreen,
+})
+
+// Preprocessor
+const preprocessRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/preprocess/$imageId',
+  component: ImagePreprocessor,
+})
+
 // Route tree
 const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -101,6 +132,10 @@ const routeTree = rootRoute.addChildren([
   searchRoute,
   templatesRoute,
   tagsRoute,
+  datasetsRoute,
+  datasetDetailRoute,
+  importRoute,
+  preprocessRoute,
 ])
 
 export const router = createRouter({ routeTree })

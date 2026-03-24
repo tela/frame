@@ -7,6 +7,26 @@ import (
 	"github.com/tela/frame/pkg/image"
 )
 
+func (a *API) listCharacterImages(w http.ResponseWriter, r *http.Request) {
+	charID := r.PathValue("id")
+	eraID := r.URL.Query().Get("era_id")
+
+	var eraPtr *string
+	if eraID != "" {
+		eraPtr = &eraID
+	}
+
+	images, err := a.Images.ListByCharacter(charID, eraPtr)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if images == nil {
+		images = []image.CharacterImage{}
+	}
+	writeJSON(w, http.StatusOK, images)
+}
+
 func (a *API) ingestCharacterImage(w http.ResponseWriter, r *http.Request) {
 	charID := r.PathValue("id")
 	a.handleIngest(w, r, charID, nil)
@@ -42,12 +62,20 @@ func (a *API) handleIngest(w http.ResponseWriter, r *http.Request, charID string
 		source = image.SourceManual
 	}
 
+	// Resolve character folder name
+	var charSlug string
+	char, lookupErr := a.Characters.Get(charID)
+	if lookupErr == nil && char != nil {
+		charSlug = char.FolderName
+	}
+
 	req := &image.IngestRequest{
-		Filename:    header.Filename,
-		Data:        data,
-		Source:      source,
-		CharacterID: charID,
-		EraID:       eraID,
+		Filename:      header.Filename,
+		Data:          data,
+		Source:        source,
+		CharacterID:   charID,
+		CharacterSlug: charSlug,
+		EraID:         eraID,
 	}
 
 	result, err := a.Ingester.Ingest(req)
@@ -90,11 +118,18 @@ func (a *API) serveImageFile(w http.ResponseWriter, r *http.Request, imageID str
 		return
 	}
 
+	// Resolve character folder name for disk path
+	folderName := ci.CharacterID
+	char, err := a.Characters.Get(ci.CharacterID)
+	if err == nil && char != nil && char.FolderName != "" {
+		folderName = char.FolderName
+	}
+
 	var filePath string
 	if thumb {
-		filePath = a.Ingester.ThumbnailPath(imageID, ci.CharacterID, ci.EraID)
+		filePath = a.Ingester.ThumbnailPath(imageID, folderName, ci.EraID)
 	} else {
-		filePath = a.Ingester.OriginalPath(imageID, ci.CharacterID, ci.EraID, img.Format)
+		filePath = a.Ingester.OriginalPath(imageID, folderName, ci.EraID, img.Format)
 	}
 
 	http.ServeFile(w, r, filePath)
@@ -114,6 +149,11 @@ func (a *API) getCharacterAvatar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	first := images[0]
-	thumbPath := a.Ingester.ThumbnailPath(first.ImageID, charID, first.EraID)
+	folderName := charID
+	char, err := a.Characters.Get(charID)
+	if err == nil && char != nil && char.FolderName != "" {
+		folderName = char.FolderName
+	}
+	thumbPath := a.Ingester.ThumbnailPath(first.ImageID, folderName, first.EraID)
 	http.ServeFile(w, r, thumbPath)
 }

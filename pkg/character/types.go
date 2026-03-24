@@ -1,6 +1,12 @@
 package character
 
-import "time"
+import (
+	"regexp"
+	"strings"
+	"time"
+)
+
+var nonAlphaNum = regexp.MustCompile(`[^a-z0-9]+`)
 
 // Status represents the lifecycle stage of a character.
 type Status string
@@ -17,9 +23,30 @@ type Character struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
 	DisplayName string    `json:"display_name"`
+	FolderName  string    `json:"folder_name"`
 	Status      Status    `json:"status"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// Slug returns a filesystem-safe folder name for the character: {name}-{short-id}.
+// Example: "Esme Thornton" with ID "a7f3b2c1d9e04f6a" → "esme-thornton-a7f3b2c"
+func (c *Character) Slug() string {
+	name := c.DisplayName
+	if name == "" {
+		name = c.Name
+	}
+	slug := strings.ToLower(name)
+	slug = nonAlphaNum.ReplaceAllString(slug, "-")
+	slug = strings.Trim(slug, "-")
+	if slug == "" {
+		slug = "unnamed"
+	}
+	shortID := c.ID
+	if len(shortID) > 7 {
+		shortID = shortID[:7]
+	}
+	return slug + "-" + shortID
 }
 
 // Era represents a phase of a character's visual development.

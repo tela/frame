@@ -8,6 +8,14 @@ import type {
   MediaContentType,
   IngestResult,
   ReferencePackage,
+  TagFamily,
+  TagSummary,
+  FamilyTaxonomy,
+  TagNamespace,
+  TagAllowedValue,
+  Dataset,
+  DatasetWithStats,
+  DatasetImage,
 } from './types'
 import { SEED_CHARACTERS, SEED_CHARACTER_DETAILS, SEED_MEDIA } from './seed-data'
 
@@ -196,6 +204,221 @@ export function useReferencePackage(characterId: string, eraId: string) {
     queryKey: ['characters', characterId, 'eras', eraId, 'reference-package'],
     queryFn: () => fetchJSON<ReferencePackage>(`/api/v1/characters/${characterId}/eras/${eraId}/reference-package`),
     enabled: !!characterId && !!eraId,
+  })
+}
+
+// ===== Generation (Bifrost) =====
+
+export interface GenerateRequest {
+  character_id: string
+  era_id?: string
+  prompt: string
+  negative_prompt?: string
+  style_prompt?: string
+  width?: number
+  height?: number
+  steps?: number
+  batch_size?: number
+  seed?: number
+  lora_adapter?: string
+  lora_strength?: number
+  content_rating?: string
+  provider_name?: string
+  include_refs?: boolean
+  ref_image_ids?: string[]
+}
+
+export interface GenerateImageResult {
+  image_id: string
+  width: number
+  height: number
+  format: string
+}
+
+export interface GenerateResponse {
+  job_id: string
+  images: GenerateImageResult[]
+}
+
+export interface BifrostStatus {
+  available: boolean
+  reason?: string
+  providers?: Array<{
+    name: string
+    tiers: string[]
+    modalities: string[]
+    tasks: string[]
+    nsfw_safe: boolean
+    state: string
+    healthy: boolean
+  }>
+}
+
+export function useGenerate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (req: GenerateRequest) =>
+      postJSON<GenerateResponse>('/api/v1/generate', req),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['characters', vars.character_id] })
+    },
+  })
+}
+
+export function useBifrostStatus() {
+  return useQuery({
+    queryKey: ['bifrost', 'status'],
+    queryFn: () => fetchJSON<BifrostStatus>('/api/v1/bifrost/status'),
+    refetchInterval: 30_000, // poll every 30s
+  })
+}
+
+// ===== Tag Families =====
+
+export function useTagFamilies() {
+  return useQuery({
+    queryKey: ['tag-families'],
+    queryFn: () => fetchJSON<TagFamily[]>('/api/v1/tag-families'),
+  })
+}
+
+export function useTags(familyId?: string) {
+  return useQuery({
+    queryKey: ['tags', familyId],
+    queryFn: () => {
+      const params = familyId ? `?family=${familyId}` : ''
+      return fetchJSON<TagSummary[]>(`/api/v1/tags${params}`)
+    },
+  })
+}
+
+export function useFamilyTaxonomy(familyId: string) {
+  return useQuery({
+    queryKey: ['tag-families', familyId, 'taxonomy'],
+    queryFn: () => fetchJSON<FamilyTaxonomy>(`/api/v1/tag-families/${familyId}/taxonomy`),
+    enabled: !!familyId,
+  })
+}
+
+export function useCreateNamespace() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ familyId, name, description }: { familyId: string; name: string; description?: string }) =>
+      postJSON<TagNamespace>(`/api/v1/tag-families/${familyId}/namespaces`, { name, description }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['tag-families', vars.familyId, 'taxonomy'] })
+    },
+  })
+}
+
+export function useCreateAllowedValue() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ namespaceId, value, description }: { namespaceId: string; value: string; description?: string }) =>
+      postJSON<TagAllowedValue>(`/api/v1/namespaces/${namespaceId}/values`, { value, description }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tag-families'] })
+    },
+  })
+}
+
+export function useCreateTagFamily() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { name: string; description?: string; color?: string }) =>
+      postJSON<TagFamily>('/api/v1/tag-families', body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tag-families'] }) },
+  })
+}
+
+export function useBulkTag() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { image_ids: string[]; tag_namespace: string; tag_value: string; family_id?: string; action: 'add' | 'remove' }) =>
+      postJSON<{ affected: number }>('/api/v1/images/bulk-tag', body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tags'] }) },
+  })
+}
+
+export function useRenameTag() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { namespace: string; old_value: string; new_value: string }) =>
+      postJSON<{ affected: number }>('/api/v1/tags/rename', body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tags'] }) },
+  })
+}
+
+export function useMergeTag() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { namespace: string; from_value: string; to_value: string }) =>
+      postJSON<{ affected: number }>('/api/v1/tags/merge', body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tags'] }) },
+  })
+}
+
+export function useDeleteTag() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { namespace: string; value: string }) =>
+      postJSON<{ affected: number }>('/api/v1/tags/delete', body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tags'] }) },
+  })
+}
+
+export function useImportDirectory() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { path: string; character_id?: string; era_id?: string; source?: string; tags?: string[] }) =>
+      postJSON<{ imported: number; skipped: number; failed: number; total: number; errors?: string[] }>('/api/v1/import/directory', body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['characters'] })
+    },
+  })
+}
+
+// ===== Datasets =====
+
+export function useDatasets() {
+  return useQuery({
+    queryKey: ['datasets'],
+    queryFn: () => fetchJSON<DatasetWithStats[]>('/api/v1/datasets'),
+  })
+}
+
+export function useDataset(id: string) {
+  return useQuery({
+    queryKey: ['datasets', id],
+    queryFn: () => fetchJSON<{ dataset: Dataset; images: DatasetImage[] }>(`/api/v1/datasets/${id}`),
+    enabled: !!id,
+  })
+}
+
+export function useCreateDataset() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { name: string; type?: string; description?: string; character_id?: string }) =>
+      postJSON<Dataset>('/api/v1/datasets', body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['datasets'] }) },
+  })
+}
+
+export function useForkDataset() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      postJSON<Dataset>(`/api/v1/datasets/${id}/fork`, { name }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['datasets'] }) },
+  })
+}
+
+export function useAddDatasetImages() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ datasetId, imageIds }: { datasetId: string; imageIds: string[] }) =>
+      postJSON<{ added: number }>(`/api/v1/datasets/${datasetId}/images`, { image_ids: imageIds }),
+    onSuccess: (_, vars) => { qc.invalidateQueries({ queryKey: ['datasets', vars.datasetId] }) },
   })
 }
 
