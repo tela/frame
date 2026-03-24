@@ -1,8 +1,12 @@
 import { Link, useParams } from '@tanstack/react-router'
-import { useCharacter, useReferencePackage } from '@/lib/api'
+import { useCharacter, useReferencePackage, useIngestImage } from '@/lib/api'
+import { useState } from 'react'
+import { Dropzone } from '@/components/dropzone'
 
 export function EraWorkspace() {
   const { characterId, eraId } = useParams({ from: '/characters/$characterId/eras/$eraId' })
+  const ingestImage = useIngestImage()
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null)
   const { data: character, isLoading: charLoading } = useCharacter(characterId)
   const { data: refPackage } = useReferencePackage(characterId, eraId)
 
@@ -21,8 +25,40 @@ export function EraWorkspace() {
 
   const pendingCount = 0 // TODO: derive from image query
 
+  const handleFileDrop = (files: File[]) => {
+    setUploadStatus(`Uploading ${files.length} file(s)...`)
+    let completed = 0
+    for (const file of files) {
+      ingestImage.mutate(
+        { characterId, eraId, file, source: 'manual' },
+        {
+          onSuccess: () => {
+            completed++
+            if (completed === files.length) {
+              setUploadStatus(`${completed} file(s) uploaded`)
+              setTimeout(() => setUploadStatus(null), 3000)
+            }
+          },
+          onError: () => {
+            completed++
+            if (completed === files.length) {
+              setUploadStatus(`Upload complete (some may have failed)`)
+              setTimeout(() => setUploadStatus(null), 3000)
+            }
+          },
+        }
+      )
+    }
+  }
+
   return (
-    <>
+    <Dropzone onFiles={handleFileDrop} accept=".png,.jpg,.jpeg,.webp" className="flex-1 flex flex-col">
+      {/* Upload status toast */}
+      {uploadStatus && (
+        <div className="fixed bottom-6 right-6 z-50 bg-on-surface text-background px-6 py-3 shadow-lg text-sm">
+          {uploadStatus}
+        </div>
+      )}
       {/* Workspace Header */}
       <section className="px-12 py-20 flex flex-col md:flex-row justify-between items-end gap-8">
         <div className="max-w-2xl">
@@ -94,6 +130,7 @@ export function EraWorkspace() {
         {era.image_count === 0 ? (
           <div className="py-20 text-center">
             <p className="text-muted text-[15px] mb-4">No images in this era yet.</p>
+            <p className="text-muted text-[13px] mb-6">Drag and drop images here, or</p>
             <Link
               to="/characters/$characterId/eras/$eraId/studio"
               params={{ characterId, eraId }}
@@ -124,6 +161,6 @@ export function EraWorkspace() {
           margin-bottom: 2.75rem;
         }
       `}</style>
-    </>
+    </Dropzone>
   )
 }
