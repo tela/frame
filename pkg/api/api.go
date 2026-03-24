@@ -43,6 +43,8 @@ func (a *API) Register(mux *http.ServeMux) {
 	// Character images
 	mux.HandleFunc("GET /api/v1/characters/{id}/images", a.listCharacterImages)
 	mux.HandleFunc("POST /api/v1/characters/{id}/images", a.ingestCharacterImage)
+	mux.HandleFunc("PATCH /api/v1/characters/{id}/images/{imageId}", a.updateCharacterImage)
+	mux.HandleFunc("GET /api/v1/characters/{id}/images/pending", a.listPendingImages)
 	mux.HandleFunc("GET /api/v1/characters/{id}/avatar", a.getCharacterAvatar)
 
 	// Post-cast era ingest
