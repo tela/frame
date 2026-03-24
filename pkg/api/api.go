@@ -69,6 +69,16 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/tags/rename", a.renameTag)
 	mux.HandleFunc("POST /api/v1/tags/merge", a.mergeTag)
 	mux.HandleFunc("POST /api/v1/tags/delete", a.deleteTag)
+	mux.HandleFunc("GET /api/v1/tags/validate", a.validateTag)
+
+	// Taxonomy
+	mux.HandleFunc("GET /api/v1/tag-families/{id}/taxonomy", a.getFamilyTaxonomy)
+	mux.HandleFunc("GET /api/v1/tag-families/{id}/namespaces", a.listNamespaces)
+	mux.HandleFunc("POST /api/v1/tag-families/{id}/namespaces", a.createNamespace)
+	mux.HandleFunc("DELETE /api/v1/namespaces/{nsId}", a.deleteNamespace)
+	mux.HandleFunc("GET /api/v1/namespaces/{nsId}/values", a.listAllowedValues)
+	mux.HandleFunc("POST /api/v1/namespaces/{nsId}/values", a.createAllowedValue)
+	mux.HandleFunc("DELETE /api/v1/values/{valId}", a.deleteAllowedValue)
 
 	// Media items
 	mux.HandleFunc("POST /api/v1/media/{type}", a.createMediaItem)
