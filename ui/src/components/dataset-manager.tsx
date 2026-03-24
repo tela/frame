@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
-import { useDatasets } from '@/lib/api'
+import { useDatasets, useCreateDataset } from '@/lib/api'
 import { useState } from 'react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import type { DatasetType, DatasetWithStats } from '@/lib/types'
 
 const TYPE_COLORS: Record<string, string> = {
@@ -11,16 +12,38 @@ const TYPE_COLORS: Record<string, string> = {
   general: 'bg-surface-high text-on-surface',
 }
 
+const DATASET_TYPES: DatasetType[] = ['lora', 'ipadapter', 'reference', 'style', 'general']
+
 export function DatasetManager() {
   const { data: datasets, isLoading } = useDatasets()
+  const createDataset = useCreateDataset()
   const [typeFilter, setTypeFilter] = useState<DatasetType | 'all'>('all')
   const [search, setSearch] = useState('')
+  const [showCreate, setShowCreate] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newType, setNewType] = useState<DatasetType>('lora')
+  const [newDescription, setNewDescription] = useState('')
 
   const filtered = (datasets ?? []).filter((d) => {
     if (typeFilter !== 'all' && d.type !== typeFilter) return false
     if (search && !d.name.toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
+
+  const handleCreate = () => {
+    if (!newName.trim()) return
+    createDataset.mutate(
+      { name: newName.trim(), type: newType, description: newDescription },
+      {
+        onSuccess: () => {
+          setShowCreate(false)
+          setNewName('')
+          setNewType('lora')
+          setNewDescription('')
+        },
+      }
+    )
+  }
 
   return (
     <>
@@ -40,9 +63,6 @@ export function DatasetManager() {
               type="text"
             />
           </div>
-          <button className="bg-accent text-white px-6 py-2.5 text-[11px] uppercase font-bold tracking-[0.15em] hover:opacity-90 transition-all flex items-center gap-2">
-            Export
-          </button>
         </div>
       </header>
 
@@ -53,7 +73,7 @@ export function DatasetManager() {
         {/* Filters */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            {(['all', 'lora', 'ipadapter', 'style', 'reference', 'general'] as const).map((type) => (
+            {(['all', ...DATASET_TYPES] as const).map((type) => (
               <button
                 key={type}
                 onClick={() => setTypeFilter(type)}
@@ -67,7 +87,10 @@ export function DatasetManager() {
               </button>
             ))}
           </div>
-          <button className="bg-on-surface text-background px-6 py-2.5 text-[11px] uppercase font-bold tracking-[0.15em] hover:opacity-90 transition-all flex items-center gap-2">
+          <button
+            onClick={() => setShowCreate(true)}
+            className="bg-on-surface text-background px-6 py-2.5 text-[11px] uppercase font-bold tracking-[0.15em] hover:opacity-90 transition-all flex items-center gap-2"
+          >
             <span className="material-symbols-outlined text-[16px]">add</span>
             Create Dataset
           </button>
@@ -82,20 +105,83 @@ export function DatasetManager() {
               <DatasetCard key={ds.id} dataset={ds} />
             ))}
 
-            {/* Add placeholder */}
-            <div className="border border-dashed border-border-subtle flex flex-col items-center justify-center p-8 min-h-[280px] hover:border-primary hover:bg-surface transition-colors cursor-pointer group">
+            <div
+              onClick={() => setShowCreate(true)}
+              className="border border-dashed border-border-subtle flex flex-col items-center justify-center p-8 min-h-[280px] hover:border-primary hover:bg-surface transition-colors cursor-pointer group"
+            >
               <span className="material-symbols-outlined text-[32px] text-muted group-hover:text-primary mb-2">add</span>
               <span className="text-[11px] uppercase font-bold tracking-[0.15em] text-muted group-hover:text-primary">Initialize Dataset</span>
-              <span className="text-xs text-muted mt-1">Drag and drop folder or connect fig</span>
             </div>
           </div>
         )}
 
-        {/* Footer stats */}
         <div className="mt-12 pt-6 border-t border-border-subtle/20 flex items-center gap-8 text-xs text-muted">
           <span>Total Assets: {(datasets ?? []).reduce((sum, d) => sum + d.image_count, 0).toLocaleString()}</span>
         </div>
       </div>
+
+      {/* Create Dialog */}
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent className="bg-background border-border-subtle">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl">Create Dataset</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 mt-4">
+            <div>
+              <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Name</label>
+              <input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
+                placeholder="e.g., Eleanor LoRA v3"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Type</label>
+              <div className="flex flex-wrap gap-2">
+                {DATASET_TYPES.map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setNewType(type)}
+                    className={`px-3 py-1.5 text-[11px] uppercase font-bold border transition-colors ${
+                      newType === type
+                        ? 'bg-on-surface text-background border-on-surface'
+                        : 'text-muted border-border-subtle hover:border-on-surface'
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Description</label>
+              <textarea
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+                className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none h-20 resize-none"
+                placeholder="Purpose and notes..."
+              />
+            </div>
+            <div className="flex justify-end gap-3 mt-2">
+              <button
+                onClick={() => setShowCreate(false)}
+                className="px-4 py-2 text-[11px] uppercase font-bold text-muted hover:text-on-surface transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreate}
+                disabled={!newName.trim() || createDataset.isPending}
+                className="bg-on-surface text-background px-6 py-2 text-[11px] uppercase font-bold tracking-[0.1em] hover:opacity-90 disabled:opacity-50 transition-all"
+              >
+                {createDataset.isPending ? 'Creating...' : 'Create'}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
@@ -108,7 +194,6 @@ function DatasetCard({ dataset }: { dataset: DatasetWithStats }) {
       params={{ datasetId: dataset.id }}
       className="group border border-border-subtle hover:border-on-surface bg-background p-0 transition-all cursor-pointer flex flex-col"
     >
-      {/* Image preview area */}
       <div className="h-40 bg-surface-low relative overflow-hidden flex items-center justify-center">
         <span className="material-symbols-outlined text-[48px] text-muted/20">dataset</span>
         <div className="absolute top-3 left-3 flex gap-2">
@@ -120,7 +205,6 @@ function DatasetCard({ dataset }: { dataset: DatasetWithStats }) {
           </span>
         </div>
       </div>
-      {/* Info */}
       <div className="p-5">
         <h3 className="text-lg font-display tracking-display text-on-surface group-hover:text-accent transition-colors">
           {dataset.name}
