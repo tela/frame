@@ -10,6 +10,9 @@ import type {
   ReferencePackage,
   TagFamily,
   TagSummary,
+  FamilyTaxonomy,
+  TagNamespace,
+  TagAllowedValue,
   Dataset,
   DatasetWithStats,
   DatasetImage,
@@ -285,6 +288,36 @@ export function useTags(familyId?: string) {
     queryFn: () => {
       const params = familyId ? `?family=${familyId}` : ''
       return fetchJSON<TagSummary[]>(`/api/v1/tags${params}`)
+    },
+  })
+}
+
+export function useFamilyTaxonomy(familyId: string) {
+  return useQuery({
+    queryKey: ['tag-families', familyId, 'taxonomy'],
+    queryFn: () => fetchJSON<FamilyTaxonomy>(`/api/v1/tag-families/${familyId}/taxonomy`),
+    enabled: !!familyId,
+  })
+}
+
+export function useCreateNamespace() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ familyId, name, description }: { familyId: string; name: string; description?: string }) =>
+      postJSON<TagNamespace>(`/api/v1/tag-families/${familyId}/namespaces`, { name, description }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['tag-families', vars.familyId, 'taxonomy'] })
+    },
+  })
+}
+
+export function useCreateAllowedValue() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ namespaceId, value, description }: { namespaceId: string; value: string; description?: string }) =>
+      postJSON<TagAllowedValue>(`/api/v1/namespaces/${namespaceId}/values`, { value, description }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tag-families'] })
     },
   })
 }

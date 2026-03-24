@@ -91,6 +91,34 @@ export interface ImageTag {
   created_at: string
 }
 
+// Tag Taxonomy
+export interface TagNamespace {
+  id: string
+  family_id: string
+  name: string
+  description: string
+  sort_order: number
+  created_at: string
+}
+
+export interface TagAllowedValue {
+  id: string
+  namespace_id: string
+  value: string
+  description: string
+  sort_order: number
+  created_at: string
+}
+
+export interface NamespaceWithValues extends TagNamespace {
+  values: TagAllowedValue[]
+}
+
+export interface FamilyTaxonomy {
+  family: TagFamily
+  namespaces: NamespaceWithValues[]
+}
+
 // Media
 export type MediaContentType = 'wardrobe' | 'prop' | 'location'
 
