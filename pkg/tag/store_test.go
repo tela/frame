@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/tela/frame/internal/testutil"
+	"github.com/tela/frame/pkg/id"
 	"github.com/tela/frame/pkg/tag"
 )
 
@@ -224,5 +225,153 @@ func TestDeleteTag(t *testing.T) {
 	tags2, _ := store.GetImageTags(img2)
 	if len(tags1) != 0 || len(tags2) != 0 {
 		t.Error("tags should be deleted")
+	}
+}
+
+// --- Taxonomy Tests ---
+
+func TestListNamespacesSeeded(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	store := tag.NewStore(db.DB)
+
+	namespaces, err := store.ListNamespaces("fam_character")
+	if err != nil {
+		t.Fatalf("list namespaces: %v", err)
+	}
+	if len(namespaces) < 5 {
+		t.Errorf("expected at least 5 seeded character namespaces, got %d", len(namespaces))
+	}
+	// Verify pose namespace exists
+	found := false
+	for _, ns := range namespaces {
+		if ns.Name == "pose" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected 'pose' namespace in character family")
+	}
+}
+
+func TestListAllowedValuesSeeded(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	store := tag.NewStore(db.DB)
+
+	values, err := store.ListAllowedValues("ns_pose")
+	if err != nil {
+		t.Fatalf("list values: %v", err)
+	}
+	if len(values) < 5 {
+		t.Errorf("expected at least 5 seeded pose values, got %d", len(values))
+	}
+}
+
+func TestGetFamilyTaxonomy(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	store := tag.NewStore(db.DB)
+
+	taxonomy, err := store.GetFamilyTaxonomy("fam_character")
+	if err != nil {
+		t.Fatalf("get taxonomy: %v", err)
+	}
+	if taxonomy == nil {
+		t.Fatal("expected taxonomy, got nil")
+	}
+	if taxonomy.Family.Name != "Character Identity" {
+		t.Errorf("family = %q, want %q", taxonomy.Family.Name, "Character Identity")
+	}
+	if len(taxonomy.Namespaces) < 5 {
+		t.Errorf("expected at least 5 namespaces, got %d", len(taxonomy.Namespaces))
+	}
+	// Check that pose namespace has values
+	for _, ns := range taxonomy.Namespaces {
+		if ns.Name == "pose" {
+			if len(ns.Values) < 5 {
+				t.Errorf("pose namespace should have at least 5 values, got %d", len(ns.Values))
+			}
+			return
+		}
+	}
+	t.Error("pose namespace not found in taxonomy")
+}
+
+func TestCreateNamespaceAndValue(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	store := tag.NewStore(db.DB)
+
+	nsID := id.New()
+	ns := &tag.Namespace{
+		ID: nsID, FamilyID: "fam_nsfw", Name: "content-type",
+		Description: "Type of content", SortOrder: 10,
+	}
+	ns.CreatedAt = ns.CreatedAt // zero time is fine for test
+	if err := store.CreateNamespace(ns); err != nil {
+		t.Fatalf("create namespace: %v", err)
+	}
+
+	vID := id.New()
+	v := &tag.AllowedValue{
+		ID: vID, NamespaceID: nsID, Value: "solo",
+		Description: "Single subject", SortOrder: 1,
+	}
+	if err := store.CreateAllowedValue(v); err != nil {
+		t.Fatalf("create value: %v", err)
+	}
+
+	values, _ := store.ListAllowedValues(nsID)
+	if len(values) != 1 || values[0].Value != "solo" {
+		t.Errorf("expected 1 value 'solo', got %v", values)
+	}
+}
+
+func TestValidateTagAgainstTaxonomy(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	store := tag.NewStore(db.DB)
+
+	// Valid: pose:front-facing is in the taxonomy
+	valid, err := store.ValidateTag("fam_character", "pose", "front-facing")
+	if err != nil {
+		t.Fatalf("validate: %v", err)
+	}
+	if !valid {
+		t.Error("pose:front-facing should be valid")
+	}
+
+	// Invalid: pose:nonexistent is not in the taxonomy
+	valid, err = store.ValidateTag("fam_character", "pose", "nonexistent")
+	if err != nil {
+		t.Fatalf("validate: %v", err)
+	}
+	if valid {
+		t.Error("pose:nonexistent should be invalid")
+	}
+
+	// Invalid namespace: completely unknown
+	valid, err = store.ValidateTag("fam_character", "unknown-namespace", "whatever")
+	if err != nil {
+		t.Fatalf("validate: %v", err)
+	}
+	if valid {
+		t.Error("unknown namespace should be invalid")
+	}
+}
+
+func TestValidateTagOpenNamespace(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	store := tag.NewStore(db.DB)
+
+	// Create a namespace with NO allowed values — should accept anything
+	nsID := id.New()
+	store.CreateNamespace(&tag.Namespace{
+		ID: nsID, FamilyID: "fam_character", Name: "open-ns",
+	})
+
+	valid, err := store.ValidateTag("fam_character", "open-ns", "anything-goes")
+	if err != nil {
+		t.Fatalf("validate: %v", err)
+	}
+	if !valid {
+		t.Error("namespace with no allowed values should accept any value")
 	}
 }

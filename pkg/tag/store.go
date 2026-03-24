@@ -228,3 +228,154 @@ func (s *Store) DeleteTag(namespace, value string) (int64, error) {
 	}
 	return res.RowsAffected()
 }
+
+// --- Taxonomy ---
+
+// ListNamespaces returns all namespaces for a family.
+func (s *Store) ListNamespaces(familyID string) ([]Namespace, error) {
+	rows, err := s.db.Query(
+		`SELECT id, family_id, name, description, sort_order, created_at
+		 FROM tag_namespaces WHERE family_id = ? ORDER BY sort_order`, familyID)
+	if err != nil {
+		return nil, fmt.Errorf("list namespaces: %w", err)
+	}
+	defer rows.Close()
+
+	var namespaces []Namespace
+	for rows.Next() {
+		var ns Namespace
+		var createdAt string
+		if err := rows.Scan(&ns.ID, &ns.FamilyID, &ns.Name, &ns.Description, &ns.SortOrder, &createdAt); err != nil {
+			return nil, fmt.Errorf("scan namespace: %w", err)
+		}
+		ns.CreatedAt = parseTime(createdAt)
+		namespaces = append(namespaces, ns)
+	}
+	return namespaces, rows.Err()
+}
+
+// CreateNamespace adds a new namespace to a family.
+func (s *Store) CreateNamespace(ns *Namespace) error {
+	_, err := s.db.Exec(
+		`INSERT INTO tag_namespaces (id, family_id, name, description, sort_order, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?)`,
+		ns.ID, ns.FamilyID, ns.Name, ns.Description, ns.SortOrder,
+		ns.CreatedAt.UTC().Format(time.RFC3339),
+	)
+	return err
+}
+
+// DeleteNamespace removes a namespace and its allowed values.
+func (s *Store) DeleteNamespace(id string) error {
+	_, err := s.db.Exec(`DELETE FROM tag_namespaces WHERE id = ?`, id)
+	return err
+}
+
+// ListAllowedValues returns all allowed values for a namespace.
+func (s *Store) ListAllowedValues(namespaceID string) ([]AllowedValue, error) {
+	rows, err := s.db.Query(
+		`SELECT id, namespace_id, value, description, sort_order, created_at
+		 FROM tag_allowed_values WHERE namespace_id = ? ORDER BY sort_order`, namespaceID)
+	if err != nil {
+		return nil, fmt.Errorf("list allowed values: %w", err)
+	}
+	defer rows.Close()
+
+	var values []AllowedValue
+	for rows.Next() {
+		var v AllowedValue
+		var createdAt string
+		if err := rows.Scan(&v.ID, &v.NamespaceID, &v.Value, &v.Description, &v.SortOrder, &createdAt); err != nil {
+			return nil, fmt.Errorf("scan allowed value: %w", err)
+		}
+		v.CreatedAt = parseTime(createdAt)
+		values = append(values, v)
+	}
+	return values, rows.Err()
+}
+
+// CreateAllowedValue adds a permitted value to a namespace.
+func (s *Store) CreateAllowedValue(v *AllowedValue) error {
+	_, err := s.db.Exec(
+		`INSERT INTO tag_allowed_values (id, namespace_id, value, description, sort_order, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?)`,
+		v.ID, v.NamespaceID, v.Value, v.Description, v.SortOrder,
+		v.CreatedAt.UTC().Format(time.RFC3339),
+	)
+	return err
+}
+
+// DeleteAllowedValue removes a permitted value.
+func (s *Store) DeleteAllowedValue(id string) error {
+	_, err := s.db.Exec(`DELETE FROM tag_allowed_values WHERE id = ?`, id)
+	return err
+}
+
+// GetFamilyTaxonomy returns the complete taxonomy tree for a family.
+func (s *Store) GetFamilyTaxonomy(familyID string) (*FamilyTaxonomy, error) {
+	family, err := s.GetFamily(familyID)
+	if err != nil || family == nil {
+		return nil, err
+	}
+
+	namespaces, err := s.ListNamespaces(familyID)
+	if err != nil {
+		return nil, err
+	}
+
+	var nsWithValues []NamespaceWithValues
+	for _, ns := range namespaces {
+		values, err := s.ListAllowedValues(ns.ID)
+		if err != nil {
+			return nil, err
+		}
+		if values == nil {
+			values = []AllowedValue{}
+		}
+		nsWithValues = append(nsWithValues, NamespaceWithValues{
+			Namespace: ns,
+			Values:    values,
+		})
+	}
+
+	return &FamilyTaxonomy{
+		Family:     *family,
+		Namespaces: nsWithValues,
+	}, nil
+}
+
+// ValidateTag checks if a namespace:value pair is allowed by the taxonomy.
+// Returns true if valid, false if the namespace or value is not in the taxonomy.
+// If the namespace has no allowed values defined, any value is accepted.
+func (s *Store) ValidateTag(familyID, namespace, value string) (bool, error) {
+	// Find the namespace
+	var nsID string
+	err := s.db.QueryRow(
+		`SELECT id FROM tag_namespaces WHERE family_id = ? AND name = ?`,
+		familyID, namespace,
+	).Scan(&nsID)
+	if err == sql.ErrNoRows {
+		return false, nil // namespace not in taxonomy
+	}
+	if err != nil {
+		return false, err
+	}
+
+	// Check if the namespace has any allowed values defined
+	var valueCount int
+	s.db.QueryRow(`SELECT COUNT(*) FROM tag_allowed_values WHERE namespace_id = ?`, nsID).Scan(&valueCount)
+	if valueCount == 0 {
+		return true, nil // no allowed values = any value accepted
+	}
+
+	// Check if the value is in the allowed list
+	var found int
+	err = s.db.QueryRow(
+		`SELECT COUNT(*) FROM tag_allowed_values WHERE namespace_id = ? AND value = ?`,
+		nsID, value,
+	).Scan(&found)
+	if err != nil {
+		return false, err
+	}
+	return found > 0, nil
+}
