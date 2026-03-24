@@ -3,12 +3,14 @@ import { Link, useRouterState } from '@tanstack/react-router'
 const navItems = [
   { to: '/characters', icon: 'group', label: 'Character Library' },
   { to: '/media', icon: 'photo_library', label: 'Media Library' },
+  { to: '/datasets', icon: 'dataset', label: 'Datasets' },
   { to: '/search', icon: 'search', label: 'Image Search' },
   { to: '/templates', icon: 'article', label: 'Prompt Templates' },
+  { to: '/import', icon: 'upload_file', label: 'Import' },
 ] as const
 
 const footerItems = [
-  { to: '/tags', icon: 'settings', label: 'Tag Manager' },
+  { to: '/tags', icon: 'sell', label: 'Tag Manager' },
 ] as const
 
 export function NavSidebar() {
