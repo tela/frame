@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import { imageUrl, usePendingImages, useUpdateCharacterImage } from '@/lib/api'
+import { TagPicker } from '@/components/tag-picker'
 
 export function TriageQueue() {
   const { characterId, eraId } = useParams({ from: '/characters/$characterId/eras/$eraId/triage' })
@@ -206,27 +207,13 @@ export function TriageQueue() {
         </div>
       </footer>
 
-      {/* Tag Overlay */}
-      {showTagOverlay && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
-          <div className="bg-background border border-border-subtle rounded-lg shadow-2xl p-6 w-full max-w-md">
-            <h3 className="font-display text-2xl text-primary mb-4">Apply Tags</h3>
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted">search</span>
-              <input
-                autoFocus
-                className="w-full bg-surface border-none rounded py-3 pl-10 pr-4 text-primary font-ui focus:ring-2 focus:ring-accent placeholder-muted"
-                placeholder="Type a tag..."
-                type="text"
-              />
-            </div>
-            <div className="mt-6 flex justify-end gap-3 text-[13px] font-ui uppercase tracking-ui">
-              <button className="px-4 py-2 text-muted hover:text-primary transition-colors" onClick={() => setShowTagOverlay(false)}>
-                Cancel (Esc)
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Tag Picker */}
+      {showTagOverlay && currentImage && (
+        <TagPicker
+          open={showTagOverlay}
+          onClose={() => setShowTagOverlay(false)}
+          imageIds={[currentImage.image_id]}
+        />
       )}
     </div>
   )
