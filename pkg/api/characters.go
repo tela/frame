@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/tela/frame/pkg/character"
+	"github.com/tela/frame/pkg/id"
 )
 
 type createCharacterRequest struct {
@@ -22,9 +23,12 @@ func (a *API) createCharacter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.ID == "" || req.Name == "" {
-		writeError(w, http.StatusBadRequest, "id and name are required")
+	if req.Name == "" {
+		writeError(w, http.StatusBadRequest, "name is required")
 		return
+	}
+	if req.ID == "" {
+		req.ID = id.New()
 	}
 
 	status := character.Status(req.Status)
