@@ -339,6 +339,56 @@ export function useBifrostStatus() {
   })
 }
 
+// ===== Prompt Templates =====
+
+export interface PromptTemplate {
+  id: string
+  name: string
+  prompt_body: string
+  negative_prompt: string
+  style_prompt: string
+  parameters: string
+  facet_tags: string
+  usage_count: number
+  created_at: string
+  updated_at: string
+}
+
+export function useTemplates() {
+  return useQuery({
+    queryKey: ['templates'],
+    queryFn: () => fetchJSON<PromptTemplate[]>('/api/v1/templates'),
+  })
+}
+
+export function useCreateTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { name: string; prompt_body?: string; negative_prompt?: string; style_prompt?: string; parameters?: string; facet_tags?: string }) =>
+      postJSON<PromptTemplate>('/api/v1/templates', body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['templates'] }) },
+  })
+}
+
+export function useUpdateTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string; name?: string; prompt_body?: string; negative_prompt?: string }) =>
+      patchJSON<{ status: string }>(`/api/v1/templates/${id}`, body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['templates'] }) },
+  })
+}
+
+export function useDeleteTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => {
+      return fetch(`/api/v1/templates/${id}`, { method: 'DELETE' }).then(r => r.json())
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['templates'] }) },
+  })
+}
+
 // ===== Tag Families =====
 
 export function useTagFamilies() {
