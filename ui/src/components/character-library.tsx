@@ -1,11 +1,13 @@
 import { Link } from '@tanstack/react-router'
 import { useCharacters, avatarUrl } from '@/lib/api'
 import { useState } from 'react'
+import { NewCharacterDialog } from '@/components/new-character-dialog'
 import type { Character } from '@/lib/types'
 
 export function CharacterLibrary() {
   const { data: characters, isLoading } = useCharacters()
   const [search, setSearch] = useState('')
+  const [showNewChar, setShowNewChar] = useState(false)
 
   const filtered = (characters ?? []).filter((c) => {
     if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.display_name.toLowerCase().includes(search.toLowerCase())) return false
@@ -18,6 +20,13 @@ export function CharacterLibrary() {
     <>
       {/* Header */}
       <header className="h-24 px-8 md:px-12 flex items-center justify-between border-b border-border-subtle sticky top-0 glass-header z-10">
+        <button
+          onClick={() => setShowNewChar(true)}
+          className="bg-on-surface text-background py-2.5 px-6 text-[11px] uppercase tracking-[0.15em] font-medium hover:opacity-90 transition-opacity flex items-center gap-2"
+        >
+          <span className="material-symbols-outlined text-[16px]">add</span>
+          New Entry
+        </button>
         <div className="flex-1 max-w-md ml-auto relative group">
           <span className="material-symbols-outlined absolute left-0 top-1/2 -translate-y-1/2 text-muted text-[18px]">search</span>
           <input
@@ -48,6 +57,8 @@ export function CharacterLibrary() {
           </div>
         )}
       </div>
+
+      <NewCharacterDialog open={showNewChar} onClose={() => setShowNewChar(false)} />
     </>
   )
 }
