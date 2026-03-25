@@ -18,6 +18,7 @@ import { DatasetManager } from '@/components/dataset-manager'
 import { DatasetDetail } from '@/components/dataset-detail'
 import { ImportScreen } from '@/components/import-screen'
 import { ImagePreprocessor } from '@/components/image-preprocessor'
+import { ImageDetail } from '@/components/image-detail'
 
 // Root
 const rootRoute = createRootRoute({
@@ -120,6 +121,13 @@ const preprocessRoute = createRoute({
   component: ImagePreprocessor,
 })
 
+// Image detail
+const imageDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/images/$imageId',
+  component: ImageDetail,
+})
+
 // Route tree
 const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -136,6 +144,7 @@ const routeTree = rootRoute.addChildren([
   datasetDetailRoute,
   importRoute,
   preprocessRoute,
+  imageDetailRoute,
 ])
 
 export const router = createRouter({ routeTree })
