@@ -6,6 +6,7 @@ import (
 
 	"github.com/tela/frame/internal/frontend"
 	"github.com/tela/frame/pkg/api"
+	"github.com/tela/frame/pkg/audit"
 	"github.com/tela/frame/pkg/bifrost"
 	"github.com/tela/frame/pkg/character"
 	"github.com/tela/frame/pkg/config"
@@ -44,6 +45,7 @@ func main() {
 	preprocessStore := preprocess.NewStore(db.DB)
 	templateStore := template.NewStore(db.DB)
 	shootStore := shoot.NewStore(db.DB)
+	auditStore := audit.NewStore(db.DB)
 	ingester := image.NewIngester(imgStore, cfg.Root)
 
 	// Bifrost client (optional — generation features disabled without it)
@@ -71,6 +73,7 @@ func main() {
 		Preprocess: preprocessStore,
 		Templates:  templateStore,
 		Shoots:     shootStore,
+		Audit:      auditStore,
 		Bifrost:    bifrostClient,
 		RootPath:   cfg.Root,
 		Port:       cfg.Port,
