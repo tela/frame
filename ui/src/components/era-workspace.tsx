@@ -216,6 +216,14 @@ function EraImageCard({ ci, isSelected, onToggleSelect, onUpdate }: {
   onToggleSelect: () => void
   onUpdate: (field: string, value: unknown) => void
 }) {
+  const [editingCaption, setEditingCaption] = useState(false)
+  const [captionText, setCaptionText] = useState(ci.caption ?? '')
+
+  const saveCaption = () => {
+    onUpdate('caption', captionText)
+    setEditingCaption(false)
+  }
+
   return (
     <div className={`masonry-item relative group overflow-hidden ${isSelected ? 'ring-2 ring-accent' : ''}`}>
       {/* Selection checkbox */}
@@ -287,6 +295,40 @@ function EraImageCard({ ci, isSelected, onToggleSelect, onUpdate }: {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Caption */}
+      <div className="px-2 py-1">
+        {editingCaption ? (
+          <div className="flex gap-1">
+            <input
+              value={captionText}
+              onChange={(e) => setCaptionText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') saveCaption(); if (e.key === 'Escape') setEditingCaption(false) }}
+              className="flex-1 bg-surface border border-border-subtle text-[11px] py-1 px-2 focus:border-on-surface focus:ring-0 focus:outline-none"
+              placeholder="Write a caption..."
+              autoFocus
+            />
+            <button onClick={saveCaption} className="text-muted hover:text-primary">
+              <span className="material-symbols-outlined text-[14px]">check</span>
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setEditingCaption(true)}
+            className="text-[10px] text-muted hover:text-primary transition-colors w-full text-left truncate"
+            title={ci.caption ?? 'Add caption'}
+          >
+            {ci.caption ? (
+              <span className="italic">{ci.caption}</span>
+            ) : (
+              <span className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="material-symbols-outlined text-[12px]">edit</span>
+                Add caption
+              </span>
+            )}
+          </button>
+        )}
       </div>
     </div>
   )

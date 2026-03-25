@@ -68,6 +68,7 @@ export interface CharacterImage {
   is_body_ref: boolean
   ref_score: number | null
   ref_rank: number | null
+  caption: string | null
   created_at: string
 }
 
