@@ -112,24 +112,29 @@ func (a *API) serveImageFile(w http.ResponseWriter, r *http.Request, imageID str
 		return
 	}
 
-	ci, err := a.Images.GetCharacterImage(imageID)
-	if err != nil || ci == nil {
-		writeError(w, http.StatusNotFound, "image not linked to any character")
-		return
-	}
-
-	// Resolve character folder name for disk path
-	folderName := ci.CharacterID
-	char, err := a.Characters.Get(ci.CharacterID)
-	if err == nil && char != nil && char.FolderName != "" {
-		folderName = char.FolderName
-	}
+	// Try character image first
+	ci, _ := a.Images.GetCharacterImage(imageID)
 
 	var filePath string
-	if thumb {
-		filePath = a.Ingester.ThumbnailPath(imageID, folderName, ci.EraID)
+	if ci != nil {
+		// Character image — resolve folder name
+		folderName := ci.CharacterID
+		char, err := a.Characters.Get(ci.CharacterID)
+		if err == nil && char != nil && char.FolderName != "" {
+			folderName = char.FolderName
+		}
+		if thumb {
+			filePath = a.Ingester.ThumbnailPath(imageID, folderName)
+		} else {
+			filePath = a.Ingester.OriginalPath(imageID, folderName, img.Format)
+		}
 	} else {
-		filePath = a.Ingester.OriginalPath(imageID, folderName, ci.EraID, img.Format)
+		// Standalone/reference image
+		if thumb {
+			filePath = a.Ingester.ReferenceThumbnailPath(imageID)
+		} else {
+			filePath = a.Ingester.ReferenceOriginalPath(imageID, img.Format)
+		}
 	}
 
 	http.ServeFile(w, r, filePath)
@@ -154,6 +159,6 @@ func (a *API) getCharacterAvatar(w http.ResponseWriter, r *http.Request) {
 	if err == nil && char != nil && char.FolderName != "" {
 		folderName = char.FolderName
 	}
-	thumbPath := a.Ingester.ThumbnailPath(first.ImageID, folderName, first.EraID)
+	thumbPath := a.Ingester.ThumbnailPath(first.ImageID, folderName)
 	http.ServeFile(w, r, thumbPath)
 }

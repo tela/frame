@@ -77,22 +77,18 @@ func (ing *Ingester) Ingest(req *IngestRequest) (*IngestResult, error) {
 	imageID := id.New()
 	now := time.Now().UTC()
 
-	// Resolve disk path
+	// Resolve disk path — flat storage per character or references
 	var origDir, thumbDir string
 	if isCharacterImage {
 		charFolder := req.CharacterSlug
 		if charFolder == "" {
 			charFolder = req.CharacterID
 		}
-		origDir = ing.characterImagePath(charFolder, req.EraID, "original")
-		thumbDir = ing.characterImagePath(charFolder, req.EraID, "thumb")
+		origDir = filepath.Join(ing.rootPath, "assets", "characters", charFolder, "images")
+		thumbDir = filepath.Join(ing.rootPath, "assets", "characters", charFolder, "thumbs")
 	} else {
-		featureFolder := req.FeatureFolder
-		if featureFolder == "" {
-			featureFolder = "unsorted"
-		}
-		origDir = filepath.Join(ing.rootPath, "assets", "features", featureFolder, "original")
-		thumbDir = filepath.Join(ing.rootPath, "assets", "features", featureFolder, "thumb")
+		origDir = filepath.Join(ing.rootPath, "assets", "references", "images")
+		thumbDir = filepath.Join(ing.rootPath, "assets", "references", "thumbs")
 	}
 
 	// Write original to disk
@@ -152,38 +148,24 @@ func (ing *Ingester) Ingest(req *IngestRequest) (*IngestResult, error) {
 	}, nil
 }
 
-// OriginalPath returns the filesystem path for an original image.
-// folderName is the character's folder_name (e.g., "esme-a7f3b2c").
-func (ing *Ingester) OriginalPath(imageID, folderName string, eraID *string, format string) string {
-	dir := ing.characterImagePath(folderName, eraID, "original")
-	return filepath.Join(dir, imageID+"."+format)
+// OriginalPath returns the filesystem path for an original character image.
+func (ing *Ingester) OriginalPath(imageID, charFolder, format string) string {
+	return filepath.Join(ing.rootPath, "assets", "characters", charFolder, "images", imageID+"."+format)
 }
 
-// ThumbnailPath returns the filesystem path for a thumbnail.
-func (ing *Ingester) ThumbnailPath(imageID, folderName string, eraID *string) string {
-	dir := ing.characterImagePath(folderName, eraID, "thumb")
-	return filepath.Join(dir, imageID+".jpg")
+// ThumbnailPath returns the filesystem path for a character image thumbnail.
+func (ing *Ingester) ThumbnailPath(imageID, charFolder string) string {
+	return filepath.Join(ing.rootPath, "assets", "characters", charFolder, "thumbs", imageID+".jpg")
 }
 
-// FeatureOriginalPath returns the filesystem path for a feature image original.
-func (ing *Ingester) FeatureOriginalPath(imageID, featureFolder, format string) string {
-	return filepath.Join(ing.featureImagePath(featureFolder, "original"), imageID+"."+format)
+// ReferenceOriginalPath returns the filesystem path for a reference image original.
+func (ing *Ingester) ReferenceOriginalPath(imageID, format string) string {
+	return filepath.Join(ing.rootPath, "assets", "references", "images", imageID+"."+format)
 }
 
-// FeatureThumbnailPath returns the filesystem path for a feature image thumbnail.
-func (ing *Ingester) FeatureThumbnailPath(imageID, featureFolder string) string {
-	return filepath.Join(ing.featureImagePath(featureFolder, "thumb"), imageID+".jpg")
-}
-
-func (ing *Ingester) characterImagePath(charFolder string, eraID *string, subdir string) string {
-	if eraID != nil {
-		return filepath.Join(ing.rootPath, "assets", "characters", charFolder, "eras", *eraID, subdir)
-	}
-	return filepath.Join(ing.rootPath, "assets", "characters", charFolder, "staging", subdir)
-}
-
-func (ing *Ingester) featureImagePath(featureFolder, subdir string) string {
-	return filepath.Join(ing.rootPath, "assets", "features", featureFolder, subdir)
+// ReferenceThumbnailPath returns the filesystem path for a reference image thumbnail.
+func (ing *Ingester) ReferenceThumbnailPath(imageID string) string {
+	return filepath.Join(ing.rootPath, "assets", "references", "thumbs", imageID+".jpg")
 }
 
 func sha256sum(data []byte) string {
