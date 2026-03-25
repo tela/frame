@@ -32,10 +32,10 @@ func (s *Store) GetCharacterImage(imageID string) (*CharacterImage, error) {
 	var createdAt string
 	var isFaceRef, isBodyRef int
 	err := s.db.QueryRow(
-		`SELECT image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, created_at
+		`SELECT image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, caption, created_at
 		 FROM character_images WHERE image_id = ? LIMIT 1`, imageID,
 	).Scan(&ci.ImageID, &ci.CharacterID, &ci.EraID, &ci.SetType, &ci.TriageStatus,
-		&ci.Rating, &isFaceRef, &isBodyRef, &ci.RefScore, &ci.RefRank, &createdAt)
+		&ci.Rating, &isFaceRef, &isBodyRef, &ci.RefScore, &ci.RefRank, &ci.Caption, &createdAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -101,10 +101,10 @@ func (s *Store) GetByHash(hash string) (*Image, error) {
 // CreateCharacterImage links an image to a character.
 func (s *Store) CreateCharacterImage(ci *CharacterImage) error {
 	_, err := s.db.Exec(
-		`INSERT INTO character_images (image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO character_images (image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, caption, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		ci.ImageID, ci.CharacterID, ci.EraID, ci.SetType, ci.TriageStatus, ci.Rating,
-		boolToInt(ci.IsFaceRef), boolToInt(ci.IsBodyRef), ci.RefScore, ci.RefRank,
+		boolToInt(ci.IsFaceRef), boolToInt(ci.IsBodyRef), ci.RefScore, ci.RefRank, ci.Caption,
 		ci.CreatedAt.UTC().Format(time.RFC3339),
 	)
 	if err != nil {
@@ -119,13 +119,13 @@ func (s *Store) ListByCharacter(characterID string, eraID *string) ([]CharacterI
 	var err error
 	if eraID != nil {
 		rows, err = s.db.Query(
-			`SELECT image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, created_at
+			`SELECT image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, caption, created_at
 			 FROM character_images WHERE character_id = ? AND era_id = ? ORDER BY created_at DESC`,
 			characterID, *eraID,
 		)
 	} else {
 		rows, err = s.db.Query(
-			`SELECT image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, created_at
+			`SELECT image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, caption, created_at
 			 FROM character_images WHERE character_id = ? ORDER BY created_at DESC`,
 			characterID,
 		)
@@ -142,7 +142,7 @@ func (s *Store) ListByCharacter(characterID string, eraID *string) ([]CharacterI
 		var isFaceRef, isBodyRef int
 		if err := rows.Scan(
 			&ci.ImageID, &ci.CharacterID, &ci.EraID, &ci.SetType, &ci.TriageStatus,
-			&ci.Rating, &isFaceRef, &isBodyRef, &ci.RefScore, &ci.RefRank, &createdAt,
+			&ci.Rating, &isFaceRef, &isBodyRef, &ci.RefScore, &ci.RefRank, &ci.Caption, &createdAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan character image: %w", err)
 		}
@@ -157,7 +157,7 @@ func (s *Store) ListByCharacter(characterID string, eraID *string) ([]CharacterI
 // ListFaceRefs returns face reference images for a character era, ordered by rank.
 func (s *Store) ListFaceRefs(characterID, eraID string) ([]CharacterImage, error) {
 	rows, err := s.db.Query(
-		`SELECT image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, created_at
+		`SELECT image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, caption, created_at
 		 FROM character_images
 		 WHERE character_id = ? AND era_id = ? AND is_face_ref = 1
 		 ORDER BY ref_rank ASC NULLS LAST`,
@@ -175,7 +175,7 @@ func (s *Store) ListFaceRefs(characterID, eraID string) ([]CharacterImage, error
 		var isFaceRef, isBodyRef int
 		if err := rows.Scan(
 			&ci.ImageID, &ci.CharacterID, &ci.EraID, &ci.SetType, &ci.TriageStatus,
-			&ci.Rating, &isFaceRef, &isBodyRef, &ci.RefScore, &ci.RefRank, &createdAt,
+			&ci.Rating, &isFaceRef, &isBodyRef, &ci.RefScore, &ci.RefRank, &ci.Caption, &createdAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan face ref: %w", err)
 		}
@@ -190,7 +190,7 @@ func (s *Store) ListFaceRefs(characterID, eraID string) ([]CharacterImage, error
 // ListBodyRefs returns body reference images for a character era, ordered by rank.
 func (s *Store) ListBodyRefs(characterID, eraID string) ([]CharacterImage, error) {
 	rows, err := s.db.Query(
-		`SELECT image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, created_at
+		`SELECT image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, caption, created_at
 		 FROM character_images
 		 WHERE character_id = ? AND era_id = ? AND is_body_ref = 1
 		 ORDER BY ref_rank ASC NULLS LAST`,
@@ -208,7 +208,7 @@ func (s *Store) ListBodyRefs(characterID, eraID string) ([]CharacterImage, error
 		var isFaceRef, isBodyRef int
 		if err := rows.Scan(
 			&ci.ImageID, &ci.CharacterID, &ci.EraID, &ci.SetType, &ci.TriageStatus,
-			&ci.Rating, &isFaceRef, &isBodyRef, &ci.RefScore, &ci.RefRank, &createdAt,
+			&ci.Rating, &isFaceRef, &isBodyRef, &ci.RefScore, &ci.RefRank, &ci.Caption, &createdAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan body ref: %w", err)
 		}
@@ -230,6 +230,7 @@ type CharacterImageUpdate struct {
 	RefScore     *float64      `json:"ref_score,omitempty"`
 	RefRank      *int          `json:"ref_rank,omitempty"`
 	EraID        *string       `json:"era_id,omitempty"`
+	Caption      *string       `json:"caption,omitempty"`
 }
 
 // UpdateCharacterImage updates fields on a character_images record.
@@ -258,6 +259,9 @@ func (s *Store) UpdateCharacterImage(imageID, characterID string, update *Charac
 	if update.EraID != nil {
 		s.db.Exec(`UPDATE character_images SET era_id = ? WHERE image_id = ? AND character_id = ?`, *update.EraID, imageID, characterID)
 	}
+	if update.Caption != nil {
+		s.db.Exec(`UPDATE character_images SET caption = ? WHERE image_id = ? AND character_id = ?`, *update.Caption, imageID, characterID)
+	}
 	return nil
 }
 
@@ -267,13 +271,13 @@ func (s *Store) ListPendingByCharacter(characterID string, eraID *string) ([]Cha
 	var err error
 	if eraID != nil {
 		rows, err = s.db.Query(
-			`SELECT image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, created_at
+			`SELECT image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, caption, created_at
 			 FROM character_images WHERE character_id = ? AND era_id = ? AND triage_status = 'pending' ORDER BY created_at DESC`,
 			characterID, *eraID,
 		)
 	} else {
 		rows, err = s.db.Query(
-			`SELECT image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, created_at
+			`SELECT image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, caption, created_at
 			 FROM character_images WHERE character_id = ? AND triage_status = 'pending' ORDER BY created_at DESC`,
 			characterID,
 		)
@@ -290,7 +294,7 @@ func (s *Store) ListPendingByCharacter(characterID string, eraID *string) ([]Cha
 		var isFaceRef, isBodyRef int
 		if err := rows.Scan(
 			&ci.ImageID, &ci.CharacterID, &ci.EraID, &ci.SetType, &ci.TriageStatus,
-			&ci.Rating, &isFaceRef, &isBodyRef, &ci.RefScore, &ci.RefRank, &createdAt,
+			&ci.Rating, &isFaceRef, &isBodyRef, &ci.RefScore, &ci.RefRank, &ci.Caption, &createdAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan pending: %w", err)
 		}

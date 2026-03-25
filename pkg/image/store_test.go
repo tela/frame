@@ -243,6 +243,35 @@ func TestUpdateCharacterImage(t *testing.T) {
 	}
 }
 
+func TestUpdateCaption(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	store := image.NewStore(db.DB)
+	charID := seedCharacter(t, db)
+
+	imgID := id.New()
+	store.Create(&image.Image{ID: imgID, Hash: id.New(), Format: "png", Source: image.SourceManual, IngestedAt: time.Now().UTC()})
+	store.CreateCharacterImage(&image.CharacterImage{
+		ImageID: imgID, CharacterID: charID,
+		SetType: image.SetStaging, TriageStatus: image.TriagePending,
+		CreatedAt: time.Now().UTC(),
+	})
+
+	// Initially no caption
+	ci, _ := store.GetCharacterImage(imgID)
+	if ci.Caption != nil {
+		t.Errorf("expected nil caption, got %q", *ci.Caption)
+	}
+
+	// Set caption
+	caption := "a portrait of Eleanor in soft natural light, front-facing, neutral expression"
+	store.UpdateCharacterImage(imgID, charID, &image.CharacterImageUpdate{Caption: &caption})
+
+	ci, _ = store.GetCharacterImage(imgID)
+	if ci.Caption == nil || *ci.Caption != caption {
+		t.Errorf("caption = %v, want %q", ci.Caption, caption)
+	}
+}
+
 func TestListPendingByCharacter(t *testing.T) {
 	db := testutil.NewTestDB(t)
 	store := image.NewStore(db.DB)
