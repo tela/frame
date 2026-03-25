@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { useCharacters, useImportDirectory, useIngestImage } from '@/lib/api'
+import { Dropzone } from '@/components/dropzone'
 
 export function ImportScreen() {
   const { data: characters } = useCharacters()
@@ -23,8 +24,12 @@ export function ImportScreen() {
 
   const removeTag = (t: string) => setTags(tags.filter((tag) => tag !== t))
 
+  const handleDroppedFiles = (droppedFiles: File[]) => {
+    setUploadedFiles((prev) => [...prev, ...droppedFiles])
+  }
+
   return (
-    <div className="flex-1 overflow-y-auto">
+    <Dropzone onFiles={handleDroppedFiles} accept=".png,.jpg,.jpeg,.webp,.tiff,.tif" className="flex-1 overflow-y-auto">
       {/* Header */}
       <div className="px-12 pt-12 pb-8">
         <h1 className="text-5xl font-display tracking-display text-on-surface mb-4">Import Assets</h1>
@@ -266,6 +271,6 @@ export function ImportScreen() {
           </div>
         </div>
       </div>
-    </div>
+    </Dropzone>
   )
 }
