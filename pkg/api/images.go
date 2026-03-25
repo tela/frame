@@ -32,6 +32,10 @@ func (a *API) ingestCharacterImage(w http.ResponseWriter, r *http.Request) {
 	a.handleIngest(w, r, charID, nil)
 }
 
+func (a *API) ingestStandaloneImage(w http.ResponseWriter, r *http.Request) {
+	a.handleIngest(w, r, "", nil)
+}
+
 func (a *API) ingestEraImage(w http.ResponseWriter, r *http.Request) {
 	charID := r.PathValue("id")
 	eraID := r.PathValue("era")

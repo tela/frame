@@ -200,7 +200,7 @@ export function ImportScreen() {
                   for (const file of uploadedFiles) {
                     ingestImage.mutate(
                       {
-                        characterId: characterId || 'standalone',
+                        characterId: characterId || '',
                         file,
                         source: sourceOrigin,
                       },

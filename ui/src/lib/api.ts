@@ -278,9 +278,14 @@ export function useIngestImage() {
       formData.append('file', file)
       if (source) formData.append('source', source)
 
-      const path = eraId
-        ? `/api/v1/characters/${characterId}/eras/${eraId}/ingest`
-        : `/api/v1/characters/${characterId}/images`
+      let path: string
+      if (!characterId) {
+        path = '/api/v1/images/ingest'
+      } else if (eraId) {
+        path = `/api/v1/characters/${characterId}/eras/${eraId}/ingest`
+      } else {
+        path = `/api/v1/characters/${characterId}/images`
+      }
 
       return postFormData<IngestResult>(path, formData)
     },
