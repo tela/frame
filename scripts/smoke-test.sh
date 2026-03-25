@@ -137,6 +137,64 @@ curl -s -X POST $BASE/media/location \
 
 curl -s $BASE/media/wardrobe | python3 -c "import json,sys; [print(f'  {i[\"name\"]}') for i in json.load(sys.stdin)]"
 
+# 17. Create prospect character (Frame-created)
+echo -e "\n--- 17. Create Prospect Character ---"
+curl -s -X POST $BASE/characters \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Alistair Thorne","display_name":"Thorne","status":"prospect"}' | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+print(f'  Created: {d[\"display_name\"]} (id={d[\"id\"]}, status={d[\"status\"]})')
+THORNE_ID=d['id']
+"
+
+# 18. List characters including prospect
+echo -e "\n--- 18. Characters with Prospect ---"
+curl -s $BASE/characters | python3 -c "
+import json,sys
+for c in json.load(sys.stdin):
+    fig = ' [Fig]' if c.get('fig_published') else ''
+    print(f'  {c[\"display_name\"]:15s} status={c[\"status\"]:12s} source={c.get(\"source\",\"?\"):6s}{fig}')
+"
+
+# 19. Create a shoot for Eleanor
+echo -e "\n--- 19. Create Shoot ---"
+curl -s -X POST $BASE/characters/char_eleanor_001/shoots \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Studio Session 1"}' | python3 -m json.tool
+
+# 20. List shoots
+echo -e "\n--- 20. List Shoots ---"
+curl -s $BASE/characters/char_eleanor_001/shoots | python3 -c "
+import json,sys
+shoots=json.load(sys.stdin)
+print(f'  {len(shoots)} shoots')
+for s in shoots:
+    print(f'    {s[\"name\"]:25s} images={s[\"image_count\"]}')
+"
+
+# 21. Create prompt template
+echo -e "\n--- 21. Create Prompt Template ---"
+curl -s -X POST $BASE/templates \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Cinematic Close-up","prompt_body":"35mm cinematic close-up of [SUBJECT], [LIGHTING] lighting, 8k resolution","negative_prompt":"blurry, low quality"}' | python3 -c "import json,sys; d=json.load(sys.stdin); print(f'  Created: {d[\"name\"]} (id={d[\"id\"]})')"
+
+# 22. List templates
+echo -e "\n--- 22. List Templates ---"
+curl -s $BASE/templates | python3 -c "
+import json,sys
+for t in json.load(sys.stdin):
+    print(f'  {t[\"name\"]:30s} uses={t[\"usage_count\"]}')
+"
+
+# 23. Search images
+echo -e "\n--- 23. Image Search ---"
+curl -s "$BASE/images/search?limit=5" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+print(f'  {d[\"total\"]} total results (showing {len(d[\"images\"])})')
+"
+
 # UI smoke test checklist
 echo -e "\n========================================="
 echo "  UI Smoke Test Checklist"
@@ -144,7 +202,9 @@ echo "========================================="
 echo "  Open http://localhost:7890 and verify:"
 echo ""
 echo "  Character Library:"
-echo "    [ ] Shows Eleanor (cast) and Theo (development)"
+echo "    [ ] Shows Eleanor (cast), Theo (development), Thorne (prospect)"
+echo "    [ ] 'New Entry' button opens creation dialog"
+echo "    [ ] Create dialog: enter name, click Create → navigates to new character"
 echo "    [ ] Search filters by name"
 echo "    [ ] Click Eleanor navigates to detail"
 echo ""
@@ -178,10 +238,21 @@ echo "  Media Library:"
 echo "    [ ] Shows Black Evening Dress, Victorian Library"
 echo "    [ ] Tab switching works"
 echo ""
+echo "  Prospect Profile (Thorne):"
+echo "    [ ] Shows Lookbook and Scrapbook tabs"
+echo "    [ ] 'Generate' and 'Develop Character' buttons visible"
+echo "    [ ] Character ID shown as metadata"
+echo "    [ ] Drop zone works (drag image file)"
+echo "    [ ] Favorite toggle on image hover"
+echo ""
+echo "  Development Profile (Luke — if created with fig_published):"
+echo "    [ ] Shows 'Published to Fig' indicator with green dot"
+echo "    [ ] 'Open in Fig' link visible"
+echo ""
 echo "  Other screens:"
-echo "    [ ] Image Search renders filter sidebar"
-echo "    [ ] Prompt Templates shows template cards"
-echo "    [ ] Studio shows config panel + session history"
+echo "    [ ] Image Search renders filter sidebar and returns results"
+echo "    [ ] Prompt Templates: create new template, shows in list"
+echo "    [ ] Studio shows config panel + ref image picker"
 echo "    [ ] Triage Queue shows empty state (no pending images)"
 echo ""
 echo "  Cleanup: rm -rf $TESTDIR"

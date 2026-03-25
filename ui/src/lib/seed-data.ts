@@ -4,12 +4,15 @@ const now = new Date().toISOString()
 
 const base = { folder_name: '', fig_published: false, fig_character_url: '', source: 'frame' }
 
+const figBase = { ...base, fig_published: true, fig_character_url: 'http://localhost:7700/casting/cast/seed-luke', source: 'frame' }
+
 export const SEED_CHARACTERS: Character[] = [
   { ...base, id: 'seed-eleanor', name: 'Eleanor Vance', display_name: 'Eleanor', status: 'cast', created_at: now, updated_at: now },
   { ...base, id: 'seed-theo', name: 'Theodora Crain', display_name: 'Theo', status: 'cast', created_at: now, updated_at: now },
-  { ...base, id: 'seed-luke', name: 'Luke Sanderson', display_name: 'Luke', status: 'development', created_at: now, updated_at: now },
+  { ...figBase, id: 'seed-luke', name: 'Luke Sanderson', display_name: 'Luke', status: 'development', created_at: now, updated_at: now },
   { ...base, id: 'seed-montague', name: 'Dr. John Montague', display_name: 'Montague', status: 'cast', created_at: now, updated_at: now },
   { ...base, id: 'seed-dudley', name: 'Mrs. Dudley', display_name: 'Dudley', status: 'prospect', created_at: now, updated_at: now },
+  { ...base, id: 'seed-prospect', name: 'Alistair Thorne', display_name: 'Thorne', status: 'prospect', created_at: now, updated_at: now },
 ]
 
 export const SEED_CHARACTER_DETAILS: Record<string, CharacterWithEras> = {
