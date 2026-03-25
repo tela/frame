@@ -10,7 +10,7 @@ echo "========================================="
 
 # 1. Health
 echo -e "\n--- 1. Health Check ---"
-curl -sf $BASE/../health | python3 -m json.tool
+curl -sf http://localhost:7890/health | python3 -m json.tool
 
 # 2. Create characters
 echo -e "\n--- 2. Create Characters ---"
@@ -21,6 +21,15 @@ curl -s -X POST $BASE/characters \
 curl -s -X POST $BASE/characters \
   -H "Content-Type: application/json" \
   -d '{"id":"char_theo_002","name":"Theodora Crain","display_name":"Theo","status":"development"}' | python3 -m json.tool
+
+curl -s -X POST $BASE/characters \
+  -H "Content-Type: application/json" \
+  -d '{"id":"char_luke_003","name":"Luke Sanderson","display_name":"Luke","status":"development"}' | python3 -m json.tool
+
+# Mark Luke as published to Fig
+curl -s -X PATCH $BASE/characters/char_luke_003 \
+  -H "Content-Type: application/json" \
+  -d '{"fig_published":true,"fig_character_url":"http://localhost:7700/casting/cast/char_luke_003"}' > /dev/null
 
 # 3. List characters
 echo -e "\n--- 3. List Characters ---"
@@ -50,10 +59,25 @@ for e in d['eras']:
 echo -e "\n--- 6. Import Test ---"
 TESTDIR=/tmp/frame-import-test
 mkdir -p $TESTDIR
-# Create minimal valid PNGs
-printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82' > $TESTDIR/test1.png
-cp $TESTDIR/test1.png $TESTDIR/test2.png
-cp $TESTDIR/test1.png $TESTDIR/test3.png
+# Create valid 2x2 RGBA PNGs using Python
+python3 -c "
+import struct, zlib
+def make_png(path, r, g, b):
+    raw = b'\x00' + bytes([r,g,b,r,g,b]) + b'\x00' + bytes([r,g,b,r,g,b])
+    compressed = zlib.compress(raw)
+    def chunk(ctype, data):
+        c = ctype + data
+        return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+    ihdr = struct.pack('>IIBBBBB', 2, 2, 8, 2, 0, 0, 0)
+    with open(path, 'wb') as f:
+        f.write(b'\x89PNG\r\n\x1a\n')
+        f.write(chunk(b'IHDR', ihdr))
+        f.write(chunk(b'IDAT', compressed))
+        f.write(chunk(b'IEND', b''))
+make_png('$TESTDIR/test1.png', 255, 0, 0)
+make_png('$TESTDIR/test2.png', 0, 255, 0)
+make_png('$TESTDIR/test3.png', 0, 0, 255)
+"
 
 curl -s -X POST $BASE/import/directory \
   -H "Content-Type: application/json" \

@@ -116,6 +116,15 @@ func (s *Store) UpdateStatus(id string, status Status) error {
 	return nil
 }
 
+// UpdateFigStatus sets the fig_published and fig_character_url fields.
+func (s *Store) UpdateFigStatus(id string, published bool, url string) error {
+	_, err := s.db.Exec(
+		`UPDATE characters SET fig_published = ?, fig_character_url = ?, updated_at = datetime('now') WHERE id = ?`,
+		boolToInt(published), url, id,
+	)
+	return err
+}
+
 // Update modifies a character's name and display name.
 func (s *Store) Update(id string, name, displayName string) error {
 	res, err := s.db.Exec(

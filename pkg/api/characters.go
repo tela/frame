@@ -95,9 +95,11 @@ func (a *API) getCharacter(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateCharacterRequest struct {
-	Name        *string `json:"name,omitempty"`
-	DisplayName *string `json:"display_name,omitempty"`
-	Status      *string `json:"status,omitempty"`
+	Name            *string `json:"name,omitempty"`
+	DisplayName     *string `json:"display_name,omitempty"`
+	Status          *string `json:"status,omitempty"`
+	FigPublished    *bool   `json:"fig_published,omitempty"`
+	FigCharacterURL *string `json:"fig_character_url,omitempty"`
 }
 
 func (a *API) updateCharacter(w http.ResponseWriter, r *http.Request) {
@@ -138,6 +140,23 @@ func (a *API) updateCharacter(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+	}
+
+	if req.FigPublished != nil || req.FigCharacterURL != nil {
+		c, err := a.Characters.Get(id)
+		if err != nil || c == nil {
+			writeError(w, http.StatusNotFound, "character not found")
+			return
+		}
+		published := c.FigPublished
+		url := c.FigCharacterURL
+		if req.FigPublished != nil {
+			published = *req.FigPublished
+		}
+		if req.FigCharacterURL != nil {
+			url = *req.FigCharacterURL
+		}
+		a.Characters.UpdateFigStatus(id, published, url)
 	}
 
 	// Return updated character
