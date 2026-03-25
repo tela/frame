@@ -306,6 +306,46 @@ func (s *Store) ListPendingByCharacter(characterID string, eraID *string) ([]Cha
 	return images, rows.Err()
 }
 
+// ToggleFavorite sets or clears the is_favorited flag on a character image.
+func (s *Store) ToggleFavorite(imageID, characterID string, favorited bool) error {
+	_, err := s.db.Exec(
+		`UPDATE character_images SET is_favorited = ? WHERE image_id = ? AND character_id = ?`,
+		boolToInt(favorited), imageID, characterID,
+	)
+	return err
+}
+
+// ListFavorites returns favorited images for a character.
+func (s *Store) ListFavorites(characterID string) ([]CharacterImage, error) {
+	rows, err := s.db.Query(
+		`SELECT image_id, character_id, era_id, set_type, triage_status, rating, is_face_ref, is_body_ref, ref_score, ref_rank, caption, created_at
+		 FROM character_images WHERE character_id = ? AND is_favorited = 1 ORDER BY created_at DESC`,
+		characterID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list favorites: %w", err)
+	}
+	defer rows.Close()
+
+	var images []CharacterImage
+	for rows.Next() {
+		var ci CharacterImage
+		var createdAt string
+		var isFaceRef, isBodyRef int
+		if err := rows.Scan(
+			&ci.ImageID, &ci.CharacterID, &ci.EraID, &ci.SetType, &ci.TriageStatus,
+			&ci.Rating, &isFaceRef, &isBodyRef, &ci.RefScore, &ci.RefRank, &ci.Caption, &createdAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan favorite: %w", err)
+		}
+		ci.IsFaceRef = isFaceRef != 0
+		ci.IsBodyRef = isBodyRef != 0
+		ci.CreatedAt = parseTime(createdAt)
+		images = append(images, ci)
+	}
+	return images, rows.Err()
+}
+
 func boolToInt(b bool) int {
 	if b {
 		return 1

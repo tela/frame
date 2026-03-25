@@ -40,7 +40,7 @@ export function TagManager() {
 
   const activeFamilyId = activeFamily ?? families?.[0]?.id ?? null
   const { data: tags } = useTags(activeFamilyId ?? undefined)
-  const { data: taxonomy } = useFamilyTaxonomy(activeFamilyId ?? '')
+  const { data: taxonomy } = useFamilyTaxonomy(activeFamilyId || '')
   const activeF = families?.find((f) => f.id === activeFamilyId)
 
   const filteredTags = (tags ?? []).filter((t) =>
@@ -215,7 +215,7 @@ function TaxonomyView({ taxonomy, familyName, onAddNamespace, onAddValue }: {
           <div>
             <h1 className="text-4xl font-display tracking-display text-on-surface">{familyName}</h1>
             <p className="text-[10px] uppercase font-bold tracking-[0.15em] text-muted mt-2">
-              {taxonomy?.namespaces.length ?? 0} namespaces · Taxonomy Definition
+              {taxonomy?.namespaces?.length ?? 0} namespaces · Taxonomy Definition
             </p>
           </div>
           <button onClick={onAddNamespace} className="bg-on-surface text-background px-6 py-2.5 text-[11px] uppercase font-bold tracking-[0.15em] hover:opacity-90 transition-all flex items-center gap-2">

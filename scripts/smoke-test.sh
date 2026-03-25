@@ -10,7 +10,7 @@ echo "========================================="
 
 # 1. Health
 echo -e "\n--- 1. Health Check ---"
-curl -sf $BASE/../health | python3 -m json.tool
+curl -sf http://localhost:7890/health | python3 -m json.tool
 
 # 2. Create characters
 echo -e "\n--- 2. Create Characters ---"
@@ -21,6 +21,15 @@ curl -s -X POST $BASE/characters \
 curl -s -X POST $BASE/characters \
   -H "Content-Type: application/json" \
   -d '{"id":"char_theo_002","name":"Theodora Crain","display_name":"Theo","status":"development"}' | python3 -m json.tool
+
+curl -s -X POST $BASE/characters \
+  -H "Content-Type: application/json" \
+  -d '{"id":"char_luke_003","name":"Luke Sanderson","display_name":"Luke","status":"development"}' | python3 -m json.tool
+
+# Mark Luke as published to Fig
+curl -s -X PATCH $BASE/characters/char_luke_003 \
+  -H "Content-Type: application/json" \
+  -d '{"fig_published":true,"fig_character_url":"http://localhost:7700/casting/cast/char_luke_003"}' > /dev/null
 
 # 3. List characters
 echo -e "\n--- 3. List Characters ---"
@@ -50,10 +59,25 @@ for e in d['eras']:
 echo -e "\n--- 6. Import Test ---"
 TESTDIR=/tmp/frame-import-test
 mkdir -p $TESTDIR
-# Create minimal valid PNGs
-printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82' > $TESTDIR/test1.png
-cp $TESTDIR/test1.png $TESTDIR/test2.png
-cp $TESTDIR/test1.png $TESTDIR/test3.png
+# Create valid 2x2 RGBA PNGs using Python
+python3 -c "
+import struct, zlib
+def make_png(path, r, g, b):
+    raw = b'\x00' + bytes([r,g,b,r,g,b]) + b'\x00' + bytes([r,g,b,r,g,b])
+    compressed = zlib.compress(raw)
+    def chunk(ctype, data):
+        c = ctype + data
+        return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+    ihdr = struct.pack('>IIBBBBB', 2, 2, 8, 2, 0, 0, 0)
+    with open(path, 'wb') as f:
+        f.write(b'\x89PNG\r\n\x1a\n')
+        f.write(chunk(b'IHDR', ihdr))
+        f.write(chunk(b'IDAT', compressed))
+        f.write(chunk(b'IEND', b''))
+make_png('$TESTDIR/test1.png', 255, 0, 0)
+make_png('$TESTDIR/test2.png', 0, 255, 0)
+make_png('$TESTDIR/test3.png', 0, 0, 255)
+"
 
 curl -s -X POST $BASE/import/directory \
   -H "Content-Type: application/json" \
@@ -137,6 +161,64 @@ curl -s -X POST $BASE/media/location \
 
 curl -s $BASE/media/wardrobe | python3 -c "import json,sys; [print(f'  {i[\"name\"]}') for i in json.load(sys.stdin)]"
 
+# 17. Create prospect character (Frame-created)
+echo -e "\n--- 17. Create Prospect Character ---"
+curl -s -X POST $BASE/characters \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Alistair Thorne","display_name":"Thorne","status":"prospect"}' | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+print(f'  Created: {d[\"display_name\"]} (id={d[\"id\"]}, status={d[\"status\"]})')
+THORNE_ID=d['id']
+"
+
+# 18. List characters including prospect
+echo -e "\n--- 18. Characters with Prospect ---"
+curl -s $BASE/characters | python3 -c "
+import json,sys
+for c in json.load(sys.stdin):
+    fig = ' [Fig]' if c.get('fig_published') else ''
+    print(f'  {c[\"display_name\"]:15s} status={c[\"status\"]:12s} source={c.get(\"source\",\"?\"):6s}{fig}')
+"
+
+# 19. Create a shoot for Eleanor
+echo -e "\n--- 19. Create Shoot ---"
+curl -s -X POST $BASE/characters/char_eleanor_001/shoots \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Studio Session 1"}' | python3 -m json.tool
+
+# 20. List shoots
+echo -e "\n--- 20. List Shoots ---"
+curl -s $BASE/characters/char_eleanor_001/shoots | python3 -c "
+import json,sys
+shoots=json.load(sys.stdin)
+print(f'  {len(shoots)} shoots')
+for s in shoots:
+    print(f'    {s[\"name\"]:25s} images={s[\"image_count\"]}')
+"
+
+# 21. Create prompt template
+echo -e "\n--- 21. Create Prompt Template ---"
+curl -s -X POST $BASE/templates \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Cinematic Close-up","prompt_body":"35mm cinematic close-up of [SUBJECT], [LIGHTING] lighting, 8k resolution","negative_prompt":"blurry, low quality"}' | python3 -c "import json,sys; d=json.load(sys.stdin); print(f'  Created: {d[\"name\"]} (id={d[\"id\"]})')"
+
+# 22. List templates
+echo -e "\n--- 22. List Templates ---"
+curl -s $BASE/templates | python3 -c "
+import json,sys
+for t in json.load(sys.stdin):
+    print(f'  {t[\"name\"]:30s} uses={t[\"usage_count\"]}')
+"
+
+# 23. Search images
+echo -e "\n--- 23. Image Search ---"
+curl -s "$BASE/images/search?limit=5" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+print(f'  {d[\"total\"]} total results (showing {len(d[\"images\"])})')
+"
+
 # UI smoke test checklist
 echo -e "\n========================================="
 echo "  UI Smoke Test Checklist"
@@ -144,7 +226,9 @@ echo "========================================="
 echo "  Open http://localhost:7890 and verify:"
 echo ""
 echo "  Character Library:"
-echo "    [ ] Shows Eleanor (cast) and Theo (development)"
+echo "    [ ] Shows Eleanor (cast), Theo (development), Thorne (prospect)"
+echo "    [ ] 'New Entry' button opens creation dialog"
+echo "    [ ] Create dialog: enter name, click Create → navigates to new character"
 echo "    [ ] Search filters by name"
 echo "    [ ] Click Eleanor navigates to detail"
 echo ""
@@ -178,10 +262,21 @@ echo "  Media Library:"
 echo "    [ ] Shows Black Evening Dress, Victorian Library"
 echo "    [ ] Tab switching works"
 echo ""
+echo "  Prospect Profile (Thorne):"
+echo "    [ ] Shows Lookbook and Scrapbook tabs"
+echo "    [ ] 'Generate' and 'Develop Character' buttons visible"
+echo "    [ ] Character ID shown as metadata"
+echo "    [ ] Drop zone works (drag image file)"
+echo "    [ ] Favorite toggle on image hover"
+echo ""
+echo "  Development Profile (Luke — if created with fig_published):"
+echo "    [ ] Shows 'Published to Fig' indicator with green dot"
+echo "    [ ] 'Open in Fig' link visible"
+echo ""
 echo "  Other screens:"
-echo "    [ ] Image Search renders filter sidebar"
-echo "    [ ] Prompt Templates shows template cards"
-echo "    [ ] Studio shows config panel + session history"
+echo "    [ ] Image Search renders filter sidebar and returns results"
+echo "    [ ] Prompt Templates: create new template, shows in list"
+echo "    [ ] Studio shows config panel + ref image picker"
 echo "    [ ] Triage Queue shows empty state (no pending images)"
 echo ""
 echo "  Cleanup: rm -rf $TESTDIR"

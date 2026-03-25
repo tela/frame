@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useMediaItems } from '@/lib/api'
 import type { MediaContentType, MediaItem } from '@/lib/types'
 
@@ -117,6 +117,7 @@ function MediaCard({ item, isSelected, onToggleSelect }: {
   onToggleSelect: () => void
 }) {
   const [expanded, setExpanded] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   return (
     <div
@@ -153,7 +154,23 @@ function MediaCard({ item, isSelected, onToggleSelect }: {
             <button className="flex-1 border border-border-subtle text-[10px] uppercase font-bold py-1.5 hover:bg-surface transition-colors">
               Edit
             </button>
-            <button className="flex-1 border border-border-subtle text-[10px] uppercase font-bold py-1.5 hover:bg-surface transition-colors">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files) {
+                  // TODO: POST each file to /api/v1/media/{type}/{id}/images
+                  alert(`Selected ${e.target.files.length} file(s) for ${item.name}. Upload API integration pending.`)
+                }
+              }}
+            />
+            <button
+              onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click() }}
+              className="flex-1 border border-border-subtle text-[10px] uppercase font-bold py-1.5 hover:bg-surface transition-colors"
+            >
               Add Images
             </button>
           </div>

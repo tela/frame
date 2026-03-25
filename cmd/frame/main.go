@@ -14,6 +14,7 @@ import (
 	"github.com/tela/frame/pkg/image"
 	"github.com/tela/frame/pkg/media"
 	"github.com/tela/frame/pkg/preprocess"
+	"github.com/tela/frame/pkg/shoot"
 	"github.com/tela/frame/pkg/server"
 	"github.com/tela/frame/pkg/tag"
 	"github.com/tela/frame/pkg/template"
@@ -42,6 +43,7 @@ func main() {
 	datasetStore := dataset.NewStore(db.DB)
 	preprocessStore := preprocess.NewStore(db.DB)
 	templateStore := template.NewStore(db.DB)
+	shootStore := shoot.NewStore(db.DB)
 	ingester := image.NewIngester(imgStore, cfg.Root)
 
 	// Bifrost client (optional — generation features disabled without it)
@@ -68,6 +70,7 @@ func main() {
 		Datasets:   datasetStore,
 		Preprocess: preprocessStore,
 		Templates:  templateStore,
+		Shoots:     shootStore,
 		Bifrost:    bifrostClient,
 		RootPath:   cfg.Root,
 		Port:       cfg.Port,

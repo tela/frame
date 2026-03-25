@@ -2,8 +2,12 @@ BINARY = frame
 CMD = ./cmd/frame
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 LDFLAGS = -ldflags "-X main.version=$(VERSION)"
+DRIVE ?=
 
-.PHONY: build build-mac-arm build-mac-amd build-linux-amd build-linux-arm dev dev-ui test clean ui
+.PHONY: build build-mac-arm build-mac-amd build-linux-amd build-linux-arm \
+        dev dev-ui test clean ui deploy smoke
+
+# === Build ===
 
 build: ui
 	go build $(LDFLAGS) -o $(BINARY) $(CMD)
@@ -20,8 +24,13 @@ build-linux-amd: ui
 build-linux-arm: ui
 	GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o $(BINARY)-linux-arm64 $(CMD)
 
+ui:
+	cd ui && pnpm install --frozen-lockfile && pnpm run build
+
+# === Development ===
+
 dev:
-	go build $(LDFLAGS) -o $(BINARY) $(CMD) && ./$(BINARY) --root .
+	go build $(LDFLAGS) -o $(BINARY) $(CMD) && ./$(BINARY) --root /tmp/frame-dev --port 7890
 
 dev-ui:
 	cd ui && pnpm run dev
@@ -29,8 +38,47 @@ dev-ui:
 test:
 	go test ./...
 
+smoke:
+	bash scripts/smoke-test.sh
+
 clean:
 	rm -f $(BINARY) $(BINARY)-*
 
-ui:
-	cd ui && pnpm install --frozen-lockfile && pnpm run build
+# === Deployment ===
+
+deploy: _check-drive build
+	@echo "Deploying Frame $(VERSION) to $(DRIVE)..."
+	@cp $(BINARY) "$(DRIVE)/frame"
+	@chmod +x "$(DRIVE)/frame"
+	@mkdir -p "$(DRIVE)/assets/characters"
+	@mkdir -p "$(DRIVE)/assets/references/images"
+	@mkdir -p "$(DRIVE)/assets/references/thumbs"
+	@mkdir -p "$(DRIVE)/assets/exports"
+	@if [ ! -f "$(DRIVE)/frame.toml" ]; then \
+		echo '# Frame configuration' > "$(DRIVE)/frame.toml"; \
+		echo 'port = 7890' >> "$(DRIVE)/frame.toml"; \
+		echo '' >> "$(DRIVE)/frame.toml"; \
+		echo '# Bifrost integration (image generation)' >> "$(DRIVE)/frame.toml"; \
+		echo 'bifrost_url = "http://localhost:9090"' >> "$(DRIVE)/frame.toml"; \
+		echo '' >> "$(DRIVE)/frame.toml"; \
+		echo '# Fig integration (character publishing)' >> "$(DRIVE)/frame.toml"; \
+		echo 'fig_url = "http://localhost:7700"' >> "$(DRIVE)/frame.toml"; \
+		echo "Created $(DRIVE)/frame.toml"; \
+	fi
+	@echo ""
+	@echo "=== Deploy complete ==="
+	@echo "Binary:  $(DRIVE)/frame ($(VERSION))"
+	@echo "Config:  $(DRIVE)/frame.toml"
+	@echo "Data:    $(DRIVE)/assets/"
+	@echo ""
+	@echo "To start:  cd $(DRIVE) && ./frame"
+	@echo "To stop:   pkill frame"
+
+_check-drive:
+ifndef DRIVE
+	$(error DRIVE is not set. Usage: make deploy DRIVE=/Volumes/YOUR_DRIVE)
+endif
+	@if [ ! -d "$(DRIVE)" ]; then \
+		echo "Error: $(DRIVE) does not exist or is not mounted"; \
+		exit 1; \
+	fi

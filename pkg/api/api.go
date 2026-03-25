@@ -11,6 +11,7 @@ import (
 	"github.com/tela/frame/pkg/image"
 	"github.com/tela/frame/pkg/media"
 	"github.com/tela/frame/pkg/preprocess"
+	"github.com/tela/frame/pkg/shoot"
 	"github.com/tela/frame/pkg/tag"
 	"github.com/tela/frame/pkg/template"
 )
@@ -25,6 +26,7 @@ type API struct {
 	Datasets    *dataset.Store
 	Preprocess  *preprocess.Store
 	Templates   *template.Store
+	Shoots      *shoot.Store
 	Bifrost     *bifrost.Client // nil if Bifrost not configured
 	RootPath    string          // drive root for file serving
 	Port        int             // server port (for self-referencing URLs)
@@ -48,6 +50,17 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("PATCH /api/v1/characters/{id}/images/{imageId}", a.updateCharacterImage)
 	mux.HandleFunc("GET /api/v1/characters/{id}/images/pending", a.listPendingImages)
 	mux.HandleFunc("GET /api/v1/characters/{id}/avatar", a.getCharacterAvatar)
+
+	// Favorites
+	mux.HandleFunc("POST /api/v1/characters/{id}/images/{imageId}/favorite", a.toggleFavorite)
+	mux.HandleFunc("GET /api/v1/characters/{id}/favorites", a.listFavorites)
+
+	// Shoots
+	mux.HandleFunc("GET /api/v1/characters/{id}/shoots", a.listShoots)
+	mux.HandleFunc("POST /api/v1/characters/{id}/shoots", a.createShoot)
+	mux.HandleFunc("DELETE /api/v1/shoots/{shootId}", a.deleteShoot)
+	mux.HandleFunc("GET /api/v1/shoots/{shootId}/images", a.listShootImages)
+	mux.HandleFunc("POST /api/v1/shoots/{shootId}/images", a.addShootImage)
 
 	// Post-cast era ingest
 	mux.HandleFunc("POST /api/v1/characters/{id}/eras/{era}/ingest", a.ingestEraImage)
