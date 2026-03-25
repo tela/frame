@@ -219,6 +219,48 @@ d=json.load(sys.stdin)
 print(f'  {d[\"total\"]} total results (showing {len(d[\"images\"])})')
 "
 
+# 24. Rate an image (triggers audit log)
+echo -e "\n--- 24. Rate Image (Audit Test) ---"
+FIRST_IMAGE=$(curl -s "$BASE/characters/char_eleanor_001/images" | python3 -c "import json,sys; imgs=json.load(sys.stdin); print(imgs[0]['image_id'] if imgs else '')" 2>/dev/null)
+if [ -n "$FIRST_IMAGE" ]; then
+  curl -s -X PATCH "$BASE/characters/char_eleanor_001/images/$FIRST_IMAGE" \
+    -H "Content-Type: application/json" \
+    -d '{"rating":4}' | python3 -c "import json,sys; d=json.load(sys.stdin); print(f'  Rated image {d.get(\"image_id\",\"?\")}: {d.get(\"rating\",\"?\")}')"
+
+  # Change set type (another audit event)
+  curl -s -X PATCH "$BASE/characters/char_eleanor_001/images/$FIRST_IMAGE" \
+    -H "Content-Type: application/json" \
+    -d '{"set_type":"curated"}' > /dev/null
+  echo "  Set type changed to curated"
+else
+  echo "  (no images to rate)"
+fi
+
+# 25. Query audit log
+echo -e "\n--- 25. Audit Log ---"
+curl -s "$BASE/audit?limit=10" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+print(f'  {d[\"total\"]} total events')
+for e in d['events'][:5]:
+    desc = e['action']
+    if e.get('field'):
+        desc += f' ({e[\"field\"]}: {e.get(\"old_value\",\"?\")} → {e.get(\"new_value\",\"?\")})'
+    print(f'    {e[\"entity_type\"]:10s} {e[\"entity_id\"][:12]:14s} {desc}')
+"
+
+# 26. Query audit for specific image
+echo -e "\n--- 26. Image Audit History ---"
+if [ -n "$FIRST_IMAGE" ]; then
+  curl -s "$BASE/audit?entity_type=image&entity_id=$FIRST_IMAGE" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+print(f'  {d[\"total\"]} events for image {sys.argv[1][:12]}')
+for e in d['events']:
+    print(f'    {e[\"action\"]}')
+" "$FIRST_IMAGE"
+fi
+
 # UI smoke test checklist
 echo -e "\n========================================="
 echo "  UI Smoke Test Checklist"
@@ -273,11 +315,23 @@ echo "  Development Profile (Luke — if created with fig_published):"
 echo "    [ ] Shows 'Published to Fig' indicator with green dot"
 echo "    [ ] 'Open in Fig' link visible"
 echo ""
+echo "  Image Detail + Audit Trail:"
+echo "    [ ] Navigate to /images/{imageId} — shows image with Audit History tab"
+echo "    [ ] Audit events appear (rating_changed, set_type_changed, created)"
+echo "    [ ] Events grouped by date with icons and descriptions"
+echo ""
+echo "  Tag Picker:"
+echo "    [ ] In Era Workspace: select images, click 'Tag' → picker opens"
+echo "    [ ] Family tabs (Character Identity, NSFW, Technical, Training)"
+echo "    [ ] Click namespace → values appear as toggleable pills"
+echo "    [ ] Search filters across values"
+echo "    [ ] Apply Selection applies tags to selected images"
+echo ""
 echo "  Other screens:"
 echo "    [ ] Image Search renders filter sidebar and returns results"
 echo "    [ ] Prompt Templates: create new template, shows in list"
 echo "    [ ] Studio shows config panel + ref image picker"
-echo "    [ ] Triage Queue shows empty state (no pending images)"
+echo "    [ ] Triage Queue: press T opens real tag picker"
 echo ""
 echo "  Cleanup: rm -rf $TESTDIR"
 echo "========================================="
