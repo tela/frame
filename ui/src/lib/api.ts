@@ -13,6 +13,7 @@ import type {
   FamilyTaxonomy,
   TagNamespace,
   TagAllowedValue,
+  SearchResults,
   Dataset,
   DatasetWithStats,
   DatasetImage,
@@ -125,6 +126,38 @@ export function useCreateEra() {
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId] })
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'eras'] })
     },
+  })
+}
+
+// ===== Image Search =====
+
+export function useImageSearch(params: {
+  character?: string
+  era?: string
+  tags?: string[]
+  rating_min?: number
+  source?: string
+  set_type?: string
+  triage_status?: string
+  has_character?: boolean
+  limit?: number
+  offset?: number
+}) {
+  const queryString = new URLSearchParams()
+  if (params.character) queryString.set('character', params.character)
+  if (params.era) queryString.set('era', params.era)
+  if (params.tags?.length) queryString.set('tags', params.tags.join(','))
+  if (params.rating_min) queryString.set('rating_min', String(params.rating_min))
+  if (params.source) queryString.set('source', params.source)
+  if (params.set_type) queryString.set('set_type', params.set_type)
+  if (params.triage_status) queryString.set('triage_status', params.triage_status)
+  if (params.has_character !== undefined) queryString.set('has_character', String(params.has_character))
+  if (params.limit) queryString.set('limit', String(params.limit))
+  if (params.offset) queryString.set('offset', String(params.offset))
+
+  return useQuery({
+    queryKey: ['images', 'search', params],
+    queryFn: () => fetchJSON<SearchResults>(`/api/v1/images/search?${queryString.toString()}`),
   })
 }
 
