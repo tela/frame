@@ -12,6 +12,7 @@ import (
 	"github.com/tela/frame/pkg/media"
 	"github.com/tela/frame/pkg/preprocess"
 	"github.com/tela/frame/pkg/tag"
+	"github.com/tela/frame/pkg/template"
 )
 
 // API holds all the dependencies for the REST API handlers.
@@ -23,6 +24,7 @@ type API struct {
 	Tags        *tag.Store
 	Datasets    *dataset.Store
 	Preprocess  *preprocess.Store
+	Templates   *template.Store
 	Bifrost     *bifrost.Client // nil if Bifrost not configured
 	RootPath    string          // drive root for file serving
 	Port        int             // server port (for self-referencing URLs)
@@ -104,6 +106,14 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/datasets/{id}/images", a.addDatasetImages)
 	mux.HandleFunc("DELETE /api/v1/datasets/{id}/images/{imgId}", a.removeDatasetImage)
 	mux.HandleFunc("PATCH /api/v1/datasets/{id}/images/{imgId}", a.updateDatasetImage)
+
+	// Prompt templates
+	mux.HandleFunc("GET /api/v1/templates", a.listTemplates)
+	mux.HandleFunc("POST /api/v1/templates", a.createTemplate)
+	mux.HandleFunc("GET /api/v1/templates/{id}", a.getTemplate)
+	mux.HandleFunc("PATCH /api/v1/templates/{id}", a.updateTemplate)
+	mux.HandleFunc("DELETE /api/v1/templates/{id}", a.deleteTemplate)
+	mux.HandleFunc("POST /api/v1/templates/{id}/duplicate", a.duplicateTemplate)
 
 	// Import
 	mux.HandleFunc("POST /api/v1/import/directory", a.handleImportDirectory)
