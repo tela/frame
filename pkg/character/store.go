@@ -22,6 +22,11 @@ type Store struct {
 	db *sql.DB
 }
 
+func boolToInt(b bool) int {
+	if b { return 1 }
+	return 0
+}
+
 // NewStore creates a new character Store.
 func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
@@ -32,10 +37,14 @@ func (s *Store) Create(c *Character) error {
 	if c.FolderName == "" {
 		c.FolderName = c.Slug()
 	}
+	if c.Source == "" {
+		c.Source = "frame"
+	}
 	_, err := s.db.Exec(
-		`INSERT INTO characters (id, name, display_name, folder_name, status, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		c.ID, c.Name, c.DisplayName, c.FolderName, c.Status, c.CreatedAt.UTC().Format(time.RFC3339), c.UpdatedAt.UTC().Format(time.RFC3339),
+		`INSERT INTO characters (id, name, display_name, folder_name, status, fig_published, fig_character_url, source, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		c.ID, c.Name, c.DisplayName, c.FolderName, c.Status, boolToInt(c.FigPublished), c.FigCharacterURL, c.Source,
+		c.CreatedAt.UTC().Format(time.RFC3339), c.UpdatedAt.UTC().Format(time.RFC3339),
 	)
 	if err != nil {
 		return fmt.Errorf("insert character: %w", err)
@@ -47,10 +56,12 @@ func (s *Store) Create(c *Character) error {
 func (s *Store) Get(id string) (*Character, error) {
 	c := &Character{}
 	var createdAt, updatedAt string
+	var figPub int
 	err := s.db.QueryRow(
-		`SELECT id, name, display_name, folder_name, status, created_at, updated_at
+		`SELECT id, name, display_name, folder_name, status, fig_published, fig_character_url, source, created_at, updated_at
 		 FROM characters WHERE id = ?`, id,
-	).Scan(&c.ID, &c.Name, &c.DisplayName, &c.FolderName, &c.Status, &createdAt, &updatedAt)
+	).Scan(&c.ID, &c.Name, &c.DisplayName, &c.FolderName, &c.Status, &figPub, &c.FigCharacterURL, &c.Source, &createdAt, &updatedAt)
+	c.FigPublished = figPub != 0
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -65,7 +76,7 @@ func (s *Store) Get(id string) (*Character, error) {
 // List returns all characters, ordered by creation time.
 func (s *Store) List() ([]Character, error) {
 	rows, err := s.db.Query(
-		`SELECT id, name, display_name, folder_name, status, created_at, updated_at
+		`SELECT id, name, display_name, folder_name, status, fig_published, fig_character_url, source, created_at, updated_at
 		 FROM characters ORDER BY created_at DESC`,
 	)
 	if err != nil {
@@ -77,11 +88,13 @@ func (s *Store) List() ([]Character, error) {
 	for rows.Next() {
 		var c Character
 		var createdAt, updatedAt string
-		if err := rows.Scan(&c.ID, &c.Name, &c.DisplayName, &c.FolderName, &c.Status, &createdAt, &updatedAt); err != nil {
+		var figPub int
+		if err := rows.Scan(&c.ID, &c.Name, &c.DisplayName, &c.FolderName, &c.Status, &figPub, &c.FigCharacterURL, &c.Source, &createdAt, &updatedAt); err != nil {
 			return nil, fmt.Errorf("scan character: %w", err)
 		}
-		c.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-		c.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+		c.FigPublished = figPub != 0
+		c.CreatedAt = parseTime(createdAt)
+		c.UpdatedAt = parseTime(updatedAt)
 		chars = append(chars, c)
 	}
 	return chars, rows.Err()

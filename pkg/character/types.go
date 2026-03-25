@@ -12,7 +12,8 @@ var nonAlphaNum = regexp.MustCompile(`[^a-z0-9]+`)
 type Status string
 
 const (
-	StatusScouted     Status = "scouted"
+	StatusProspect    Status = "prospect"
+	StatusScouted     Status = "scouted"     // created via Fig scout
 	StatusDevelopment Status = "development"
 	StatusCast        Status = "cast"
 )
@@ -20,11 +21,14 @@ const (
 // Character is a character record in Frame.
 // Frame stores a thin record — narrative identity and production metadata live in Fig.
 type Character struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	DisplayName string    `json:"display_name"`
-	FolderName  string    `json:"folder_name"`
-	Status      Status    `json:"status"`
+	ID              string    `json:"id"`
+	Name            string    `json:"name"`
+	DisplayName     string    `json:"display_name"`
+	FolderName      string    `json:"folder_name"`
+	Status          Status    `json:"status"`
+	FigPublished    bool      `json:"fig_published"`
+	FigCharacterURL string    `json:"fig_character_url,omitempty"`
+	Source          string    `json:"source"` // "frame" or "fig"
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
