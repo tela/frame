@@ -397,6 +397,34 @@ export function useBifrostStatus() {
   })
 }
 
+// ===== Audit Log =====
+
+export interface AuditEvent {
+  id: string
+  entity_type: string
+  entity_id: string
+  action: string
+  field?: string
+  old_value?: string
+  new_value?: string
+  context: Record<string, string>
+  created_at: string
+}
+
+export function useAuditLog(entityType?: string, entityId?: string) {
+  return useQuery({
+    queryKey: ['audit', entityType, entityId],
+    queryFn: () => {
+      const params = new URLSearchParams()
+      if (entityType) params.set('entity_type', entityType)
+      if (entityId) params.set('entity_id', entityId)
+      params.set('limit', '50')
+      return fetchJSON<{ events: AuditEvent[]; total: number }>(`/api/v1/audit?${params.toString()}`)
+    },
+    enabled: !!(entityType || entityId),
+  })
+}
+
 // ===== Prompt Templates =====
 
 export interface PromptTemplate {
