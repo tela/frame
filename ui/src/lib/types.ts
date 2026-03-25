@@ -1,13 +1,26 @@
 // Character
-export type CharacterStatus = 'scouted' | 'development' | 'cast'
+export type CharacterStatus = 'prospect' | 'scouted' | 'development' | 'cast'
 
 export interface Character {
   id: string
   name: string
   display_name: string
+  folder_name: string
   status: CharacterStatus
+  fig_published: boolean
+  fig_character_url: string
+  source: string
   created_at: string
   updated_at: string
+}
+
+export interface Shoot {
+  id: string
+  character_id: string
+  name: string
+  sort_order: number
+  created_at: string
+  image_count: number
 }
 
 export interface EraWithStats {

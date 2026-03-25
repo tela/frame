@@ -4,6 +4,7 @@ import type {
   CharacterWithEras,
   Era,
   CharacterImage,
+  Shoot,
   MediaItem,
   MediaContentType,
   IngestResult,
@@ -95,6 +96,20 @@ export function useCharacter(id: string) {
   })
 }
 
+export function useCreateCharacter() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { name: string; display_name?: string; status?: string }) =>
+      postJSON<Character>('/api/v1/characters', {
+        ...body,
+        status: body.status || 'prospect',
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['characters'] })
+    },
+  })
+}
+
 export function useUpdateCharacter() {
   const qc = useQueryClient()
   return useMutation({
@@ -125,6 +140,49 @@ export function useCreateEra() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId] })
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'eras'] })
+    },
+  })
+}
+
+// ===== Shoots =====
+
+export function useShoots(characterId: string) {
+  return useQuery({
+    queryKey: ['characters', characterId, 'shoots'],
+    queryFn: () => fetchJSON<Shoot[]>(`/api/v1/characters/${characterId}/shoots`),
+    enabled: !!characterId,
+  })
+}
+
+export function useCreateShoot() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ characterId, name }: { characterId: string; name: string }) =>
+      postJSON<Shoot>(`/api/v1/characters/${characterId}/shoots`, { name }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'shoots'] })
+    },
+  })
+}
+
+// ===== Favorites =====
+
+export function useFavorites(characterId: string) {
+  return useQuery({
+    queryKey: ['characters', characterId, 'favorites'],
+    queryFn: () => fetchJSON<CharacterImage[]>(`/api/v1/characters/${characterId}/favorites`),
+    enabled: !!characterId,
+  })
+}
+
+export function useToggleFavorite() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ characterId, imageId, favorited }: { characterId: string; imageId: string; favorited: boolean }) =>
+      postJSON<{ favorited: boolean }>(`/api/v1/characters/${characterId}/images/${imageId}/favorite`, { favorited }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'favorites'] })
+      qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'images'] })
     },
   })
 }
