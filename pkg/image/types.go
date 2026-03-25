@@ -57,6 +57,7 @@ type CharacterImage struct {
 	IsBodyRef    bool         `json:"is_body_ref"`
 	RefScore     *float64     `json:"ref_score,omitempty"`
 	RefRank      *int         `json:"ref_rank,omitempty"`
+	Caption      *string      `json:"caption,omitempty"`
 	CreatedAt    time.Time    `json:"created_at"`
 }
 

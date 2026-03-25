@@ -68,7 +68,27 @@ export interface CharacterImage {
   is_body_ref: boolean
   ref_score: number | null
   ref_rank: number | null
+  caption: string | null
   created_at: string
+}
+
+export interface SearchResult extends Image {
+  character_id?: string
+  character_name?: string
+  era_id?: string
+  era_label?: string
+  set_type?: SetType
+  triage_status?: TriageStatus
+  rating?: number
+  is_face_ref: boolean
+  is_body_ref: boolean
+}
+
+export interface SearchResults {
+  images: SearchResult[]
+  total: number
+  limit: number
+  offset: number
 }
 
 export interface IngestResult {

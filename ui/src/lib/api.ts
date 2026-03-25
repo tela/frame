@@ -13,6 +13,7 @@ import type {
   FamilyTaxonomy,
   TagNamespace,
   TagAllowedValue,
+  SearchResults,
   Dataset,
   DatasetWithStats,
   DatasetImage,
@@ -128,6 +129,38 @@ export function useCreateEra() {
   })
 }
 
+// ===== Image Search =====
+
+export function useImageSearch(params: {
+  character?: string
+  era?: string
+  tags?: string[]
+  rating_min?: number
+  source?: string
+  set_type?: string
+  triage_status?: string
+  has_character?: boolean
+  limit?: number
+  offset?: number
+}) {
+  const queryString = new URLSearchParams()
+  if (params.character) queryString.set('character', params.character)
+  if (params.era) queryString.set('era', params.era)
+  if (params.tags?.length) queryString.set('tags', params.tags.join(','))
+  if (params.rating_min) queryString.set('rating_min', String(params.rating_min))
+  if (params.source) queryString.set('source', params.source)
+  if (params.set_type) queryString.set('set_type', params.set_type)
+  if (params.triage_status) queryString.set('triage_status', params.triage_status)
+  if (params.has_character !== undefined) queryString.set('has_character', String(params.has_character))
+  if (params.limit) queryString.set('limit', String(params.limit))
+  if (params.offset) queryString.set('offset', String(params.offset))
+
+  return useQuery({
+    queryKey: ['images', 'search', params],
+    queryFn: () => fetchJSON<SearchResults>(`/api/v1/images/search?${queryString.toString()}`),
+  })
+}
+
 // ===== Images =====
 
 export function useCharacterImages(characterId: string, eraId?: string) {
@@ -136,6 +169,39 @@ export function useCharacterImages(characterId: string, eraId?: string) {
     queryFn: () => {
       const params = eraId ? `?era_id=${eraId}` : ''
       return fetchJSON<CharacterImage[]>(`/api/v1/characters/${characterId}/images${params}`)
+    },
+    enabled: !!characterId,
+  })
+}
+
+export function useUpdateCharacterImage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ characterId, imageId, ...update }: {
+      characterId: string
+      imageId: string
+      set_type?: string
+      triage_status?: string
+      rating?: number
+      is_face_ref?: boolean
+      is_body_ref?: boolean
+      ref_score?: number
+      ref_rank?: number
+      era_id?: string
+    }) => patchJSON<CharacterImage>(`/api/v1/characters/${characterId}/images/${imageId}`, update),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'images'] })
+      qc.invalidateQueries({ queryKey: ['characters', vars.characterId] })
+    },
+  })
+}
+
+export function usePendingImages(characterId: string, eraId?: string) {
+  return useQuery({
+    queryKey: ['characters', characterId, 'images', 'pending', eraId],
+    queryFn: () => {
+      const params = eraId ? `?era_id=${eraId}` : ''
+      return fetchJSON<CharacterImage[]>(`/api/v1/characters/${characterId}/images/pending${params}`)
     },
     enabled: !!characterId,
   })
@@ -270,6 +336,56 @@ export function useBifrostStatus() {
     queryKey: ['bifrost', 'status'],
     queryFn: () => fetchJSON<BifrostStatus>('/api/v1/bifrost/status'),
     refetchInterval: 30_000, // poll every 30s
+  })
+}
+
+// ===== Prompt Templates =====
+
+export interface PromptTemplate {
+  id: string
+  name: string
+  prompt_body: string
+  negative_prompt: string
+  style_prompt: string
+  parameters: string
+  facet_tags: string
+  usage_count: number
+  created_at: string
+  updated_at: string
+}
+
+export function useTemplates() {
+  return useQuery({
+    queryKey: ['templates'],
+    queryFn: () => fetchJSON<PromptTemplate[]>('/api/v1/templates'),
+  })
+}
+
+export function useCreateTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { name: string; prompt_body?: string; negative_prompt?: string; style_prompt?: string; parameters?: string; facet_tags?: string }) =>
+      postJSON<PromptTemplate>('/api/v1/templates', body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['templates'] }) },
+  })
+}
+
+export function useUpdateTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string; name?: string; prompt_body?: string; negative_prompt?: string }) =>
+      patchJSON<{ status: string }>(`/api/v1/templates/${id}`, body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['templates'] }) },
+  })
+}
+
+export function useDeleteTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => {
+      return fetch(`/api/v1/templates/${id}`, { method: 'DELETE' }).then(r => r.json())
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['templates'] }) },
   })
 }
 
