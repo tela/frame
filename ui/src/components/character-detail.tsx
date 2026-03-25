@@ -1,6 +1,8 @@
 import { Link, useParams } from '@tanstack/react-router'
-import { useCharacter, useDatasets, avatarUrl } from '@/lib/api'
-import type { EraWithStats } from '@/lib/types'
+import { useCharacter, useDatasets, useCharacterImages, useFavorites, useToggleFavorite, useIngestImage, avatarUrl, thumbUrl } from '@/lib/api'
+import { useState } from 'react'
+import { Dropzone } from '@/components/dropzone'
+import type { EraWithStats, CharacterImage } from '@/lib/types'
 
 export function CharacterDetail() {
   const { characterId } = useParams({ from: '/characters/$characterId' })
@@ -40,6 +42,22 @@ export function CharacterDetail() {
             <h1 className="text-primary tracking-display text-[48px] md:text-[64px] font-normal font-display leading-[1.1] text-left pb-6 border-b border-border-subtle">
               {character.name}
             </h1>
+            {/* Fig status + ID */}
+            <div className="flex items-center gap-4 mt-3 mb-4">
+              <span className="text-[10px] uppercase tracking-[0.15em] bg-surface-high text-on-surface px-2 py-0.5">{character.status}</span>
+              {character.fig_published && (
+                <span className="flex items-center gap-1.5 text-[11px] text-muted">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                  Published to Fig
+                </span>
+              )}
+              {character.fig_character_url && (
+                <a href={character.fig_character_url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-primary hover:text-accent flex items-center gap-1">
+                  Open in Fig <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                </a>
+              )}
+              <span className="text-[10px] text-muted tabular-nums ml-auto">ID: {character.id}</span>
+            </div>
             {/* Vitals Panel */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-8">
               <div className="flex flex-col gap-1">
@@ -125,15 +143,175 @@ export function CharacterDetail() {
           </div>
         )}
 
-        {/* Pre-cast state */}
-        {character.status !== 'cast' && (
+        {/* Prospect / Development view (pre-cast) */}
+        {(character.status === 'prospect' || character.status === 'development') && (
+          <ProspectView characterId={character.id} status={character.status} figPublished={character.fig_published} figUrl={character.fig_character_url} />
+        )}
+
+        {/* Scouted state (from Fig) */}
+        {character.status === 'scouted' && (
           <div className="py-12">
             <p className="text-muted text-[15px]">
-              This character is in <span className="capitalize">{character.status}</span> phase.
-              Eras and visual identity curation are available after casting.
+              This character was scouted in Fig. Visual identity curation is available after development.
             </p>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+type ProspectTab = 'lookbook' | 'scrapbook'
+
+function ProspectView({ characterId, status, figPublished, figUrl }: {
+  characterId: string; status: string; figPublished: boolean; figUrl: string
+}) {
+  const [activeTab, setActiveTab] = useState<ProspectTab>('lookbook')
+  const { data: allImages } = useCharacterImages(characterId)
+  const { data: favorites } = useFavorites(characterId)
+  const toggleFavorite = useToggleFavorite()
+  const ingestImage = useIngestImage()
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null)
+
+  const images = activeTab === 'lookbook' ? (favorites ?? []) : (allImages ?? [])
+
+  const handleDrop = (files: File[]) => {
+    setUploadStatus(`Uploading ${files.length} file(s)...`)
+    let completed = 0
+    for (const file of files) {
+      ingestImage.mutate(
+        { characterId, file, source: 'manual' },
+        {
+          onSettled: () => {
+            completed++
+            if (completed === files.length) {
+              setUploadStatus(null)
+            }
+          },
+        }
+      )
+    }
+  }
+
+  return (
+    <Dropzone onFiles={handleDrop} accept=".png,.jpg,.jpeg,.webp" className="relative">
+      {uploadStatus && (
+        <div className="fixed bottom-6 right-6 z-50 bg-on-surface text-background px-6 py-3 shadow-lg text-sm">
+          {uploadStatus}
+        </div>
+      )}
+
+      {/* Fig integration */}
+      {figPublished && (
+        <div className="flex items-center gap-3 mb-6">
+          <span className="w-2 h-2 rounded-full bg-green-500" />
+          <span className="text-[11px] uppercase tracking-[0.15em] text-muted">Published to Fig</span>
+          {figUrl && (
+            <a href={figUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-primary hover:text-accent flex items-center gap-1">
+              Open in Fig <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+            </a>
+          )}
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex items-center gap-6 mb-8 border-b border-border-subtle">
+        {(['lookbook', 'scrapbook'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`pb-3 text-[13px] uppercase tracking-[0.1em] font-medium border-b-2 transition-colors capitalize ${
+              activeTab === tab ? 'text-primary border-primary' : 'text-muted border-transparent hover:text-primary'
+            }`}
+          >
+            {tab} {tab === 'lookbook' ? `(${(favorites ?? []).length})` : `(${(allImages ?? []).length})`}
+          </button>
+        ))}
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex gap-3">
+          <Link
+            to="/characters/$characterId/eras/$eraId/studio"
+            params={{ characterId, eraId: 'default' }}
+            className="bg-on-surface text-background py-2 px-5 text-[11px] uppercase tracking-[0.1em] font-medium hover:opacity-90 flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
+            Generate
+          </Link>
+        </div>
+        {status === 'prospect' && (
+          <button className="border border-primary text-primary py-2 px-5 text-[11px] uppercase tracking-[0.1em] font-medium hover:bg-primary hover:text-background transition-colors">
+            Develop Character
+          </button>
+        )}
+      </div>
+
+      {/* Image grid */}
+      {images.length === 0 ? (
+        <div className="py-20 text-center">
+          <span className="material-symbols-outlined text-[48px] text-muted/30 mb-4 block">
+            {activeTab === 'lookbook' ? 'favorite' : 'photo_library'}
+          </span>
+          <p className="text-muted text-[15px] mb-2">
+            {activeTab === 'lookbook'
+              ? 'No favorites yet. Star images from the scrapbook to build the lookbook.'
+              : 'No images yet. Drag and drop images here or generate new ones.'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {images.map((ci) => (
+            <ProspectImageCard
+              key={ci.image_id}
+              ci={ci}
+              characterId={characterId}
+              onToggleFavorite={() => toggleFavorite.mutate({
+                characterId,
+                imageId: ci.image_id,
+                favorited: !((favorites ?? []).some(f => f.image_id === ci.image_id)),
+              })}
+              isFavorited={(favorites ?? []).some(f => f.image_id === ci.image_id)}
+            />
+          ))}
+        </div>
+      )}
+    </Dropzone>
+  )
+}
+
+function ProspectImageCard({ ci, characterId, onToggleFavorite, isFavorited }: {
+  ci: CharacterImage; characterId: string; onToggleFavorite: () => void; isFavorited: boolean
+}) {
+  return (
+    <div className="group relative overflow-hidden border border-border-subtle hover:border-primary transition-colors">
+      <div className="aspect-square bg-surface-low overflow-hidden">
+        <img
+          src={thumbUrl(ci.image_id)}
+          alt=""
+          className="w-full h-full object-cover"
+          loading="lazy"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+        />
+      </div>
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-on-surface/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-start justify-between p-3">
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleFavorite() }}
+          className="material-symbols-outlined text-[20px] text-white hover:text-accent transition-colors"
+          style={{ fontVariationSettings: isFavorited ? "'FILL' 1" : "'FILL' 0" }}
+        >
+          favorite
+        </button>
+        <Link
+          to="/characters/$characterId/eras/$eraId/studio"
+          params={{ characterId, eraId: 'default' }}
+          className="bg-background/80 text-on-surface p-1.5 rounded-sm hover:bg-background text-[10px] uppercase tracking-wider flex items-center gap-1"
+        >
+          <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
+          Remix
+        </Link>
       </div>
     </div>
   )
