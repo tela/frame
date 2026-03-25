@@ -50,3 +50,33 @@ func (a *API) listPendingImages(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, images)
 }
+
+func (a *API) toggleFavorite(w http.ResponseWriter, r *http.Request) {
+	charID := r.PathValue("id")
+	imageID := r.PathValue("imageId")
+	var req struct {
+		Favorited bool `json:"favorited"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+	if err := a.Images.ToggleFavorite(imageID, charID, req.Favorited); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"favorited": req.Favorited})
+}
+
+func (a *API) listFavorites(w http.ResponseWriter, r *http.Request) {
+	charID := r.PathValue("id")
+	images, err := a.Images.ListFavorites(charID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if images == nil {
+		images = []image.CharacterImage{}
+	}
+	writeJSON(w, http.StatusOK, images)
+}
