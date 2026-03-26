@@ -6,6 +6,10 @@ import (
 	"time"
 )
 
+func nowStr() string {
+	return time.Now().UTC().Format("2006-01-02T15:04:05Z")
+}
+
 // Store provides CRUD for character looks (go-see outfits).
 type Store struct {
 	db *sql.DB

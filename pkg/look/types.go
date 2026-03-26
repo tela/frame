@@ -1,16 +1,14 @@
 package look
 
-import "time"
-
 // Look is a named outfit composition for a character's go-see.
 type Look struct {
-	ID             string    `json:"id"`
-	CharacterID    string    `json:"character_id"`
-	EraID          string    `json:"era_id,omitempty"`
-	Name           string    `json:"name"`
-	WardrobeItemIDs string   `json:"wardrobe_item_ids"` // JSON array of media item IDs
-	IsDefault      bool      `json:"is_default"`
-	CreatedAt      time.Time `json:"created_at"`
+	ID              string `json:"id"`
+	CharacterID     string `json:"character_id"`
+	EraID           string `json:"era_id,omitempty"`
+	Name            string `json:"name"`
+	WardrobeItemIDs string `json:"wardrobe_item_ids"` // JSON array of media item IDs
+	IsDefault       bool   `json:"is_default"`
+	CreatedAt       string `json:"created_at"`
 }
 
 // LookWithDetails extends Look with resolved garment info and try-on counts.

@@ -15,6 +15,7 @@ import (
 	"github.com/tela/frame/pkg/dataset"
 	"github.com/tela/frame/pkg/fig"
 	"github.com/tela/frame/pkg/image"
+	"github.com/tela/frame/pkg/look"
 	"github.com/tela/frame/pkg/lora"
 	"github.com/tela/frame/pkg/media"
 	"github.com/tela/frame/pkg/poseset"
@@ -138,6 +139,7 @@ func newTestServerWithFig(t *testing.T, mock *mockFig) *testServer {
 	templateStore := template.NewStore(db.DB)
 	shootStore := shoot.NewStore(db.DB)
 	auditStore := audit.NewStore(db.DB)
+	lookStore := look.NewStore(db.DB)
 	loraStore := lora.NewStore(db.DB)
 	poseSetStore := poseset.NewStore(db.DB)
 	ingester := image.NewIngester(imgStore, rootDir)
@@ -154,6 +156,7 @@ func newTestServerWithFig(t *testing.T, mock *mockFig) *testServer {
 		Templates:  templateStore,
 		Shoots:     shootStore,
 		Audit:      auditStore,
+		Looks:      lookStore,
 		Loras:      loraStore,
 		PoseSet:    poseSetStore,
 		Fig:        figClient,

@@ -755,6 +755,78 @@ export interface StandardPose {
   sort_order: number
 }
 
+// ===== Go-See Looks =====
+
+export interface Look {
+  id: string
+  character_id: string
+  era_id: string
+  name: string
+  wardrobe_item_ids: string
+  is_default: boolean
+  created_at: string
+}
+
+export interface LookWithDetails extends Look {
+  garment_count: number
+  try_on_total: number
+  try_on_complete: number
+}
+
+export function useLooks(characterId: string) {
+  return useQuery({
+    queryKey: ['looks', characterId],
+    queryFn: () => fetchJSON<LookWithDetails[]>(`/api/v1/characters/${characterId}/looks`),
+    enabled: !!characterId,
+  })
+}
+
+export function useCreateLook() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ characterId, ...body }: { characterId: string; name: string; era_id?: string; wardrobe_item_ids?: string[]; is_default?: boolean }) =>
+      postJSON<Look>(`/api/v1/characters/${characterId}/looks`, body),
+    onSuccess: (_, vars) => { qc.invalidateQueries({ queryKey: ['looks', vars.characterId] }) },
+  })
+}
+
+export function useUpdateLook() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ lookId, ...body }: { lookId: string; name?: string; wardrobe_item_ids?: string[]; is_default?: boolean }) =>
+      patchJSON<{ status: string }>(`/api/v1/looks/${lookId}`, body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['looks'] }) },
+  })
+}
+
+export function useDeleteLook() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (lookId: string) =>
+      fetch(`/api/v1/looks/${lookId}`, { method: 'DELETE' }).then(r => r.json()),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['looks'] }) },
+  })
+}
+
+export function useLookTryOn(lookId: string) {
+  return useQuery({
+    queryKey: ['looks', lookId, 'try-on'],
+    queryFn: () => fetchJSON<{ look_id: string; images: string[] }>(`/api/v1/looks/${lookId}/try-on`),
+    enabled: !!lookId,
+  })
+}
+
+export function useGenerateLookTryOn() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ lookId, prompt }: { lookId: string; prompt: string }) =>
+      postJSON<{ image_id: string; width: number; height: number; format: string }>(`/api/v1/looks/${lookId}/generate`, { prompt }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['looks'] }) },
+  })
+}
+
+// ===== Standard Poses & Outfits =====
+
 export interface StandardOutfit {
   id: string
   name: string

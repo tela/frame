@@ -339,6 +339,81 @@ func TestForwardOnlySkipStage(t *testing.T) {
 
 // --- Auto Standard Era ---
 
+// --- Go-See Looks ---
+
+func TestLooksCRUD(t *testing.T) {
+	s := newTestServer(t)
+
+	charID := s.createCharacter("LookTest", "LookTest", "development")
+
+	// Create a wardrobe item to use in the look
+	code, _ := s.postJSON("/api/v1/media/wardrobe", map[string]string{
+		"id": "garment_001", "name": "Black Dress",
+	})
+	if code != 201 {
+		t.Fatalf("create garment: status %d", code)
+	}
+
+	// Create a look
+	code, body := s.postJSON("/api/v1/characters/"+charID+"/looks", map[string]any{
+		"name":              "Casting Day",
+		"wardrobe_item_ids": []string{"garment_001"},
+		"is_default":        true,
+	})
+	if code != 201 {
+		t.Fatalf("create look: status %d, body: %s", code, body)
+	}
+	var created struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	s.decode(body, &created)
+	if created.Name != "Casting Day" {
+		t.Errorf("name: got %q", created.Name)
+	}
+
+	// List looks
+	code, body = s.get("/api/v1/characters/" + charID + "/looks")
+	if code != 200 {
+		t.Fatalf("list looks: status %d", code)
+	}
+	var looks []struct {
+		ID           string `json:"id"`
+		GarmentCount int    `json:"garment_count"`
+		IsDefault    bool   `json:"is_default"`
+	}
+	s.decode(body, &looks)
+	if len(looks) != 1 {
+		t.Fatalf("expected 1 look, got %d", len(looks))
+	}
+	if looks[0].GarmentCount != 1 {
+		t.Errorf("garment count: got %d, want 1", looks[0].GarmentCount)
+	}
+
+	// Update look
+	code, _ = s.patchJSON("/api/v1/looks/"+created.ID, map[string]any{
+		"name": "Evening Look",
+	})
+	if code != 200 {
+		t.Fatalf("update look: status %d", code)
+	}
+
+	// Delete look
+	code, _ = s.delete("/api/v1/looks/" + created.ID)
+	if code != 200 {
+		t.Fatalf("delete look: status %d", code)
+	}
+
+	// Verify deleted
+	code, body = s.get("/api/v1/characters/" + charID + "/looks")
+	s.decode(body, &looks)
+	if len(looks) != 0 {
+		t.Errorf("expected 0 looks after delete, got %d", len(looks))
+	}
+}
+
+// --- Auto Standard Era ---
+
 func TestAutoStandardEra(t *testing.T) {
 	s := newTestServer(t)
 
