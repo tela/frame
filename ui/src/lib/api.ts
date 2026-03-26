@@ -651,6 +651,50 @@ export function useAddDatasetImages() {
   })
 }
 
+// ===== Dataset Export =====
+
+export interface ExportResult {
+  dataset_id: string
+  output_dir: string
+  exported: number
+  skipped: number
+  errors: number
+}
+
+export function useExportDataset() {
+  return useMutation({
+    mutationFn: ({ datasetId, outputDir, format }: { datasetId: string; outputDir: string; format?: string }) =>
+      postJSON<ExportResult>(`/api/v1/datasets/${datasetId}/export`, { output_dir: outputDir, format }),
+  })
+}
+
+// ===== Preprocessing =====
+
+export interface PreprocessResult {
+  derivative_id: string
+  image_id: string
+  width: number
+  height: number
+  format: string
+}
+
+export interface PreprocessOperation {
+  type: string
+  params: Record<string, unknown>
+}
+
+export function useApplyPreprocess() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { image_id: string; operations?: PreprocessOperation[]; preset_id?: string }) =>
+      postJSON<PreprocessResult>('/api/v1/preprocess/apply', body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['characters'] })
+      qc.invalidateQueries({ queryKey: ['images'] })
+    },
+  })
+}
+
 // ===== LoRA Registry =====
 
 export interface LoRA {
