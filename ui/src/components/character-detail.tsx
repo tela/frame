@@ -2,6 +2,7 @@ import { Link, useParams } from '@tanstack/react-router'
 import { useCharacter, useDatasets, useCharacterImages, useFavorites, useToggleFavorite, useIngestImage, useCreateEra, avatarUrl, thumbUrl } from '@/lib/api'
 import { useState } from 'react'
 import { Dropzone } from '@/components/dropzone'
+import { PoseSetDashboard } from '@/components/pose-set-dashboard'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import type { EraWithStats, CharacterImage } from '@/lib/types'
 
@@ -115,6 +116,13 @@ export function CharacterDetail() {
               </button>
             </div>
           </>
+        )}
+
+        {/* Pose Set Dashboard */}
+        {(character.status === 'cast' || character.status === 'development') && character.eras.length > 0 && (
+          <div className="mb-12">
+            <PoseSetDashboard characterId={character.id} eraId={character.eras[0].id} />
+          </div>
         )}
 
         {/* Datasets Section */}

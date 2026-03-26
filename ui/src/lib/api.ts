@@ -346,9 +346,15 @@ export interface GenerateRequest {
   lora_adapter?: string
   lora_strength?: number
   content_rating?: string
+  tier?: string
+  workflow?: string
   provider_name?: string
   include_refs?: boolean
   ref_image_ids?: string[]
+  source_image_id?: string
+  denoise_strength?: number
+  pose_id?: string
+  outfit_id?: string
 }
 
 export interface GenerateImageResult {
