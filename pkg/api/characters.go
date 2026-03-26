@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/tela/frame/pkg/character"
+	"github.com/tela/frame/pkg/fig"
 	"github.com/tela/frame/pkg/id"
 )
 
@@ -231,6 +232,17 @@ func (a *API) createEra(w http.ResponseWriter, r *http.Request) {
 	if err := a.Characters.CreateEra(era); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+
+	// Sync to Fig if character is published
+	if c.FigPublished {
+		a.figSyncEra(charID, fig.Era{
+			ID:         era.ID,
+			Label:      era.Label,
+			AgeRange:   era.AgeRange,
+			TimePeriod: era.TimePeriod,
+			SortOrder:  era.SortOrder,
+		})
 	}
 
 	writeJSON(w, http.StatusCreated, era)

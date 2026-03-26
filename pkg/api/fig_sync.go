@@ -102,6 +102,18 @@ func (a *API) figSyncStatus(characterID, status string) {
 	}()
 }
 
+// figSyncEra pushes a thin era record to Fig (fire-and-forget).
+func (a *API) figSyncEra(characterID string, era fig.Era) {
+	if a.Fig == nil || !a.Fig.IsAvailable() {
+		return
+	}
+	go func() {
+		if err := a.Fig.PushEra(characterID, era); err != nil {
+			log.Printf("fig: sync era %s/%s: %v", characterID, era.ID, err)
+		}
+	}()
+}
+
 // figSyncMedia registers a media item in Fig (fire-and-forget).
 func (a *API) figSyncMedia(contentType, id, name string) {
 	if a.Fig == nil || !a.Fig.IsAvailable() {

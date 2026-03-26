@@ -61,6 +61,13 @@ func newMockFig() *mockFig {
 		json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
 	})
 
+	// Era push
+	m.mux.HandleFunc("POST /api/v1/characters/{id}/eras", func(w http.ResponseWriter, r *http.Request) {
+		m.record(r)
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(map[string]string{"status": "created"})
+	})
+
 	// Media registration endpoints
 	for _, path := range []string{
 		"POST /api/v1/wardrobe/garments",
@@ -385,5 +392,72 @@ func TestHarmonizedLifecycle(t *testing.T) {
 	s.decode(body, &c)
 	if c.Status != "prospect" {
 		t.Errorf("default status: got %q, want prospect", c.Status)
+	}
+}
+
+func TestEraSyncToFig(t *testing.T) {
+	mock := newMockFig()
+	s := newTestServerWithFig(t, mock)
+
+	// Create and publish a character
+	charID := s.createCharacter("Esme", "Esme", "development")
+	s.postJSON("/api/v1/characters/"+charID+"/publish", nil)
+
+	// Create an era — should sync to Fig since character is published
+	code, body := s.postJSON("/api/v1/characters/"+charID+"/eras", map[string]any{
+		"label":      "Young Adult",
+		"age_range":  "18-24",
+		"time_period": "Present day",
+		"sort_order":  1,
+	})
+	if code != 201 {
+		t.Fatalf("create era: status %d, body: %s", code, body)
+	}
+
+	// Wait for fire-and-forget
+	time.Sleep(100 * time.Millisecond)
+
+	reqs := mock.getRequests()
+	var eraReq *mockFigRequest
+	for i := range reqs {
+		if reqs[i].Method == "POST" && reqs[i].Path == "/api/v1/characters/"+charID+"/eras" {
+			eraReq = &reqs[i]
+			break
+		}
+	}
+	if eraReq == nil {
+		t.Fatal("expected era sync request to Fig")
+	}
+	if eraReq.Body["label"] != "Young Adult" {
+		t.Errorf("era label: got %v, want Young Adult", eraReq.Body["label"])
+	}
+	if eraReq.Body["age_range"] != "18-24" {
+		t.Errorf("era age_range: got %v, want 18-24", eraReq.Body["age_range"])
+	}
+}
+
+func TestEraSyncSkippedWhenNotPublished(t *testing.T) {
+	mock := newMockFig()
+	s := newTestServerWithFig(t, mock)
+
+	// Create character but DON'T publish
+	charID := s.createCharacter("Private", "Private", "prospect")
+
+	// Create an era — should NOT sync to Fig
+	code, _ := s.postJSON("/api/v1/characters/"+charID+"/eras", map[string]any{
+		"label": "Early Years",
+	})
+	if code != 201 {
+		t.Fatalf("create era: status %d", code)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Only the health check should have been recorded, no era push
+	reqs := mock.getRequests()
+	for _, r := range reqs {
+		if r.Path == "/api/v1/characters/"+charID+"/eras" {
+			t.Error("expected no era sync for unpublished character")
+		}
 	}
 }

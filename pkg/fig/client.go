@@ -162,6 +162,11 @@ func (c *Client) UpdateCharacterStatus(id, status string) error {
 	return c.putJSON("/api/v1/characters/"+id+"/status", map[string]string{"status": status})
 }
 
+// PushEra pushes a thin era record to Fig for a character.
+func (c *Client) PushEra(characterID string, era Era) error {
+	return c.postJSON("/api/v1/characters/"+characterID+"/eras", era)
+}
+
 // --- Media Registration ---
 
 // RegisterMedia registers a media item (wardrobe/prop/location) in Fig.
