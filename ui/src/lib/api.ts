@@ -532,6 +532,28 @@ export function useCreateTagFamily() {
   })
 }
 
+export function useUpdateTagFamily() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string; name?: string; description?: string; color?: string; sort_order?: number }) =>
+      patchJSON<{ status: string }>(`/api/v1/tag-families/${id}`, body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tag-families'] }) },
+  })
+}
+
+export function useDeleteTagFamily() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) =>
+      fetch(`/api/v1/tag-families/${id}`, { method: 'DELETE' }).then(async (res) => {
+        const data = await res.json().catch(() => ({ error: res.statusText }))
+        if (!res.ok) throw new Error(data.error || res.statusText)
+        return data
+      }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tag-families'] }) },
+  })
+}
+
 export function useBulkTag() {
   const qc = useQueryClient()
   return useMutation({

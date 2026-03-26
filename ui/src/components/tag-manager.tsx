@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import {
-  useTagFamilies, useTags, useCreateTagFamily, useDeleteTag, useRenameTag,
+  useTagFamilies, useTags, useCreateTagFamily, useUpdateTagFamily, useDeleteTagFamily,
+  useDeleteTag, useRenameTag,
   useFamilyTaxonomy, useCreateNamespace, useCreateAllowedValue,
 } from '@/lib/api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -13,11 +14,15 @@ const FAMILY_ICONS: Record<string, string> = {
   'fam_training': 'model_training',
 }
 
+const SEEDED_FAMILIES = new Set(['fam_character', 'fam_nsfw', 'fam_technical', 'fam_training'])
+
 type TabView = 'taxonomy' | 'usage'
 
 export function TagManager() {
   const { data: families } = useTagFamilies()
   const createFamily = useCreateTagFamily()
+  const updateFamily = useUpdateTagFamily()
+  const deleteFamily = useDeleteTagFamily()
   const deleteTagMutation = useDeleteTag()
   const renameTagMutation = useRenameTag()
   const createNamespace = useCreateNamespace()
@@ -29,6 +34,10 @@ export function TagManager() {
   const [search, setSearch] = useState('')
   const [showCreateFamily, setShowCreateFamily] = useState(false)
   const [newFamilyName, setNewFamilyName] = useState('')
+  const [editingFamily, setEditingFamily] = useState<string | null>(null)
+  const [editFamilyName, setEditFamilyName] = useState('')
+  const [deletingFamily, setDeletingFamily] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [showAddNamespace, setShowAddNamespace] = useState(false)
   const [newNsName, setNewNsName] = useState('')
   const [newNsDesc, setNewNsDesc] = useState('')
@@ -59,18 +68,37 @@ export function TagManager() {
           <h2 className="text-ui text-[11px] text-muted px-3 mb-2">Tag Families</h2>
           {(families ?? []).map((family) => {
             const isActive = family.id === activeFamilyId
+            const isCustom = !SEEDED_FAMILIES.has(family.id)
             const icon = FAMILY_ICONS[family.id] ?? 'label'
             return (
-              <button
+              <div
                 key={family.id}
-                onClick={() => { setActiveFamily(family.id); setSelectedTag(null); setSearch('') }}
-                className={`flex items-center gap-3 px-3 py-2 text-left transition-all duration-200 hover:translate-x-1 ${
+                className={`group flex items-center gap-3 px-3 py-2 text-left transition-all duration-200 hover:translate-x-1 cursor-pointer ${
                   isActive ? 'bg-surface-lowest text-primary rounded-l-sm shadow-sm' : 'text-muted hover:bg-surface'
                 }`}
+                onClick={() => { setActiveFamily(family.id); setSelectedTag(null); setSearch('') }}
               >
                 <span className="material-symbols-outlined text-[20px]">{icon}</span>
-                <span className="text-ui text-[11px] font-bold">{family.name}</span>
-              </button>
+                <span className="text-ui text-[11px] font-bold flex-1">{family.name}</span>
+                {isCustom && isActive && (
+                  <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => { setEditingFamily(family.id); setEditFamilyName(family.name) }}
+                      className="p-1 text-muted hover:text-primary transition-colors"
+                      title="Rename family"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">edit</span>
+                    </button>
+                    <button
+                      onClick={() => { setDeletingFamily(family.id); setDeleteError(null) }}
+                      className="p-1 text-muted hover:text-accent transition-colors"
+                      title="Delete family"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">delete</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             )
           })}
         </div>
@@ -193,6 +221,65 @@ export function TagManager() {
             <div className="flex justify-end gap-3">
               <button onClick={() => setShowRename(false)} className="px-4 py-2 text-[11px] uppercase font-bold text-muted">Cancel</button>
               <button onClick={() => { if (selectedTag) renameTagMutation.mutate({ namespace: selectedTag.tag_namespace, old_value: selectedTag.tag_value, new_value: renameValue.trim() }, { onSuccess: () => { setShowRename(false); setSelectedTag(null) } }) }} disabled={!renameValue.trim()} className="bg-on-surface text-background px-6 py-2 text-[11px] uppercase font-bold disabled:opacity-50">Rename</button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Family Name */}
+      <Dialog open={!!editingFamily} onOpenChange={(open) => { if (!open) setEditingFamily(null) }}>
+        <DialogContent className="bg-background border-border-subtle">
+          <DialogHeader><DialogTitle className="font-display text-2xl">Rename Family</DialogTitle></DialogHeader>
+          <div className="flex flex-col gap-4 mt-4">
+            <input value={editFamilyName} onChange={(e) => setEditFamilyName(e.target.value)} className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none" placeholder="Family name..." autoFocus />
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setEditingFamily(null)} className="px-4 py-2 text-[11px] uppercase font-bold text-muted">Cancel</button>
+              <button
+                onClick={() => {
+                  if (editingFamily) updateFamily.mutate(
+                    { id: editingFamily, name: editFamilyName.trim() },
+                    { onSuccess: () => setEditingFamily(null) }
+                  )
+                }}
+                disabled={!editFamilyName.trim() || updateFamily.isPending}
+                className="bg-on-surface text-background px-6 py-2 text-[11px] uppercase font-bold disabled:opacity-50"
+              >
+                {updateFamily.isPending ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Family Confirmation */}
+      <Dialog open={!!deletingFamily} onOpenChange={(open) => { if (!open) { setDeletingFamily(null); setDeleteError(null) } }}>
+        <DialogContent className="bg-background border-border-subtle">
+          <DialogHeader><DialogTitle className="font-display text-2xl">Delete Family</DialogTitle></DialogHeader>
+          <div className="flex flex-col gap-4 mt-4">
+            <p className="text-sm text-muted">
+              Are you sure you want to delete <strong>{families?.find((f) => f.id === deletingFamily)?.name}</strong>? This action cannot be undone.
+            </p>
+            {deleteError && (
+              <p className="text-sm text-accent bg-accent/10 p-3 border border-accent/20">{deleteError}</p>
+            )}
+            <div className="flex justify-end gap-3">
+              <button onClick={() => { setDeletingFamily(null); setDeleteError(null) }} className="px-4 py-2 text-[11px] uppercase font-bold text-muted">Cancel</button>
+              <button
+                onClick={() => {
+                  if (deletingFamily) deleteFamily.mutate(deletingFamily, {
+                    onSuccess: () => {
+                      setDeletingFamily(null)
+                      setDeleteError(null)
+                      if (activeFamilyId === deletingFamily) setActiveFamily(null)
+                    },
+                    onError: (err: Error) => setDeleteError(err.message),
+                  })
+                }}
+                disabled={deleteFamily.isPending}
+                className="border border-accent text-accent px-6 py-2 text-[11px] uppercase font-bold hover:bg-accent hover:text-white transition-colors disabled:opacity-50"
+              >
+                {deleteFamily.isPending ? 'Deleting...' : 'Delete'}
+              </button>
             </div>
           </div>
         </DialogContent>

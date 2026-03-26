@@ -65,6 +65,29 @@ func (a *API) updateTagFamily(w http.ResponseWriter, r *http.Request) {
 
 func (a *API) deleteTagFamily(w http.ResponseWriter, r *http.Request) {
 	familyID := r.PathValue("id")
+
+	// Check if family has any tags in use
+	tags, err := a.Tags.ListTags(&familyID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if len(tags) > 0 {
+		writeError(w, http.StatusConflict, "cannot delete family with tags in use — remove all tags first")
+		return
+	}
+
+	// Check if family has namespaces
+	namespaces, err := a.Tags.ListNamespaces(familyID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if len(namespaces) > 0 {
+		writeError(w, http.StatusConflict, "cannot delete family with namespaces — remove all namespaces first")
+		return
+	}
+
 	if err := a.Tags.DeleteFamily(familyID); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
