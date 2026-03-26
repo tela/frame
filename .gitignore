@@ -1,4 +1,5 @@
 # Binaries
+frame
 frame-bin
 frame-bin-*
 *.exe
