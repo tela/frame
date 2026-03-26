@@ -54,8 +54,15 @@ func (a *API) updatePoseSetImage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if a.Audit != nil && req.Status != "" {
+		a.Audit.Log("pose_set", charID, "status_changed", strPtr("status"), nil, strPtr(req.Status),
+			map[string]string{"era_id": req.EraID, "pose_id": req.PoseID, "outfit_id": req.OutfitID})
+	}
+
 	writeJSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
+
+func strPtr(s string) *string { return &s }
 
 func (a *API) listStandardPoses(w http.ResponseWriter, r *http.Request) {
 	poses, err := a.PoseSet.ListPoses()

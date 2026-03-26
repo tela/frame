@@ -50,6 +50,10 @@ func (a *API) createMediaItem(w http.ResponseWriter, r *http.Request) {
 	// Sync to Fig (fire-and-forget)
 	a.figSyncMedia(string(contentType), req.ID, req.Name)
 
+	if a.Audit != nil {
+		a.Audit.Log("media", req.ID, "created", nil, nil, nil, map[string]string{"name": req.Name, "content_type": string(contentType)})
+	}
+
 	writeJSON(w, http.StatusCreated, item)
 }
 

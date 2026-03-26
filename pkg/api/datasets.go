@@ -50,6 +50,9 @@ func (a *API) createDataset(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if a.Audit != nil {
+		a.Audit.Log("dataset", d.ID, "created", nil, nil, nil, map[string]string{"name": d.Name, "type": string(d.Type)})
+	}
 	writeJSON(w, http.StatusCreated, d)
 }
 
@@ -99,6 +102,9 @@ func (a *API) deleteDataset(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if a.Audit != nil {
+		a.Audit.Log("dataset", dsID, "deleted", nil, nil, nil, nil)
+	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
@@ -118,6 +124,9 @@ func (a *API) forkDataset(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+	if a.Audit != nil {
+		a.Audit.Log("dataset", forked.ID, "forked", nil, nil, nil, map[string]string{"source_id": dsID, "name": req.Name})
 	}
 	writeJSON(w, http.StatusCreated, forked)
 }
