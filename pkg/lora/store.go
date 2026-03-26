@@ -5,6 +5,10 @@ import (
 	"time"
 )
 
+func now() string {
+	return time.Now().UTC().Format("2006-01-02T15:04:05Z")
+}
+
 // Store provides CRUD operations for the LoRA registry.
 type Store struct {
 	db *sql.DB
@@ -75,7 +79,7 @@ func (s *Store) Update(id, name, filename, sourceURL, description, category, tag
 	_, err := s.db.Exec(`
 		UPDATE loras SET name = ?, filename = ?, source_url = ?, description = ?, category = ?, tags = ?, recommended_strength = ?, content_rating = ?, compatible_models = ?, updated_at = ?
 		WHERE id = ?`,
-		name, filename, sourceURL, description, category, tags, strength, contentRating, compatibleModels, time.Now().UTC(), id,
+		name, filename, sourceURL, description, category, tags, strength, contentRating, compatibleModels, now(), id,
 	)
 	return err
 }

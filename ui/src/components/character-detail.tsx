@@ -1,5 +1,5 @@
 import { Link, useParams } from '@tanstack/react-router'
-import { useCharacter, useDatasets, useCharacterImages, useFavorites, useToggleFavorite, useIngestImage, useCreateEra, avatarUrl, thumbUrl } from '@/lib/api'
+import { useCharacter, useDatasets, useCharacterImages, useFavorites, useToggleFavorite, useIngestImage, useCreateEra, useFigStatus, usePublishToFig, avatarUrl, thumbUrl } from '@/lib/api'
 import { useState } from 'react'
 import { Dropzone } from '@/components/dropzone'
 import { PoseSetDashboard } from '@/components/pose-set-dashboard'
@@ -12,6 +12,8 @@ export function CharacterDetail() {
   const { data: allDatasets } = useDatasets()
   const characterDatasets = (allDatasets ?? []).filter((d) => d.character_id === characterId)
   const createEra = useCreateEra()
+  const { data: figStatus } = useFigStatus()
+  const publishToFig = usePublishToFig()
   const [showCreateEra, setShowCreateEra] = useState(false)
   const [newEraLabel, setNewEraLabel] = useState('')
   const [newEraAgeRange, setNewEraAgeRange] = useState('')
@@ -53,17 +55,28 @@ export function CharacterDetail() {
             {/* Fig status + ID */}
             <div className="flex items-center gap-4 mt-3 mb-4">
               <span className="text-[10px] uppercase tracking-[0.15em] bg-surface-high text-on-surface px-2 py-0.5">{character.status}</span>
-              {character.fig_published && (
-                <span className="flex items-center gap-1.5 text-[11px] text-muted">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                  Published to Fig
-                </span>
-              )}
-              {character.fig_character_url && (
-                <a href={character.fig_character_url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-primary hover:text-accent flex items-center gap-1">
-                  Open in Fig <span className="material-symbols-outlined text-[12px]">open_in_new</span>
-                </a>
-              )}
+              {character.fig_published ? (
+                <>
+                  <span className="flex items-center gap-1.5 text-[11px] text-muted">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    Published to Fig
+                  </span>
+                  {character.fig_character_url && (
+                    <a href={character.fig_character_url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-primary hover:text-accent flex items-center gap-1">
+                      Open in Fig <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                    </a>
+                  )}
+                </>
+              ) : figStatus?.available ? (
+                <button
+                  onClick={() => publishToFig.mutate(character.id)}
+                  disabled={publishToFig.isPending}
+                  className="text-[11px] uppercase font-bold tracking-[0.1em] border border-border-subtle px-3 py-1 hover:border-on-surface hover:bg-surface transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[14px]">publish</span>
+                  {publishToFig.isPending ? 'Publishing...' : 'Publish to Fig'}
+                </button>
+              ) : null}
               <span className="text-[10px] text-muted tabular-nums ml-auto">ID: {character.id}</span>
             </div>
             {/* Vitals Panel */}

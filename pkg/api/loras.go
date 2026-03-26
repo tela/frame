@@ -59,7 +59,7 @@ func (a *API) createLora(w http.ResponseWriter, r *http.Request) {
 		req.CompatibleModels = "[]"
 	}
 
-	now := time.Now().UTC()
+	ts := time.Now().UTC().Format("2006-01-02T15:04:05Z")
 	l := &lora.LoRA{
 		ID:                  id.New(),
 		Name:                req.Name,
@@ -71,8 +71,8 @@ func (a *API) createLora(w http.ResponseWriter, r *http.Request) {
 		RecommendedStrength: req.RecommendedStrength,
 		ContentRating:       req.ContentRating,
 		CompatibleModels:    req.CompatibleModels,
-		CreatedAt:           now,
-		UpdatedAt:           now,
+		CreatedAt:           ts,
+		UpdatedAt:           ts,
 	}
 	if err := a.Loras.Create(l); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
