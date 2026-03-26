@@ -14,12 +14,15 @@ type Config struct {
 	Port       int    `toml:"port"`
 	Root       string `toml:"-"`          // resolved drive root, not stored in TOML
 	BifrostURL string `toml:"bifrost_url"` // Bifrost service URL for image generation
+	FigURL     string `toml:"fig_url"`     // Fig studio URL for character/media sync
+	FigSecret  string `toml:"fig_secret"`  // Shared secret for Fig→Frame auth (optional)
 }
 
 // defaults
 const (
 	DefaultPort       = 7890
 	DefaultBifrostURL = "http://localhost:9090"
+	DefaultFigURL     = "http://localhost:7700"
 	ConfigFileName    = "frame.toml"
 )
 
@@ -27,6 +30,8 @@ const (
 type fileConfig struct {
 	Port       int    `toml:"port"`
 	BifrostURL string `toml:"bifrost_url"`
+	FigURL     string `toml:"fig_url"`
+	FigSecret  string `toml:"fig_secret"`
 }
 
 // Load resolves configuration from CLI flags and the TOML config file.
@@ -35,6 +40,7 @@ func Load() (*Config, error) {
 	portFlag := flag.Int("port", 0, "HTTP server port (overrides config file)")
 	rootFlag := flag.String("root", "", "Drive root directory (overrides auto-detection)")
 	bifrostFlag := flag.String("bifrost", "", "Bifrost service URL (overrides config file)")
+	figFlag := flag.String("fig", "", "Fig studio URL (overrides config file)")
 	flag.Parse()
 
 	root, err := resolveRoot(*rootFlag)
@@ -45,6 +51,7 @@ func Load() (*Config, error) {
 	cfg := &Config{
 		Port:       DefaultPort,
 		BifrostURL: DefaultBifrostURL,
+		FigURL:     DefaultFigURL,
 		Root:       root,
 	}
 
@@ -61,11 +68,23 @@ func Load() (*Config, error) {
 		if fc.BifrostURL != "" {
 			cfg.BifrostURL = fc.BifrostURL
 		}
+		if fc.FigURL != "" {
+			cfg.FigURL = fc.FigURL
+		}
+		if fc.FigSecret != "" {
+			cfg.FigSecret = fc.FigSecret
+		}
 	}
 
-	// Environment variable override
+	// Environment variable overrides
 	if env := os.Getenv("BIFROST_URL"); env != "" {
 		cfg.BifrostURL = env
+	}
+	if env := os.Getenv("FIG_URL"); env != "" {
+		cfg.FigURL = env
+	}
+	if env := os.Getenv("FIG_SECRET"); env != "" {
+		cfg.FigSecret = env
 	}
 
 	// CLI flags override everything
@@ -74,6 +93,9 @@ func Load() (*Config, error) {
 	}
 	if *bifrostFlag != "" {
 		cfg.BifrostURL = *bifrostFlag
+	}
+	if *figFlag != "" {
+		cfg.FigURL = *figFlag
 	}
 
 	return cfg, nil
