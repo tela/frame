@@ -173,10 +173,13 @@ func (a *API) updateCharacter(w http.ResponseWriter, r *http.Request) {
 }
 
 type createEraRequest struct {
-	ID                    string `json:"id"`
-	Label                 string `json:"label"`
+	ID                     string `json:"id"`
+	Label                  string `json:"label"`
+	AgeRange               string `json:"age_range"`
+	TimePeriod             string `json:"time_period"`
+	Description            string `json:"description"`
 	PreliminaryDescription string `json:"preliminary_description"`
-	SortOrder             int    `json:"sort_order"`
+	SortOrder              int    `json:"sort_order"`
 }
 
 func (a *API) createEra(w http.ResponseWriter, r *http.Request) {
@@ -211,6 +214,9 @@ func (a *API) createEra(w http.ResponseWriter, r *http.Request) {
 		ID:                req.ID,
 		CharacterID:       charID,
 		Label:             req.Label,
+		AgeRange:          req.AgeRange,
+		TimePeriod:        req.TimePeriod,
+		Description:       req.Description,
 		VisualDescription: req.PreliminaryDescription,
 		PipelineSettings:  "{}",
 		SortOrder:         req.SortOrder,

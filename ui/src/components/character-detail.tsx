@@ -1,7 +1,8 @@
 import { Link, useParams } from '@tanstack/react-router'
-import { useCharacter, useDatasets, useCharacterImages, useFavorites, useToggleFavorite, useIngestImage, avatarUrl, thumbUrl } from '@/lib/api'
+import { useCharacter, useDatasets, useCharacterImages, useFavorites, useToggleFavorite, useIngestImage, useCreateEra, avatarUrl, thumbUrl } from '@/lib/api'
 import { useState } from 'react'
 import { Dropzone } from '@/components/dropzone'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import type { EraWithStats, CharacterImage } from '@/lib/types'
 
 export function CharacterDetail() {
@@ -9,6 +10,12 @@ export function CharacterDetail() {
   const { data: character, isLoading } = useCharacter(characterId)
   const { data: allDatasets } = useDatasets()
   const characterDatasets = (allDatasets ?? []).filter((d) => d.character_id === characterId)
+  const createEra = useCreateEra()
+  const [showCreateEra, setShowCreateEra] = useState(false)
+  const [newEraLabel, setNewEraLabel] = useState('')
+  const [newEraAgeRange, setNewEraAgeRange] = useState('')
+  const [newEraTimePeriod, setNewEraTimePeriod] = useState('')
+  const [newEraDescription, setNewEraDescription] = useState('')
 
   if (isLoading) {
     return <div className="p-12 text-muted text-[15px]">Loading...</div>
@@ -83,8 +90,8 @@ export function CharacterDetail() {
           </div>
         </div>
 
-        {/* Eras Section */}
-        {character.status === 'cast' && (
+        {/* Eras Section — show for cast and development */}
+        {(character.status === 'cast' || character.status === 'development') && (
           <>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-[24px] font-display font-normal tracking-display text-primary">Chronological Eras</h2>
@@ -94,8 +101,11 @@ export function CharacterDetail() {
               {character.eras.map((era) => (
                 <EraCard key={era.id} characterId={character.id} era={era} />
               ))}
-              {/* Add Era placeholder */}
-              <button className="flex flex-col gap-3 min-w-[280px] md:min-w-[400px] group snap-start outline-none text-left">
+              {/* Add Era */}
+              <button
+                onClick={() => { setShowCreateEra(true); setNewEraLabel('') }}
+                className="flex flex-col gap-3 min-w-[280px] md:min-w-[400px] group snap-start outline-none text-left"
+              >
                 <div className="aspect-video w-full bg-transparent rounded-sm border border-dashed border-border-subtle flex items-center justify-center transition-all duration-300 group-hover:border-primary group-hover:bg-primary/5">
                   <span className="material-symbols-outlined text-[24px] text-muted group-hover:text-primary transition-colors">add</span>
                 </div>
@@ -108,7 +118,7 @@ export function CharacterDetail() {
         )}
 
         {/* Datasets Section */}
-        {character.status === 'cast' && characterDatasets.length > 0 && (
+        {(character.status === 'cast' || character.status === 'development') && characterDatasets.length > 0 && (
           <div className="mb-12">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-[24px] font-display font-normal tracking-display text-primary">Datasets</h2>
@@ -139,7 +149,7 @@ export function CharacterDetail() {
           </div>
         )}
 
-        {/* Prospect / Development view (pre-cast) */}
+        {/* Lookbook view — prospect always, development always */}
         {(character.status === 'prospect' || character.status === 'development') && (
           <ProspectView characterId={character.id} status={character.status} />
         )}
@@ -153,6 +163,104 @@ export function CharacterDetail() {
           </div>
         )}
       </div>
+
+      {/* Create Era Dialog */}
+      <Dialog open={showCreateEra} onOpenChange={setShowCreateEra}>
+        <DialogContent className="bg-background border-border-subtle max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl">Initialize New Era</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 mt-4">
+            <div>
+              <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Era Label <span className="text-accent">*</span></label>
+              <input
+                value={newEraLabel}
+                onChange={(e) => setNewEraLabel(e.target.value)}
+                className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
+                placeholder="e.g. Young Adult, The Haunting, Aftermath"
+                autoFocus
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Age Range</label>
+                <select
+                  value={newEraAgeRange}
+                  onChange={(e) => setNewEraAgeRange(e.target.value)}
+                  className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
+                >
+                  <option value="">Select...</option>
+                  <option value="Child (5-9)">Child (5-9)</option>
+                  <option value="Adolescent (10-12)">Adolescent (10-12)</option>
+                  <option value="Teen (13-17)">Teen (13-17)</option>
+                  <option value="Young Adult (18-24)">Young Adult (18-24)</option>
+                  <option value="Late 20s (25-29)">Late 20s (25-29)</option>
+                  <option value="Early 30s (30-34)">Early 30s (30-34)</option>
+                  <option value="Mid 30s (35-39)">Mid 30s (35-39)</option>
+                  <option value="Early 40s (40-44)">Early 40s (40-44)</option>
+                  <option value="Mid 40s (45-49)">Mid 40s (45-49)</option>
+                  <option value="50s (50-59)">50s (50-59)</option>
+                  <option value="60s (60-69)">60s (60-69)</option>
+                  <option value="70+ (70+)">70+ (70+)</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Time Period</label>
+                <input
+                  value={newEraTimePeriod}
+                  onChange={(e) => setNewEraTimePeriod(e.target.value)}
+                  className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
+                  placeholder="e.g. 1950s, Present day"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Description</label>
+              <textarea
+                value={newEraDescription}
+                onChange={(e) => setNewEraDescription(e.target.value)}
+                className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none h-20 resize-none"
+                placeholder="Narrative context for this era..."
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowCreateEra(false)}
+                className="px-4 py-2 text-[11px] uppercase font-bold text-muted hover:text-on-surface transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (!newEraLabel.trim()) return
+                  createEra.mutate(
+                    {
+                      characterId,
+                      label: newEraLabel.trim(),
+                      age_range: newEraAgeRange.trim() || undefined,
+                      time_period: newEraTimePeriod.trim() || undefined,
+                      description: newEraDescription.trim() || undefined,
+                    } as any,
+                    {
+                      onSuccess: () => {
+                        setShowCreateEra(false)
+                        setNewEraLabel('')
+                        setNewEraAgeRange('')
+                        setNewEraTimePeriod('')
+                        setNewEraDescription('')
+                      },
+                    }
+                  )
+                }}
+                disabled={!newEraLabel.trim() || createEra.isPending}
+                className="bg-on-surface text-background px-6 py-2 text-[11px] uppercase font-bold disabled:opacity-50"
+              >
+                {createEra.isPending ? 'Creating...' : 'Create'}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -319,11 +427,18 @@ function EraCard({ characterId, era }: { characterId: string; era: EraWithStats 
           </div>
         )}
       </div>
-      <div className="flex justify-between items-baseline px-1">
-        <h3 className="text-[18px] font-display tracking-display text-primary group-hover:text-accent transition-colors">
-          {era.label}
-        </h3>
-        <span className="text-[12px] font-body tabular-nums text-muted">{era.image_count} Assets</span>
+      <div className="px-1">
+        <div className="flex justify-between items-baseline">
+          <h3 className="text-[18px] font-display tracking-display text-primary group-hover:text-accent transition-colors">
+            {era.label}
+          </h3>
+          <span className="text-[12px] font-body tabular-nums text-muted">{era.image_count} Assets</span>
+        </div>
+        {(era.age_range || era.time_period) && (
+          <p className="text-[11px] text-muted mt-1">
+            {[era.age_range, era.time_period].filter(Boolean).join(' · ')}
+          </p>
+        )}
       </div>
     </Link>
   )

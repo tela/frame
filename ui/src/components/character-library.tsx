@@ -97,6 +97,26 @@ export function CharacterLibrary() {
 }
 
 function CharacterCard({ character }: { character: Character }) {
+  const isSeed = character.id.startsWith('seed-')
+
+  if (isSeed) {
+    return (
+      <div className="flex flex-col gap-4 opacity-50">
+        <div className="w-full aspect-[3/4] bg-surface overflow-hidden rounded relative">
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="material-symbols-outlined text-[48px] text-muted/20">person</span>
+          </div>
+        </div>
+        <div>
+          <h3 className="font-display text-[18px] tracking-display font-medium text-muted">
+            {character.display_name || character.name}
+          </h3>
+          <p className="text-[10px] text-muted/60 uppercase tracking-[0.1em]">Sample data</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <Link
       to="/characters/$characterId"

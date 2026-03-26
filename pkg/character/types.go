@@ -59,9 +59,12 @@ type Era struct {
 	ID                string    `json:"id"`
 	CharacterID       string    `json:"character_id"`
 	Label             string    `json:"label"`
-	VisualDescription string    `json:"visual_description"`
+	AgeRange          string    `json:"age_range"`          // e.g., "18-24", "Late 30s"
+	TimePeriod        string    `json:"time_period"`        // e.g., "1950s", "Present day"
+	Description       string    `json:"description"`        // narrative context for the era
+	VisualDescription string    `json:"visual_description"` // appearance description for generation
 	PromptPrefix      string    `json:"prompt_prefix"`
-	PipelineSettings  string    `json:"pipeline_settings"` // JSON blob
+	PipelineSettings  string    `json:"pipeline_settings"`  // JSON blob
 	SortOrder         int       `json:"sort_order"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`

@@ -19,7 +19,7 @@ import type {
   DatasetWithStats,
   DatasetImage,
 } from './types'
-import { SEED_CHARACTERS, SEED_CHARACTER_DETAILS, SEED_MEDIA } from './seed-data'
+import { SEED_CHARACTERS, SEED_MEDIA } from './seed-data'
 
 // ===== HTTP Helpers =====
 
@@ -85,14 +85,8 @@ export function useCharacters() {
 export function useCharacter(id: string) {
   return useQuery({
     queryKey: ['characters', id],
-    queryFn: async () => {
-      if (id.startsWith('seed-')) {
-        const seed = SEED_CHARACTER_DETAILS[id]
-        if (seed) return seed
-      }
-      return fetchJSON<CharacterWithEras>(`/api/v1/characters/${id}`)
-    },
-    enabled: !!id,
+    queryFn: () => fetchJSON<CharacterWithEras>(`/api/v1/characters/${id}`),
+    enabled: !!id && !id.startsWith('seed-'),
   })
 }
 
@@ -135,7 +129,7 @@ export function useEras(characterId: string) {
 export function useCreateEra() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ characterId, ...body }: { characterId: string; id: string; label: string; preliminary_description?: string; sort_order?: number }) =>
+    mutationFn: ({ characterId, ...body }: { characterId: string; id?: string; label: string; age_range?: string; time_period?: string; description?: string; preliminary_description?: string; sort_order?: number }) =>
       postJSON<Era>(`/api/v1/characters/${characterId}/eras`, body),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId] })
