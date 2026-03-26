@@ -14,6 +14,7 @@ export function ImportScreen() {
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [importResult, setImportResult] = useState<{ imported: number; skipped: number; failed: number; total: number } | null>(null)
+  const [isImporting, setIsImporting] = useState(false)
 
   const addTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
@@ -191,53 +192,50 @@ export function ImportScreen() {
             </div>
 
             <button
-              disabled={(importDirectory.isPending || ingestImage.isPending) || (!directoryPath.trim() && uploadedFiles.length === 0)}
-              onClick={() => {
+              disabled={isImporting || (!directoryPath.trim() && uploadedFiles.length === 0)}
+              onClick={async () => {
                 if (uploadedFiles.length > 0) {
-                  // File upload mode
-                  let completed = 0
+                  setIsImporting(true)
+                  let imported = 0
+                  let failed = 0
                   const total = uploadedFiles.length
                   for (const file of uploadedFiles) {
-                    ingestImage.mutate(
-                      {
+                    try {
+                      await ingestImage.mutateAsync({
                         characterId: characterId || '',
                         file,
                         source: sourceOrigin,
-                      },
-                      {
-                        onSuccess: () => {
-                          completed++
-                          if (completed === total) {
-                            setImportResult({ imported: completed, skipped: 0, failed: 0, total })
-                            setUploadedFiles([])
-                          }
-                        },
-                        onError: () => {
-                          completed++
-                          if (completed === total) {
-                            setImportResult({ imported: completed - 1, skipped: 0, failed: 1, total })
-                          }
-                        },
-                      }
-                    )
+                      })
+                      imported++
+                    } catch (err) {
+                      console.error('Import failed for', file.name, err)
+                      failed++
+                    }
                   }
+                  setImportResult({ imported, skipped: 0, failed, total })
+                  setUploadedFiles([])
+                  setIsImporting(false)
                 } else if (directoryPath.trim()) {
-                  // Directory mode
-                  const tagStrings = tags.map((t) => `misc:${t}`)
-                  importDirectory.mutate(
-                    {
+                  setIsImporting(true)
+                  try {
+                    const tagStrings = tags.map((t) => `misc:${t}`)
+                    const data = await importDirectory.mutateAsync({
                       path: directoryPath,
                       character_id: characterId || undefined,
                       source: sourceOrigin,
                       tags: tagStrings.length > 0 ? tagStrings : undefined,
-                    },
-                    { onSuccess: (data) => setImportResult(data) }
-                  )
+                    })
+                    setImportResult(data)
+                  } catch (err) {
+                    console.error('Directory import failed', err)
+                    setImportResult({ imported: 0, skipped: 0, failed: 1, total: 1 })
+                  }
+                  setIsImporting(false)
                 }
               }}
               className="w-full bg-accent text-white py-3 text-[11px] uppercase font-bold tracking-[0.15em] hover:opacity-90 transition-all disabled:opacity-50"
             >
-              {(importDirectory.isPending || ingestImage.isPending) ? 'Importing...' : 'Execute Import'}
+              {isImporting ? 'Importing...' : 'Execute Import'}
             </button>
           </div>
 
@@ -255,18 +253,13 @@ export function ImportScreen() {
                 {importResult.failed > 0 && <p className="text-accent">{importResult.failed} failed</p>}
                 <p className="text-muted">{importResult.total} total files processed</p>
               </div>
-            ) : importDirectory.isPending ? (
+            ) : isImporting ? (
               <div className="flex items-center gap-3 text-sm text-muted">
                 <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
                 Importing...
               </div>
             ) : (
               <p className="text-xs text-muted">No active import session</p>
-            )}
-            {importDirectory.isError && (
-              <p className="text-accent text-xs mt-2">
-                Error: {importDirectory.error?.message}
-              </p>
             )}
           </div>
         </div>
