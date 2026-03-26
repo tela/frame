@@ -37,6 +37,12 @@ dev-ui:
 	cd ui && pnpm run dev
 
 test:
+	go test ./pkg/...
+
+test-integration:
+	go test ./tests/integration/ -v
+
+test-all:
 	go test ./...
 
 smoke:

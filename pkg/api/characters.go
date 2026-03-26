@@ -198,9 +198,12 @@ func (a *API) createEra(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.ID == "" || req.Label == "" {
-		writeError(w, http.StatusBadRequest, "id and label are required")
+	if req.Label == "" {
+		writeError(w, http.StatusBadRequest, "label is required")
 		return
+	}
+	if req.ID == "" {
+		req.ID = id.New()
 	}
 
 	now := time.Now().UTC()
