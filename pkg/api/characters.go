@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -50,6 +51,23 @@ func (a *API) createCharacter(w http.ResponseWriter, r *http.Request) {
 	if err := a.Characters.Create(c); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+
+	// Auto-create Standard era (age 20 baseline)
+	standardEra := &character.Era{
+		ID:               id.New(),
+		CharacterID:      c.ID,
+		Label:            "Standard",
+		AgeRange:         "20",
+		TimePeriod:       "Present day",
+		Description:      "Baseline visual identity",
+		PipelineSettings: "{}",
+		SortOrder:        0,
+		CreatedAt:        now,
+		UpdatedAt:        now,
+	}
+	if err := a.Characters.CreateEra(standardEra); err != nil {
+		log.Printf("auto-create standard era for %s: %v", c.ID, err)
 	}
 
 	if a.Audit != nil {

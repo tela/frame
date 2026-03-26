@@ -1,7 +1,34 @@
 import { useParams } from '@tanstack/react-router'
-import { useCharacter, useGenerate, useBifrostStatus, thumbUrl } from '@/lib/api'
+import { useCharacter, useGenerate, useBifrostStatus, useLoras, thumbUrl } from '@/lib/api'
+import type { LoRA } from '@/lib/api'
 import { useState } from 'react'
 import { ImagePickerModal } from '@/components/image-picker-modal'
+
+type Workflow = 'txt2img' | 'multi_ref' | 'img2img' | 'pose_transfer' | 'upscale'
+type Tier = 'cheap' | 'complex' | 'frontier'
+type ContentRating = 'sfw' | 'nsfw'
+
+const WORKFLOWS: { value: Workflow; label: string; description: string }[] = [
+  { value: 'txt2img', label: 'Text to Image', description: 'Generate from prompt only' },
+  { value: 'multi_ref', label: 'Multi-Reference', description: 'Use face + body reference images' },
+  { value: 'img2img', label: 'Image Refinement', description: 'Refine an existing image' },
+  { value: 'pose_transfer', label: 'Pose Transfer', description: 'Apply a pose to character' },
+  { value: 'upscale', label: 'Quality Upscale', description: 'Enhance resolution' },
+]
+
+const TIERS: { value: Tier; label: string }[] = [
+  { value: 'cheap', label: 'Quick' },
+  { value: 'complex', label: 'Standard' },
+  { value: 'frontier', label: 'Premium' },
+]
+
+const DIMENSIONS: { label: string; w: number; h: number }[] = [
+  { label: 'Portrait', w: 768, h: 1024 },
+  { label: 'Square', w: 1024, h: 1024 },
+  { label: 'Landscape', w: 1024, h: 768 },
+]
+
+const BATCH_SIZES = [1, 2, 4, 8]
 
 interface GeneratedImage {
   id: string
@@ -16,61 +43,87 @@ export function Studio() {
   const { characterId, eraId } = useParams({ from: '/characters/$characterId/eras/$eraId/studio' })
   const { data: character } = useCharacter(characterId)
   const { data: bifrostStatus } = useBifrostStatus()
+  const { data: loras } = useLoras()
   const generate = useGenerate()
 
   const [prompt, setPrompt] = useState('')
-  const [template, setTemplate] = useState('Cinematic Close-up (35mm)')
+  const [negativePrompt, setNegativePrompt] = useState('')
+  const [workflow, setWorkflow] = useState<Workflow>('txt2img')
+  const [tier, setTier] = useState<Tier>('complex')
+  const [contentRating, setContentRating] = useState<ContentRating>('nsfw')
+  const [dimensions, setDimensions] = useState(0) // index into DIMENSIONS
+  const [batchSize, setBatchSize] = useState(1)
+  const [steps, setSteps] = useState(30)
+  const [selectedLora, setSelectedLora] = useState<string>('')
+  const [loraStrength, setLoraStrength] = useState(0.7)
+  const [denoiseStrength, setDenoiseStrength] = useState(0.6)
   const [showParams, setShowParams] = useState(false)
   const [sessionImages, setSessionImages] = useState<GeneratedImage[]>([])
   const [showRefPicker, setShowRefPicker] = useState(false)
+  const [showSourcePicker, setShowSourcePicker] = useState(false)
   const [selectedRefs, setSelectedRefs] = useState<string[]>([])
+  const [sourceImageId, setSourceImageId] = useState<string>('')
   const [includeEraRefs, setIncludeEraRefs] = useState(true)
 
   const era = character?.eras.find((e) => e.id === eraId)
-  const charCount = prompt.length
   const bifrostAvailable = bifrostStatus?.available ?? false
+  const dim = DIMENSIONS[dimensions]
+  const activeLora = (loras ?? []).find((l: LoRA) => l.id === selectedLora)
 
   const handleGenerate = () => {
     if (!prompt.trim()) return
 
-    const placeholder: GeneratedImage = {
+    const placeholders: GeneratedImage[] = Array.from({ length: batchSize }, () => ({
       id: crypto.randomUUID(),
       url: '',
       seed: Math.floor(Math.random() * 100000),
-      prompt: `${template}: ${prompt}`,
+      prompt: prompt,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      status: 'generating',
-    }
-    setSessionImages((prev) => [placeholder, ...prev])
+      status: 'generating' as const,
+    }))
+    setSessionImages((prev) => [...placeholders.reverse(), ...prev])
 
     generate.mutate(
       {
         character_id: characterId,
         era_id: eraId,
         prompt: prompt,
-        include_refs: includeEraRefs,
+        negative_prompt: negativePrompt || undefined,
+        include_refs: includeEraRefs && (workflow === 'multi_ref' || workflow === 'txt2img'),
         ref_image_ids: selectedRefs.length > 0 ? selectedRefs : undefined,
-        batch_size: 1,
+        batch_size: batchSize,
+        width: dim.w,
+        height: dim.h,
+        steps: steps,
+        content_rating: contentRating,
+        lora_adapter: activeLora?.filename || undefined,
+        lora_strength: activeLora ? loraStrength : undefined,
+        source_image_id: (workflow === 'img2img' || workflow === 'upscale') ? sourceImageId || undefined : undefined,
+        denoise_strength: workflow === 'img2img' ? denoiseStrength : undefined,
       },
       {
         onSuccess: (data) => {
-          setSessionImages((prev) =>
-            prev.map((img) =>
-              img.id === placeholder.id && data.images.length > 0
-                ? { ...img, id: data.images[0].image_id, url: thumbUrl(data.images[0].image_id), status: 'complete' as const }
-                : img
-            )
-          )
+          setSessionImages((prev) => {
+            const updated = [...prev]
+            for (let i = 0; i < data.images.length; i++) {
+              const placeholderIdx = updated.findIndex((img) => img.status === 'generating')
+              if (placeholderIdx >= 0) {
+                updated[placeholderIdx] = {
+                  ...updated[placeholderIdx],
+                  id: data.images[i].image_id,
+                  url: thumbUrl(data.images[i].image_id),
+                  status: 'complete',
+                }
+              }
+            }
+            return updated
+          })
         },
         onError: () => {
-          setSessionImages((prev) => prev.filter((img) => img.id !== placeholder.id))
+          setSessionImages((prev) => prev.filter((img) => img.status !== 'generating'))
         },
       }
     )
-  }
-
-  const insertVariable = (v: string) => {
-    setPrompt((p) => p + ` [${v}]`)
   }
 
   return (
@@ -90,124 +143,275 @@ export function Studio() {
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-8">
-          {/* Template Selector */}
+        <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-6">
+          {/* Workflow Selector */}
           <div className="flex flex-col gap-2">
-            <label className="text-[13px] uppercase tracking-ui font-medium text-muted flex justify-between">
-              Style Template
-              <button className="text-accent hover:underline lowercase tracking-normal text-[13px]">Manage</button>
-            </label>
+            <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Workflow</label>
             <div className="relative">
               <select
-                value={template}
-                onChange={(e) => setTemplate(e.target.value)}
-                className="w-full appearance-none bg-transparent border border-border-subtle rounded-sm py-3 px-4 text-sm focus:outline-none focus:border-primary cursor-pointer transition-colors hover:border-muted"
+                value={workflow}
+                onChange={(e) => setWorkflow(e.target.value as Workflow)}
+                className="w-full appearance-none bg-transparent border border-border-subtle py-2.5 px-3 text-sm focus:outline-none focus:border-primary cursor-pointer"
               >
-                <option>Cinematic Close-up (35mm)</option>
-                <option>Archival Polaroid</option>
-                <option>Studio Portrait - High Contrast</option>
-                <option>Environmental Wide</option>
-                <option>Custom Override</option>
+                {WORKFLOWS.map((w) => (
+                  <option key={w.value} value={w.value}>{w.label}</option>
+                ))}
               </select>
-              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted text-[20px]">expand_more</span>
+              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted text-[18px]">expand_more</span>
+            </div>
+            <p className="text-[11px] text-muted">{WORKFLOWS.find((w) => w.value === workflow)?.description}</p>
+          </div>
+
+          {/* Content Rating + Tier */}
+          <div className="flex gap-3">
+            <div className="flex-1 flex flex-col gap-2">
+              <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Content</label>
+              <div className="flex">
+                {(['sfw', 'nsfw'] as const).map((cr) => (
+                  <button
+                    key={cr}
+                    onClick={() => setContentRating(cr)}
+                    className={`flex-1 py-2 text-[11px] uppercase font-bold tracking-[0.1em] border transition-colors ${
+                      contentRating === cr
+                        ? cr === 'nsfw' ? 'bg-accent text-white border-accent' : 'bg-on-surface text-background border-on-surface'
+                        : 'bg-transparent text-muted border-border-subtle hover:border-on-surface'
+                    }`}
+                  >
+                    {cr}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex-1 flex flex-col gap-2">
+              <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Quality</label>
+              <div className="flex">
+                {TIERS.map((t) => (
+                  <button
+                    key={t.value}
+                    onClick={() => setTier(t.value)}
+                    className={`flex-1 py-2 text-[11px] uppercase font-bold tracking-[0.1em] border transition-colors ${
+                      tier === t.value
+                        ? 'bg-on-surface text-background border-on-surface'
+                        : 'bg-transparent text-muted border-border-subtle hover:border-on-surface'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Reference Images */}
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] uppercase tracking-ui font-medium text-muted">
-              Reference Images
-            </label>
-
-            {/* Era refs toggle */}
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="checkbox"
-                checked={includeEraRefs}
-                onChange={(e) => setIncludeEraRefs(e.target.checked)}
-                className="rounded border-border-subtle text-primary focus:ring-primary"
-              />
-              <span className="text-muted">Include era reference package</span>
-            </label>
-
-            {/* Selected custom refs */}
-            {selectedRefs.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {selectedRefs.map((refId) => (
-                  <div key={refId} className="relative w-10 h-10 border border-border-subtle overflow-hidden group">
-                    <img src={thumbUrl(refId)} alt="" className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => setSelectedRefs((prev) => prev.filter((id) => id !== refId))}
-                      className="absolute inset-0 bg-on-surface/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                    >
-                      <span className="material-symbols-outlined text-white text-[14px]">close</span>
-                    </button>
+          {/* Source Image (for img2img/upscale) */}
+          {(workflow === 'img2img' || workflow === 'upscale') && (
+            <div className="flex flex-col gap-2">
+              <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Source Image</label>
+              {sourceImageId ? (
+                <div className="relative w-20 h-20 border border-border-subtle overflow-hidden group">
+                  <img src={thumbUrl(sourceImageId)} alt="" className="w-full h-full object-cover" />
+                  <button
+                    onClick={() => setSourceImageId('')}
+                    className="absolute inset-0 bg-on-surface/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                  >
+                    <span className="material-symbols-outlined text-white text-[14px]">close</span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowSourcePicker(true)}
+                  className="border border-dashed border-border-subtle text-muted text-[12px] py-3 px-3 hover:border-primary hover:text-primary transition-colors flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[16px]">add_photo_alternate</span>
+                  Select source image
+                </button>
+              )}
+              {workflow === 'img2img' && (
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between text-[11px] text-muted">
+                    <span>Denoise Strength</span>
+                    <span className="tabular-nums">{denoiseStrength.toFixed(2)}</span>
                   </div>
+                  <input
+                    type="range"
+                    min={0.1}
+                    max={1.0}
+                    step={0.05}
+                    value={denoiseStrength}
+                    onChange={(e) => setDenoiseStrength(parseFloat(e.target.value))}
+                    className="w-full accent-primary"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Reference Images (for multi_ref / txt2img) */}
+          {(workflow === 'multi_ref' || workflow === 'txt2img') && (
+            <div className="flex flex-col gap-2">
+              <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">References</label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={includeEraRefs}
+                  onChange={(e) => setIncludeEraRefs(e.target.checked)}
+                  className="rounded border-border-subtle text-primary focus:ring-primary"
+                />
+                <span className="text-muted text-[13px]">Include era reference package</span>
+              </label>
+              {selectedRefs.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {selectedRefs.map((refId) => (
+                    <div key={refId} className="relative w-10 h-10 border border-border-subtle overflow-hidden group">
+                      <img src={thumbUrl(refId)} alt="" className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => setSelectedRefs((prev) => prev.filter((id) => id !== refId))}
+                        className="absolute inset-0 bg-on-surface/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                      >
+                        <span className="material-symbols-outlined text-white text-[14px]">close</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button
+                onClick={() => setShowRefPicker(true)}
+                className="border border-dashed border-border-subtle text-muted text-[12px] py-2 px-3 hover:border-primary hover:text-primary transition-colors flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[16px]">add_photo_alternate</span>
+                {selectedRefs.length > 0 ? `${selectedRefs.length} custom refs` : 'Select custom references'}
+              </button>
+            </div>
+          )}
+
+          {/* LoRA Selector */}
+          <div className="flex flex-col gap-2">
+            <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">LoRA Adapter</label>
+            <div className="relative">
+              <select
+                value={selectedLora}
+                onChange={(e) => {
+                  setSelectedLora(e.target.value)
+                  const l = (loras ?? []).find((l: LoRA) => l.id === e.target.value)
+                  if (l) setLoraStrength(l.recommended_strength)
+                }}
+                className="w-full appearance-none bg-transparent border border-border-subtle py-2.5 px-3 text-sm focus:outline-none focus:border-primary cursor-pointer"
+              >
+                <option value="">None</option>
+                {(loras ?? []).map((l: LoRA) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name} {l.content_rating === 'nsfw' ? '(NSFW)' : ''}
+                  </option>
                 ))}
+              </select>
+              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted text-[18px]">expand_more</span>
+            </div>
+            {selectedLora && (
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between text-[11px] text-muted">
+                  <span>Strength</span>
+                  <span className="tabular-nums">{loraStrength.toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={1.5}
+                  step={0.05}
+                  value={loraStrength}
+                  onChange={(e) => setLoraStrength(parseFloat(e.target.value))}
+                  className="w-full accent-primary"
+                />
               </div>
             )}
-
-            {/* Pick refs button */}
-            <button
-              onClick={() => setShowRefPicker(true)}
-              className="mt-1 border border-dashed border-border-subtle text-muted text-[12px] py-2 px-3 hover:border-primary hover:text-primary transition-colors flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined text-[16px]">add_photo_alternate</span>
-              {selectedRefs.length > 0 ? `${selectedRefs.length} custom refs · Change` : 'Select custom references'}
-            </button>
           </div>
 
-          {/* Prompt Textarea */}
-          <div className="flex flex-col gap-2 flex-1">
-            <label className="text-[13px] uppercase tracking-ui font-medium text-muted flex justify-between">
-              Base Prompt
-              <span className="text-[11px] tracking-normal lowercase tabular-nums">{charCount}/1000</span>
+          {/* Prompt */}
+          <div className="flex flex-col gap-2">
+            <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted flex justify-between">
+              Prompt
+              <span className="tracking-normal lowercase tabular-nums">{prompt.length}/1000</span>
             </label>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              className="w-full h-[200px] resize-none bg-surface border border-border-subtle rounded-sm p-4 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
-              placeholder="Describe the subject, environment, lighting, and camera details..."
+              className="w-full h-[140px] resize-none bg-surface border border-border-subtle p-3 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
+              placeholder="Describe the subject, environment, lighting..."
             />
-            <div className="flex flex-wrap gap-2 mt-2">
-              {['SUBJECT', 'ERA', 'LIGHTING'].map((v) => (
-                <span
-                  key={v}
-                  onClick={() => insertVariable(v)}
-                  className="text-[11px] px-2 py-1 border border-border-subtle rounded-sm bg-surface font-body text-muted cursor-pointer hover:border-primary hover:text-primary transition-colors"
-                >
-                  + [{v}]
-                </span>
-              ))}
-            </div>
           </div>
 
-          {/* Parameters (Collapsed) */}
-          <div className="border-t border-border-subtle pt-6">
+          {/* Negative Prompt */}
+          <div className="flex flex-col gap-2">
+            <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Negative Prompt</label>
+            <textarea
+              value={negativePrompt}
+              onChange={(e) => setNegativePrompt(e.target.value)}
+              className="w-full h-[60px] resize-none bg-surface border border-border-subtle p-3 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
+              placeholder="What to exclude..."
+            />
+          </div>
+
+          {/* Parameters */}
+          <div className="border-t border-border-subtle pt-4">
             <button
               onClick={() => setShowParams(!showParams)}
-              className="flex items-center justify-between w-full text-[13px] uppercase tracking-ui font-medium text-muted hover:text-primary transition-colors group"
+              className="flex items-center justify-between w-full text-[11px] uppercase tracking-[0.1em] font-bold text-muted hover:text-primary transition-colors"
             >
               Parameters
               <span className={`material-symbols-outlined text-[18px] transition-transform ${showParams ? 'rotate-180' : ''}`}>expand_more</span>
             </button>
             {showParams && (
-              <div className="mt-4 flex flex-col gap-4 text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted">Batch Size</span>
-                  <span className="text-primary tabular-nums">1</span>
+              <div className="mt-4 flex flex-col gap-4">
+                {/* Dimensions */}
+                <div className="flex flex-col gap-2">
+                  <span className="text-[11px] text-muted">Dimensions</span>
+                  <div className="flex gap-2">
+                    {DIMENSIONS.map((d, i) => (
+                      <button
+                        key={d.label}
+                        onClick={() => setDimensions(i)}
+                        className={`flex-1 py-1.5 text-[11px] uppercase font-bold border transition-colors ${
+                          dimensions === i ? 'bg-on-surface text-background border-on-surface' : 'text-muted border-border-subtle hover:border-on-surface'
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-muted tabular-nums">{dim.w} x {dim.h}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted">Steps</span>
-                  <span className="text-primary tabular-nums">30</span>
+
+                {/* Batch Size */}
+                <div className="flex flex-col gap-2">
+                  <span className="text-[11px] text-muted">Batch Size</span>
+                  <div className="flex gap-2">
+                    {BATCH_SIZES.map((bs) => (
+                      <button
+                        key={bs}
+                        onClick={() => setBatchSize(bs)}
+                        className={`w-10 py-1.5 text-[11px] font-bold border transition-colors ${
+                          batchSize === bs ? 'bg-on-surface text-background border-on-surface' : 'text-muted border-border-subtle hover:border-on-surface'
+                        }`}
+                      >
+                        {bs}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted">CFG Scale</span>
-                  <span className="text-primary tabular-nums">7.5</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted">Seed</span>
-                  <span className="text-primary tabular-nums">Random</span>
+
+                {/* Steps */}
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between text-[11px] text-muted">
+                    <span>Steps</span>
+                    <span className="tabular-nums">{steps}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={10}
+                    max={50}
+                    step={5}
+                    value={steps}
+                    onChange={(e) => setSteps(parseInt(e.target.value))}
+                    className="w-full accent-primary"
+                  />
                 </div>
               </div>
             )}
@@ -219,17 +423,11 @@ export function Studio() {
           <button
             onClick={handleGenerate}
             disabled={!bifrostAvailable || !prompt.trim() || generate.isPending}
-            className="w-full bg-accent text-white py-4 rounded-sm font-medium tracking-ui hover:bg-accent/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-accent text-white py-4 font-medium tracking-ui hover:bg-accent/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-            {generate.isPending ? 'Generating...' : 'Generate'}
+            {generate.isPending ? 'Generating...' : `Generate${batchSize > 1 ? ` (${batchSize})` : ''}`}
           </button>
-          <p className="text-center text-[11px] text-muted mt-3">
-            {bifrostAvailable
-              ? <>Press <kbd className="font-body bg-surface px-1 rounded text-[10px]">Cmd</kbd> + <kbd className="font-body bg-surface px-1 rounded text-[10px]">Enter</kbd> to generate</>
-              : 'Waiting for Bifrost connection...'
-            }
-          </p>
         </div>
       </aside>
 
@@ -238,18 +436,16 @@ export function Studio() {
         <div className="h-[73px] border-b border-border-subtle bg-background flex items-center justify-between px-8 flex-shrink-0">
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium">Session History</span>
-            <span className="text-xs text-muted bg-surface px-2 py-1 rounded-sm border border-border-subtle">
+            <span className="text-xs text-muted bg-surface px-2 py-1 border border-border-subtle">
               {sessionImages.length} Items
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSessionImages([])}
-              className="text-[13px] uppercase tracking-ui font-medium border border-border-subtle px-4 py-2 rounded-sm hover:bg-surface transition-colors"
-            >
-              Clear Session
-            </button>
-          </div>
+          <button
+            onClick={() => setSessionImages([])}
+            className="text-[11px] uppercase tracking-[0.1em] font-bold border border-border-subtle px-4 py-2 hover:bg-surface transition-colors"
+          >
+            Clear Session
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-8">
@@ -261,12 +457,12 @@ export function Studio() {
           ) : (
             <div className="grid grid-cols-2 xl:grid-cols-3 gap-6">
               {sessionImages.map((img) => (
-                <div key={img.id} className="aspect-[3/4] relative rounded-sm overflow-hidden border border-border-subtle group cursor-pointer bg-background">
+                <div key={img.id} className="aspect-[3/4] relative overflow-hidden border border-border-subtle group cursor-pointer bg-background">
                   {img.status === 'generating' ? (
                     <>
                       <div className="absolute inset-0 bg-muted/10 backdrop-blur-md" />
                       <div className="absolute top-0 left-0 w-full h-[2px] bg-background overflow-hidden">
-                        <div className="h-full w-full bg-accent animate-progress origin-left" style={{ animation: 'progress 2s infinite linear' }} />
+                        <div className="h-full w-full bg-accent" style={{ animation: 'progress 2s infinite linear' }} />
                       </div>
                       <div className="relative z-10 flex flex-col items-center justify-center h-full text-muted gap-3">
                         <span className="material-symbols-outlined text-[32px] animate-pulse">model_training</span>
@@ -282,10 +478,10 @@ export function Studio() {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-4">
                         <div className="flex justify-end gap-2">
-                          <button className="bg-background/90 text-primary p-1.5 rounded-sm hover:bg-white hover:text-accent transition-colors" title="Reject">
+                          <button className="bg-background/90 text-primary p-1.5 hover:text-accent transition-colors" title="Reject">
                             <span className="material-symbols-outlined text-[18px]">close</span>
                           </button>
-                          <button className="bg-accent/90 text-white p-1.5 rounded-sm hover:bg-accent transition-colors" title="Accept">
+                          <button className="bg-accent/90 text-white p-1.5 hover:bg-accent transition-colors" title="Accept">
                             <span className="material-symbols-outlined text-[18px]">check</span>
                           </button>
                         </div>
@@ -303,7 +499,7 @@ export function Studio() {
         </div>
       </section>
 
-      {/* Reference Image Picker Modal */}
+      {/* Modals */}
       <ImagePickerModal
         open={showRefPicker}
         onClose={() => setShowRefPicker(false)}
@@ -311,6 +507,14 @@ export function Studio() {
         characterId={characterId}
         eraId={eraId}
         initialSelected={selectedRefs}
+      />
+      <ImagePickerModal
+        open={showSourcePicker}
+        onClose={() => setShowSourcePicker(false)}
+        onConfirm={(ids) => { if (ids.length > 0) setSourceImageId(ids[0]); setShowSourcePicker(false) }}
+        characterId={characterId}
+        eraId={eraId}
+        initialSelected={sourceImageId ? [sourceImageId] : []}
       />
 
       <style>{`

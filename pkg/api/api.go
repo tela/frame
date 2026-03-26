@@ -11,7 +11,9 @@ import (
 	"github.com/tela/frame/pkg/fig"
 	"github.com/tela/frame/pkg/dataset"
 	"github.com/tela/frame/pkg/image"
+	"github.com/tela/frame/pkg/lora"
 	"github.com/tela/frame/pkg/media"
+	"github.com/tela/frame/pkg/poseset"
 	"github.com/tela/frame/pkg/preprocess"
 	"github.com/tela/frame/pkg/shoot"
 	"github.com/tela/frame/pkg/tag"
@@ -30,6 +32,8 @@ type API struct {
 	Templates   *template.Store
 	Shoots      *shoot.Store
 	Audit       *audit.Store
+	Loras       *lora.Store
+	PoseSet     *poseset.Store
 	Bifrost     *bifrost.Client // nil if Bifrost not configured
 	Fig         *fig.Client    // nil if Fig not configured
 	RootPath    string          // drive root for file serving
@@ -144,6 +148,18 @@ func (a *API) Register(mux *http.ServeMux) {
 	// Generation (Bifrost)
 	mux.HandleFunc("POST /api/v1/generate", a.handleGenerate)
 	mux.HandleFunc("GET /api/v1/bifrost/status", a.handleBifrostStatus)
+
+	// Standard pose set
+	mux.HandleFunc("GET /api/v1/characters/{id}/pose-set", a.getPoseSetStatus)
+	mux.HandleFunc("POST /api/v1/characters/{id}/pose-set", a.updatePoseSetImage)
+	mux.HandleFunc("GET /api/v1/standard-poses", a.listStandardPoses)
+	mux.HandleFunc("GET /api/v1/standard-outfits", a.listStandardOutfits)
+
+	// LoRA registry
+	mux.HandleFunc("GET /api/v1/loras", a.listLoras)
+	mux.HandleFunc("POST /api/v1/loras", a.createLora)
+	mux.HandleFunc("PATCH /api/v1/loras/{id}", a.updateLora)
+	mux.HandleFunc("DELETE /api/v1/loras/{id}", a.deleteLora)
 
 	// Fig integration
 	mux.HandleFunc("POST /api/v1/characters/{id}/publish", a.publishToFig)

@@ -15,7 +15,9 @@ import (
 	"github.com/tela/frame/pkg/database"
 	"github.com/tela/frame/pkg/dataset"
 	"github.com/tela/frame/pkg/image"
+	"github.com/tela/frame/pkg/lora"
 	"github.com/tela/frame/pkg/media"
+	"github.com/tela/frame/pkg/poseset"
 	"github.com/tela/frame/pkg/preprocess"
 	"github.com/tela/frame/pkg/shoot"
 	"github.com/tela/frame/pkg/server"
@@ -48,6 +50,8 @@ func main() {
 	templateStore := template.NewStore(db.DB)
 	shootStore := shoot.NewStore(db.DB)
 	auditStore := audit.NewStore(db.DB)
+	loraStore := lora.NewStore(db.DB)
+	poseSetStore := poseset.NewStore(db.DB)
 	ingester := image.NewIngester(imgStore, cfg.Root)
 
 	// Bifrost client (optional — generation features disabled without it)
@@ -85,6 +89,8 @@ func main() {
 		Templates:  templateStore,
 		Shoots:     shootStore,
 		Audit:      auditStore,
+		Loras:      loraStore,
+		PoseSet:    poseSetStore,
 		Bifrost:    bifrostClient,
 		Fig:        figClient,
 		RootPath:   cfg.Root,
