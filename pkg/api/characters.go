@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -135,12 +136,26 @@ func (a *API) updateCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.Status != nil {
-		if err := a.Characters.UpdateStatus(id, character.Status(*req.Status)); err != nil {
+		newStatus := character.Status(*req.Status)
+		// Enforce forward-only transitions: prospect → development → cast
+		c, err := a.Characters.Get(id)
+		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		// Notify Fig of status change if published
-		if c, _ := a.Characters.Get(id); c != nil && c.FigPublished {
+		if c == nil {
+			writeError(w, http.StatusNotFound, "character not found")
+			return
+		}
+		if !validStatusTransition(c.Status, newStatus) {
+			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot transition from %s to %s (forward-only: prospect → development → cast)", c.Status, newStatus))
+			return
+		}
+		if err := a.Characters.UpdateStatus(id, newStatus); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if c.FigPublished {
 			a.figSyncStatus(id, *req.Status)
 		}
 	}
@@ -277,4 +292,22 @@ func (a *API) listEras(w http.ResponseWriter, r *http.Request) {
 		eras = []character.Era{}
 	}
 	writeJSON(w, http.StatusOK, eras)
+}
+
+// statusRank maps lifecycle stages to ordinal values for forward-only enforcement.
+var statusRank = map[character.Status]int{
+	character.StatusProspect:    0,
+	character.StatusDevelopment: 1,
+	character.StatusCast:        2,
+}
+
+// validStatusTransition returns true if moving from current to next is forward-only.
+// Same-status is allowed (idempotent). Backward is rejected.
+func validStatusTransition(current, next character.Status) bool {
+	cr, cOK := statusRank[current]
+	nr, nOK := statusRank[next]
+	if !cOK || !nOK {
+		return false // unknown status
+	}
+	return nr >= cr
 }
