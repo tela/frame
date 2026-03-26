@@ -190,7 +190,8 @@ export function CharacterDetail() {
                   className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
                 >
                   <option value="">Select...</option>
-                  <option value="Child (5-12)">Child (5-12)</option>
+                  <option value="Child (5-9)">Child (5-9)</option>
+                  <option value="Adolescent (10-12)">Adolescent (10-12)</option>
                   <option value="Teen (13-17)">Teen (13-17)</option>
                   <option value="Young Adult (18-24)">Young Adult (18-24)</option>
                   <option value="Late 20s (25-29)">Late 20s (25-29)</option>
