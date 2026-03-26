@@ -2,32 +2,90 @@ BINARY = frame
 CMD = ./cmd/frame
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 LDFLAGS = -ldflags "-X main.version=$(VERSION)"
+DRIVE ?=
 
-.PHONY: build build-mac-arm build-mac-amd build-linux-amd build-linux-arm dev test clean ui
+.PHONY: build build-mac-arm build-mac-amd build-linux-amd build-linux-arm \
+        dev dev-ui test clean ui deploy smoke
 
-build:
+# === Build ===
+
+build: ui
 	go build $(LDFLAGS) -o $(BINARY) $(CMD)
 
-build-mac-arm:
+build-mac-arm: ui
 	GOOS=darwin GOARCH=arm64 go build $(LDFLAGS) -o $(BINARY)-darwin-arm64 $(CMD)
 
-build-mac-amd:
+build-mac-amd: ui
 	GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) -o $(BINARY)-darwin-amd64 $(CMD)
 
-build-linux-amd:
+build-linux-amd: ui
 	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o $(BINARY)-linux-amd64 $(CMD)
 
-build-linux-arm:
+build-linux-arm: ui
 	GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o $(BINARY)-linux-arm64 $(CMD)
 
+ui:
+	cd ui && pnpm install --frozen-lockfile && pnpm run build
+
+# === Development ===
+
 dev:
-	go build $(LDFLAGS) -o $(BINARY) $(CMD) && ./$(BINARY) --root .
+	@mkdir -p /tmp/frame-dev
+	go build $(LDFLAGS) -o $(BINARY) $(CMD) && ./$(BINARY) --root /tmp/frame-dev --port 7890
+
+dev-ui:
+	cd ui && pnpm run dev
 
 test:
+	go test ./pkg/...
+
+test-integration:
+	go test ./tests/integration/ -v
+
+test-all:
 	go test ./...
+
+smoke:
+	bash scripts/smoke-test.sh
 
 clean:
 	rm -f $(BINARY) $(BINARY)-*
 
-ui:
-	@echo "Frontend build not yet configured"
+# === Deployment ===
+
+deploy: _check-drive build
+	@echo "Deploying Frame $(VERSION) to $(DRIVE)..."
+	@cp $(BINARY) "$(DRIVE)/frame"
+	@chmod +x "$(DRIVE)/frame"
+	@mkdir -p "$(DRIVE)/assets/characters"
+	@mkdir -p "$(DRIVE)/assets/references/images"
+	@mkdir -p "$(DRIVE)/assets/references/thumbs"
+	@mkdir -p "$(DRIVE)/assets/exports"
+	@if [ ! -f "$(DRIVE)/frame.toml" ]; then \
+		echo '# Frame configuration' > "$(DRIVE)/frame.toml"; \
+		echo 'port = 7890' >> "$(DRIVE)/frame.toml"; \
+		echo '' >> "$(DRIVE)/frame.toml"; \
+		echo '# Bifrost integration (image generation)' >> "$(DRIVE)/frame.toml"; \
+		echo 'bifrost_url = "http://localhost:9090"' >> "$(DRIVE)/frame.toml"; \
+		echo '' >> "$(DRIVE)/frame.toml"; \
+		echo '# Fig integration (character publishing)' >> "$(DRIVE)/frame.toml"; \
+		echo 'fig_url = "http://localhost:7700"' >> "$(DRIVE)/frame.toml"; \
+		echo "Created $(DRIVE)/frame.toml"; \
+	fi
+	@echo ""
+	@echo "=== Deploy complete ==="
+	@echo "Binary:  $(DRIVE)/frame ($(VERSION))"
+	@echo "Config:  $(DRIVE)/frame.toml"
+	@echo "Data:    $(DRIVE)/assets/"
+	@echo ""
+	@echo "To start:  cd $(DRIVE) && ./frame"
+	@echo "To stop:   pkill frame"
+
+_check-drive:
+ifndef DRIVE
+	$(error DRIVE is not set. Usage: make deploy DRIVE=/Volumes/YOUR_DRIVE)
+endif
+	@if [ ! -d "$(DRIVE)" ]; then \
+		echo "Error: $(DRIVE) does not exist or is not mounted"; \
+		exit 1; \
+	fi

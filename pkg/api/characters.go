@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/tela/frame/pkg/character"
+	"github.com/tela/frame/pkg/id"
 )
 
 type createCharacterRequest struct {
@@ -22,9 +23,12 @@ func (a *API) createCharacter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.ID == "" || req.Name == "" {
-		writeError(w, http.StatusBadRequest, "id and name are required")
+	if req.Name == "" {
+		writeError(w, http.StatusBadRequest, "name is required")
 		return
+	}
+	if req.ID == "" {
+		req.ID = id.New()
 	}
 
 	status := character.Status(req.Status)
@@ -45,6 +49,10 @@ func (a *API) createCharacter(w http.ResponseWriter, r *http.Request) {
 	if err := a.Characters.Create(c); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+
+	if a.Audit != nil {
+		a.Audit.Log("character", c.ID, "created", nil, nil, nil, map[string]string{"name": c.Name, "status": string(c.Status)})
 	}
 
 	writeJSON(w, http.StatusCreated, c)
@@ -91,9 +99,11 @@ func (a *API) getCharacter(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateCharacterRequest struct {
-	Name        *string `json:"name,omitempty"`
-	DisplayName *string `json:"display_name,omitempty"`
-	Status      *string `json:"status,omitempty"`
+	Name            *string `json:"name,omitempty"`
+	DisplayName     *string `json:"display_name,omitempty"`
+	Status          *string `json:"status,omitempty"`
+	FigPublished    *bool   `json:"fig_published,omitempty"`
+	FigCharacterURL *string `json:"fig_character_url,omitempty"`
 }
 
 func (a *API) updateCharacter(w http.ResponseWriter, r *http.Request) {
@@ -136,6 +146,23 @@ func (a *API) updateCharacter(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if req.FigPublished != nil || req.FigCharacterURL != nil {
+		c, err := a.Characters.Get(id)
+		if err != nil || c == nil {
+			writeError(w, http.StatusNotFound, "character not found")
+			return
+		}
+		published := c.FigPublished
+		url := c.FigCharacterURL
+		if req.FigPublished != nil {
+			published = *req.FigPublished
+		}
+		if req.FigCharacterURL != nil {
+			url = *req.FigCharacterURL
+		}
+		a.Characters.UpdateFigStatus(id, published, url)
+	}
+
 	// Return updated character
 	c, err := a.Characters.Get(id)
 	if err != nil || c == nil {
@@ -146,10 +173,13 @@ func (a *API) updateCharacter(w http.ResponseWriter, r *http.Request) {
 }
 
 type createEraRequest struct {
-	ID                    string `json:"id"`
-	Label                 string `json:"label"`
+	ID                     string `json:"id"`
+	Label                  string `json:"label"`
+	AgeRange               string `json:"age_range"`
+	TimePeriod             string `json:"time_period"`
+	Description            string `json:"description"`
 	PreliminaryDescription string `json:"preliminary_description"`
-	SortOrder             int    `json:"sort_order"`
+	SortOrder              int    `json:"sort_order"`
 }
 
 func (a *API) createEra(w http.ResponseWriter, r *http.Request) {
@@ -171,9 +201,12 @@ func (a *API) createEra(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.ID == "" || req.Label == "" {
-		writeError(w, http.StatusBadRequest, "id and label are required")
+	if req.Label == "" {
+		writeError(w, http.StatusBadRequest, "label is required")
 		return
+	}
+	if req.ID == "" {
+		req.ID = id.New()
 	}
 
 	now := time.Now().UTC()
@@ -181,6 +214,9 @@ func (a *API) createEra(w http.ResponseWriter, r *http.Request) {
 		ID:                req.ID,
 		CharacterID:       charID,
 		Label:             req.Label,
+		AgeRange:          req.AgeRange,
+		TimePeriod:        req.TimePeriod,
+		Description:       req.Description,
 		VisualDescription: req.PreliminaryDescription,
 		PipelineSettings:  "{}",
 		SortOrder:         req.SortOrder,

@@ -11,19 +11,22 @@ import (
 
 // Config holds the application configuration.
 type Config struct {
-	Port int    `toml:"port"`
-	Root string `toml:"-"` // resolved drive root, not stored in TOML
+	Port       int    `toml:"port"`
+	Root       string `toml:"-"`          // resolved drive root, not stored in TOML
+	BifrostURL string `toml:"bifrost_url"` // Bifrost service URL for image generation
 }
 
 // defaults
 const (
-	DefaultPort     = 7890
-	ConfigFileName  = "frame.toml"
+	DefaultPort       = 7890
+	DefaultBifrostURL = "http://localhost:9090"
+	ConfigFileName    = "frame.toml"
 )
 
 // fileConfig is the TOML file structure.
 type fileConfig struct {
-	Port int `toml:"port"`
+	Port       int    `toml:"port"`
+	BifrostURL string `toml:"bifrost_url"`
 }
 
 // Load resolves configuration from CLI flags and the TOML config file.
@@ -31,6 +34,7 @@ type fileConfig struct {
 func Load() (*Config, error) {
 	portFlag := flag.Int("port", 0, "HTTP server port (overrides config file)")
 	rootFlag := flag.String("root", "", "Drive root directory (overrides auto-detection)")
+	bifrostFlag := flag.String("bifrost", "", "Bifrost service URL (overrides config file)")
 	flag.Parse()
 
 	root, err := resolveRoot(*rootFlag)
@@ -39,8 +43,9 @@ func Load() (*Config, error) {
 	}
 
 	cfg := &Config{
-		Port: DefaultPort,
-		Root: root,
+		Port:       DefaultPort,
+		BifrostURL: DefaultBifrostURL,
+		Root:       root,
 	}
 
 	// Load TOML config if it exists
@@ -53,11 +58,22 @@ func Load() (*Config, error) {
 		if fc.Port != 0 {
 			cfg.Port = fc.Port
 		}
+		if fc.BifrostURL != "" {
+			cfg.BifrostURL = fc.BifrostURL
+		}
+	}
+
+	// Environment variable override
+	if env := os.Getenv("BIFROST_URL"); env != "" {
+		cfg.BifrostURL = env
 	}
 
 	// CLI flags override everything
 	if *portFlag != 0 {
 		cfg.Port = *portFlag
+	}
+	if *bifrostFlag != "" {
+		cfg.BifrostURL = *bifrostFlag
 	}
 
 	return cfg, nil

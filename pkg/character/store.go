@@ -22,17 +22,29 @@ type Store struct {
 	db *sql.DB
 }
 
+func boolToInt(b bool) int {
+	if b { return 1 }
+	return 0
+}
+
 // NewStore creates a new character Store.
 func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
-// Create inserts a new character.
+// Create inserts a new character. Sets FolderName automatically if empty.
 func (s *Store) Create(c *Character) error {
+	if c.FolderName == "" {
+		c.FolderName = c.Slug()
+	}
+	if c.Source == "" {
+		c.Source = "frame"
+	}
 	_, err := s.db.Exec(
-		`INSERT INTO characters (id, name, display_name, status, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?)`,
-		c.ID, c.Name, c.DisplayName, c.Status, c.CreatedAt.UTC().Format(time.RFC3339), c.UpdatedAt.UTC().Format(time.RFC3339),
+		`INSERT INTO characters (id, name, display_name, folder_name, status, fig_published, fig_character_url, source, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		c.ID, c.Name, c.DisplayName, c.FolderName, c.Status, boolToInt(c.FigPublished), c.FigCharacterURL, c.Source,
+		c.CreatedAt.UTC().Format(time.RFC3339), c.UpdatedAt.UTC().Format(time.RFC3339),
 	)
 	if err != nil {
 		return fmt.Errorf("insert character: %w", err)
@@ -44,10 +56,12 @@ func (s *Store) Create(c *Character) error {
 func (s *Store) Get(id string) (*Character, error) {
 	c := &Character{}
 	var createdAt, updatedAt string
+	var figPub int
 	err := s.db.QueryRow(
-		`SELECT id, name, display_name, status, created_at, updated_at
+		`SELECT id, name, display_name, folder_name, status, fig_published, fig_character_url, source, created_at, updated_at
 		 FROM characters WHERE id = ?`, id,
-	).Scan(&c.ID, &c.Name, &c.DisplayName, &c.Status, &createdAt, &updatedAt)
+	).Scan(&c.ID, &c.Name, &c.DisplayName, &c.FolderName, &c.Status, &figPub, &c.FigCharacterURL, &c.Source, &createdAt, &updatedAt)
+	c.FigPublished = figPub != 0
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -62,7 +76,7 @@ func (s *Store) Get(id string) (*Character, error) {
 // List returns all characters, ordered by creation time.
 func (s *Store) List() ([]Character, error) {
 	rows, err := s.db.Query(
-		`SELECT id, name, display_name, status, created_at, updated_at
+		`SELECT id, name, display_name, folder_name, status, fig_published, fig_character_url, source, created_at, updated_at
 		 FROM characters ORDER BY created_at DESC`,
 	)
 	if err != nil {
@@ -74,11 +88,13 @@ func (s *Store) List() ([]Character, error) {
 	for rows.Next() {
 		var c Character
 		var createdAt, updatedAt string
-		if err := rows.Scan(&c.ID, &c.Name, &c.DisplayName, &c.Status, &createdAt, &updatedAt); err != nil {
+		var figPub int
+		if err := rows.Scan(&c.ID, &c.Name, &c.DisplayName, &c.FolderName, &c.Status, &figPub, &c.FigCharacterURL, &c.Source, &createdAt, &updatedAt); err != nil {
 			return nil, fmt.Errorf("scan character: %w", err)
 		}
-		c.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-		c.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+		c.FigPublished = figPub != 0
+		c.CreatedAt = parseTime(createdAt)
+		c.UpdatedAt = parseTime(updatedAt)
 		chars = append(chars, c)
 	}
 	return chars, rows.Err()
@@ -100,6 +116,15 @@ func (s *Store) UpdateStatus(id string, status Status) error {
 	return nil
 }
 
+// UpdateFigStatus sets the fig_published and fig_character_url fields.
+func (s *Store) UpdateFigStatus(id string, published bool, url string) error {
+	_, err := s.db.Exec(
+		`UPDATE characters SET fig_published = ?, fig_character_url = ?, updated_at = datetime('now') WHERE id = ?`,
+		boolToInt(published), url, id,
+	)
+	return err
+}
+
 // Update modifies a character's name and display name.
 func (s *Store) Update(id string, name, displayName string) error {
 	res, err := s.db.Exec(
@@ -119,9 +144,9 @@ func (s *Store) Update(id string, name, displayName string) error {
 // CreateEra inserts a new era for a character.
 func (s *Store) CreateEra(e *Era) error {
 	_, err := s.db.Exec(
-		`INSERT INTO eras (id, character_id, label, visual_description, prompt_prefix, pipeline_settings, sort_order, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		e.ID, e.CharacterID, e.Label, e.VisualDescription, e.PromptPrefix, e.PipelineSettings, e.SortOrder,
+		`INSERT INTO eras (id, character_id, label, age_range, time_period, description, visual_description, prompt_prefix, pipeline_settings, sort_order, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		e.ID, e.CharacterID, e.Label, e.AgeRange, e.TimePeriod, e.Description, e.VisualDescription, e.PromptPrefix, e.PipelineSettings, e.SortOrder,
 		e.CreatedAt.UTC().Format(time.RFC3339), e.UpdatedAt.UTC().Format(time.RFC3339),
 	)
 	if err != nil {
@@ -135,9 +160,9 @@ func (s *Store) GetEra(id string) (*Era, error) {
 	e := &Era{}
 	var createdAt, updatedAt string
 	err := s.db.QueryRow(
-		`SELECT id, character_id, label, visual_description, prompt_prefix, pipeline_settings, sort_order, created_at, updated_at
+		`SELECT id, character_id, label, age_range, time_period, description, visual_description, prompt_prefix, pipeline_settings, sort_order, created_at, updated_at
 		 FROM eras WHERE id = ?`, id,
-	).Scan(&e.ID, &e.CharacterID, &e.Label, &e.VisualDescription, &e.PromptPrefix, &e.PipelineSettings, &e.SortOrder, &createdAt, &updatedAt)
+	).Scan(&e.ID, &e.CharacterID, &e.Label, &e.AgeRange, &e.TimePeriod, &e.Description, &e.VisualDescription, &e.PromptPrefix, &e.PipelineSettings, &e.SortOrder, &createdAt, &updatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -152,7 +177,7 @@ func (s *Store) GetEra(id string) (*Era, error) {
 // ListEras returns all eras for a character, ordered by sort_order.
 func (s *Store) ListEras(characterID string) ([]Era, error) {
 	rows, err := s.db.Query(
-		`SELECT id, character_id, label, visual_description, prompt_prefix, pipeline_settings, sort_order, created_at, updated_at
+		`SELECT id, character_id, label, age_range, time_period, description, visual_description, prompt_prefix, pipeline_settings, sort_order, created_at, updated_at
 		 FROM eras WHERE character_id = ? ORDER BY sort_order`, characterID,
 	)
 	if err != nil {
@@ -164,7 +189,7 @@ func (s *Store) ListEras(characterID string) ([]Era, error) {
 	for rows.Next() {
 		var e Era
 		var createdAt, updatedAt string
-		if err := rows.Scan(&e.ID, &e.CharacterID, &e.Label, &e.VisualDescription, &e.PromptPrefix, &e.PipelineSettings, &e.SortOrder, &createdAt, &updatedAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.CharacterID, &e.Label, &e.AgeRange, &e.TimePeriod, &e.Description, &e.VisualDescription, &e.PromptPrefix, &e.PipelineSettings, &e.SortOrder, &createdAt, &updatedAt); err != nil {
 			return nil, fmt.Errorf("scan era: %w", err)
 		}
 		e.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
@@ -177,8 +202,8 @@ func (s *Store) ListEras(characterID string) ([]Era, error) {
 // ListErasWithStats returns eras with image counts and reference package readiness.
 func (s *Store) ListErasWithStats(characterID string) ([]EraWithStats, error) {
 	rows, err := s.db.Query(
-		`SELECT e.id, e.character_id, e.label, e.visual_description, e.prompt_prefix,
-		        e.pipeline_settings, e.sort_order, e.created_at, e.updated_at,
+		`SELECT e.id, e.character_id, e.label, e.age_range, e.time_period, e.description,
+		        e.visual_description, e.prompt_prefix, e.pipeline_settings, e.sort_order, e.created_at, e.updated_at,
 		        COALESCE(ci.image_count, 0),
 		        COALESCE(ci.has_face_ref, 0)
 		 FROM eras e
@@ -202,8 +227,8 @@ func (s *Store) ListErasWithStats(characterID string) ([]EraWithStats, error) {
 		var createdAt, updatedAt string
 		var hasFaceRef int
 		if err := rows.Scan(
-			&es.ID, &es.CharacterID, &es.Label, &es.VisualDescription, &es.PromptPrefix,
-			&es.PipelineSettings, &es.SortOrder, &createdAt, &updatedAt,
+			&es.ID, &es.CharacterID, &es.Label, &es.AgeRange, &es.TimePeriod, &es.Description,
+			&es.VisualDescription, &es.PromptPrefix, &es.PipelineSettings, &es.SortOrder, &createdAt, &updatedAt,
 			&es.ImageCount, &hasFaceRef,
 		); err != nil {
 			return nil, fmt.Errorf("scan era with stats: %w", err)
