@@ -13,6 +13,9 @@ export function CharacterDetail() {
   const createEra = useCreateEra()
   const [showCreateEra, setShowCreateEra] = useState(false)
   const [newEraLabel, setNewEraLabel] = useState('')
+  const [newEraAgeRange, setNewEraAgeRange] = useState('')
+  const [newEraTimePeriod, setNewEraTimePeriod] = useState('')
+  const [newEraDescription, setNewEraDescription] = useState('')
 
   if (isLoading) {
     return <div className="p-12 text-muted text-[15px]">Loading...</div>
@@ -163,27 +166,48 @@ export function CharacterDetail() {
 
       {/* Create Era Dialog */}
       <Dialog open={showCreateEra} onOpenChange={setShowCreateEra}>
-        <DialogContent className="bg-background border-border-subtle max-w-md">
+        <DialogContent className="bg-background border-border-subtle max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-display text-2xl">Initialize New Era</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-4 mt-4">
             <div>
-              <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Era Label</label>
+              <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Era Label <span className="text-accent">*</span></label>
               <input
                 value={newEraLabel}
                 onChange={(e) => setNewEraLabel(e.target.value)}
                 className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
                 placeholder="e.g. Young Adult, The Haunting, Aftermath"
                 autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newEraLabel.trim()) {
-                    createEra.mutate(
-                      { characterId, label: newEraLabel.trim() },
-                      { onSuccess: () => { setShowCreateEra(false); setNewEraLabel('') } }
-                    )
-                  }
-                }}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Age Range</label>
+                <input
+                  value={newEraAgeRange}
+                  onChange={(e) => setNewEraAgeRange(e.target.value)}
+                  className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
+                  placeholder="e.g. 18-24, Late 30s"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Time Period</label>
+                <input
+                  value={newEraTimePeriod}
+                  onChange={(e) => setNewEraTimePeriod(e.target.value)}
+                  className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
+                  placeholder="e.g. 1950s, Present day"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Description</label>
+              <textarea
+                value={newEraDescription}
+                onChange={(e) => setNewEraDescription(e.target.value)}
+                className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none h-20 resize-none"
+                placeholder="Narrative context for this era..."
               />
             </div>
             <div className="flex justify-end gap-3">
@@ -197,8 +221,22 @@ export function CharacterDetail() {
                 onClick={() => {
                   if (!newEraLabel.trim()) return
                   createEra.mutate(
-                    { characterId, label: newEraLabel.trim() },
-                    { onSuccess: () => { setShowCreateEra(false); setNewEraLabel('') } }
+                    {
+                      characterId,
+                      label: newEraLabel.trim(),
+                      age_range: newEraAgeRange.trim() || undefined,
+                      time_period: newEraTimePeriod.trim() || undefined,
+                      description: newEraDescription.trim() || undefined,
+                    } as any,
+                    {
+                      onSuccess: () => {
+                        setShowCreateEra(false)
+                        setNewEraLabel('')
+                        setNewEraAgeRange('')
+                        setNewEraTimePeriod('')
+                        setNewEraDescription('')
+                      },
+                    }
                   )
                 }}
                 disabled={!newEraLabel.trim() || createEra.isPending}

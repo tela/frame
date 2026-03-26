@@ -27,6 +27,9 @@ export interface EraWithStats {
   id: string
   character_id: string
   label: string
+  age_range: string
+  time_period: string
+  description: string
   visual_description: string
   prompt_prefix: string
   pipeline_settings: string
@@ -45,6 +48,9 @@ export interface Era {
   id: string
   character_id: string
   label: string
+  age_range: string
+  time_period: string
+  description: string
   visual_description: string
   prompt_prefix: string
   pipeline_settings: string

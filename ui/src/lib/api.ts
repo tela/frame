@@ -135,7 +135,7 @@ export function useEras(characterId: string) {
 export function useCreateEra() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ characterId, ...body }: { characterId: string; id?: string; label: string; preliminary_description?: string; sort_order?: number }) =>
+    mutationFn: ({ characterId, ...body }: { characterId: string; id?: string; label: string; age_range?: string; time_period?: string; description?: string; preliminary_description?: string; sort_order?: number }) =>
       postJSON<Era>(`/api/v1/characters/${characterId}/eras`, body),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId] })
