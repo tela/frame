@@ -181,14 +181,45 @@ export function ImportScreen() {
           <div className="border border-border-subtle bg-background p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-ui text-[13px] tracking-[0.15em]">Import Queue</h3>
-              <span className="text-meta text-muted">Est: 0 / 12s</span>
+              {uploadedFiles.length > 0 && (
+                <button
+                  onClick={() => setUploadedFiles([])}
+                  className="text-[10px] uppercase tracking-[0.1em] text-muted hover:text-accent transition-colors"
+                >
+                  Clear
+                </button>
+              )}
             </div>
 
             {/* Preview grid */}
             <div className="grid grid-cols-4 gap-1 mb-6">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="aspect-square bg-surface-low" />
-              ))}
+              {uploadedFiles.length > 0 ? (
+                <>
+                  {uploadedFiles.slice(0, 8).map((file, i) => (
+                    <div key={i} className="aspect-square bg-surface-low overflow-hidden relative">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={file.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                  {uploadedFiles.length > 8 && (
+                    <div className="aspect-square bg-surface-low flex items-center justify-center text-[10px] text-muted font-bold">
+                      +{uploadedFiles.length - 8}
+                    </div>
+                  )}
+                </>
+              ) : (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="aspect-square bg-surface-low" />
+                ))
+              )}
+            </div>
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-meta text-muted">
+                {uploadedFiles.length > 0 ? `${uploadedFiles.length} file${uploadedFiles.length !== 1 ? 's' : ''} queued` : 'No files selected'}
+              </span>
             </div>
 
             <button
