@@ -127,6 +127,7 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("PATCH /api/v1/datasets/{id}", a.updateDataset)
 	mux.HandleFunc("DELETE /api/v1/datasets/{id}", a.deleteDataset)
 	mux.HandleFunc("POST /api/v1/datasets/{id}/fork", a.forkDataset)
+	mux.HandleFunc("POST /api/v1/datasets/{id}/export", a.exportDataset)
 	mux.HandleFunc("POST /api/v1/datasets/{id}/images", a.addDatasetImages)
 	mux.HandleFunc("DELETE /api/v1/datasets/{id}/images/{imgId}", a.removeDatasetImage)
 	mux.HandleFunc("PATCH /api/v1/datasets/{id}/images/{imgId}", a.updateDatasetImage)
@@ -138,6 +139,9 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("PATCH /api/v1/templates/{id}", a.updateTemplate)
 	mux.HandleFunc("DELETE /api/v1/templates/{id}", a.deleteTemplate)
 	mux.HandleFunc("POST /api/v1/templates/{id}/duplicate", a.duplicateTemplate)
+
+	// Preprocessing
+	mux.HandleFunc("POST /api/v1/preprocess/apply", a.applyPreprocess)
 
 	// Import
 	mux.HandleFunc("POST /api/v1/import/directory", a.handleImportDirectory)

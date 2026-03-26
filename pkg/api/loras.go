@@ -78,6 +78,9 @@ func (a *API) createLora(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if a.Audit != nil {
+		a.Audit.Log("lora", l.ID, "created", nil, nil, nil, map[string]string{"name": l.Name, "category": l.Category})
+	}
 	writeJSON(w, http.StatusCreated, l)
 }
 
@@ -151,6 +154,9 @@ func (a *API) updateLora(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if a.Audit != nil {
+		a.Audit.Log("lora", loraID, "updated", nil, nil, nil, map[string]string{"name": name})
+	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
@@ -159,6 +165,9 @@ func (a *API) deleteLora(w http.ResponseWriter, r *http.Request) {
 	if err := a.Loras.Delete(loraID); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+	if a.Audit != nil {
+		a.Audit.Log("lora", loraID, "deleted", nil, nil, nil, nil)
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
