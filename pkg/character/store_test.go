@@ -59,7 +59,7 @@ func TestCreateAndGetCharacter(t *testing.T) {
 		ID:          id.New(),
 		Name:        "Sarah Mitchell",
 		DisplayName: "Sarah",
-		Status:      character.StatusScouted,
+		Status:      character.StatusProspect,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
@@ -81,8 +81,8 @@ func TestCreateAndGetCharacter(t *testing.T) {
 	if got.DisplayName != "Sarah" {
 		t.Errorf("display_name = %q, want %q", got.DisplayName, "Sarah")
 	}
-	if got.Status != character.StatusScouted {
-		t.Errorf("status = %q, want %q", got.Status, character.StatusScouted)
+	if got.Status != character.StatusProspect {
+		t.Errorf("status = %q, want %q", got.Status, character.StatusProspect)
 	}
 }
 
@@ -127,7 +127,7 @@ func TestUpdateStatus(t *testing.T) {
 	now := time.Now().UTC()
 	c := &character.Character{
 		ID: id.New(), Name: "Test", DisplayName: "T",
-		Status: character.StatusScouted, CreatedAt: now, UpdatedAt: now,
+		Status: character.StatusProspect, CreatedAt: now, UpdatedAt: now,
 	}
 	store.Create(c)
 
@@ -158,7 +158,7 @@ func TestUpdateNameAndDisplayName(t *testing.T) {
 	now := time.Now().UTC()
 	c := &character.Character{
 		ID: id.New(), Name: "Old Name", DisplayName: "Old",
-		Status: character.StatusScouted, CreatedAt: now, UpdatedAt: now,
+		Status: character.StatusProspect, CreatedAt: now, UpdatedAt: now,
 	}
 	store.Create(c)
 

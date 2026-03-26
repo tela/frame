@@ -1,5 +1,5 @@
 // Character
-export type CharacterStatus = 'prospect' | 'scouted' | 'development' | 'cast'
+export type CharacterStatus = 'prospect' | 'development' | 'cast'
 
 export interface Character {
   id: string

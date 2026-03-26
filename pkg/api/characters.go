@@ -33,7 +33,7 @@ func (a *API) createCharacter(w http.ResponseWriter, r *http.Request) {
 
 	status := character.Status(req.Status)
 	if status == "" {
-		status = character.StatusScouted
+		status = character.StatusProspect
 	}
 
 	now := time.Now().UTC()
