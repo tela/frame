@@ -1,6 +1,6 @@
-import { useParams } from '@tanstack/react-router'
+import { useParams, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { imageUrl } from '@/lib/api'
+import { imageUrl, useApplyPreprocess } from '@/lib/api'
 import type { DerivativeOperation } from '@/lib/types'
 
 type OpType = 'crop' | 'resize' | 'upscale' | 'rotate' | 'pad'
@@ -17,16 +17,58 @@ const ASPECT_RATIOS = ['1:1', '4:3', '16:9', 'Free'] as const
 
 export function ImagePreprocessor() {
   const { imageId } = useParams({ from: '/preprocess/$imageId' })
+  const navigate = useNavigate()
+  const applyPreprocess = useApplyPreprocess()
   const [activeOp, setActiveOp] = useState<OpType>('crop')
-  const [cropX, setCropX] = useState(124)
-  const [cropY, setCropY] = useState(86)
+  const [cropX, setCropX] = useState(0)
+  const [cropY, setCropY] = useState(0)
   const [cropW, setCropW] = useState(1024)
   const [cropH, setCropH] = useState(1024)
+  const [resizeW, setResizeW] = useState(512)
+  const [resizeH, setResizeH] = useState(512)
+  const [rotateDeg, setRotateDeg] = useState(90)
+  const [padTop, setPadTop] = useState(0)
+  const [padBottom, setPadBottom] = useState(0)
+  const [padLeft, setPadLeft] = useState(0)
+  const [padRight, setPadRight] = useState(0)
   const [aspectLock, setAspectLock] = useState<string>('1:1')
-  const [history] = useState<DerivativeOperation[]>([
-    { type: 'crop', params: { width: 768, height: 768, note: 'at center' }, timestamp: new Date().toISOString() },
-    { type: 'resize', params: { width: 512, height: 512 }, timestamp: new Date().toISOString() },
-  ])
+  const [history, setHistory] = useState<DerivativeOperation[]>([])
+
+  const addToHistory = (op: DerivativeOperation) => {
+    setHistory((prev) => [...prev, op])
+  }
+
+  const buildCurrentOp = (): DerivativeOperation => {
+    const ts = new Date().toISOString()
+    switch (activeOp) {
+      case 'crop':
+        return { type: 'crop', params: { x: cropX, y: cropY, width: cropW, height: cropH }, timestamp: ts }
+      case 'resize':
+        return { type: 'resize', params: { width: resizeW, height: resizeH }, timestamp: ts }
+      case 'rotate':
+        return { type: 'rotate', params: { degrees: rotateDeg }, timestamp: ts }
+      case 'pad':
+        return { type: 'pad', params: { top: padTop, bottom: padBottom, left: padLeft, right: padRight }, timestamp: ts }
+      default:
+        return { type: activeOp, params: {}, timestamp: ts }
+    }
+  }
+
+  const handleAddOp = () => {
+    addToHistory(buildCurrentOp())
+  }
+
+  const handleSave = () => {
+    const ops = history.length > 0 ? history : [buildCurrentOp()]
+    applyPreprocess.mutate(
+      { image_id: imageId, operations: ops.map((o) => ({ type: o.type, params: o.params })) },
+      {
+        onSuccess: (result) => {
+          navigate({ to: '/images/$imageId', params: { imageId: result.image_id } })
+        },
+      }
+    )
+  }
 
   return (
     <div className="flex h-full overflow-hidden bg-surface-high">
@@ -199,12 +241,47 @@ export function ImagePreprocessor() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[10px] uppercase tracking-[0.1em] text-muted block mb-1">Width</label>
-                <input type="number" defaultValue={768} className="w-full border border-border-subtle bg-transparent py-2 px-3 text-sm tabular-nums focus:border-on-surface focus:ring-0" />
+                <input type="number" value={resizeW} onChange={(e) => setResizeW(+e.target.value)} className="w-full border border-border-subtle bg-transparent py-2 px-3 text-sm tabular-nums focus:border-on-surface focus:ring-0" />
               </div>
               <div>
                 <label className="text-[10px] uppercase tracking-[0.1em] text-muted block mb-1">Height</label>
-                <input type="number" defaultValue={768} className="w-full border border-border-subtle bg-transparent py-2 px-3 text-sm tabular-nums focus:border-on-surface focus:ring-0" />
+                <input type="number" value={resizeH} onChange={(e) => setResizeH(+e.target.value)} className="w-full border border-border-subtle bg-transparent py-2 px-3 text-sm tabular-nums focus:border-on-surface focus:ring-0" />
               </div>
+            </div>
+          )}
+
+          {activeOp === 'rotate' && (
+            <div>
+              <label className="text-[10px] uppercase tracking-[0.1em] text-muted block mb-2">Degrees</label>
+              <div className="flex gap-2">
+                {[90, 180, 270].map((deg) => (
+                  <button
+                    key={deg}
+                    onClick={() => setRotateDeg(deg)}
+                    className={`px-4 py-2 text-[11px] border transition-colors ${
+                      rotateDeg === deg ? 'bg-on-surface text-background border-on-surface' : 'text-muted border-border-subtle hover:border-on-surface'
+                    }`}
+                  >
+                    {deg}°
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeOp === 'pad' && (
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: 'Top', value: padTop, set: setPadTop },
+                { label: 'Bottom', value: padBottom, set: setPadBottom },
+                { label: 'Left', value: padLeft, set: setPadLeft },
+                { label: 'Right', value: padRight, set: setPadRight },
+              ].map((p) => (
+                <div key={p.label}>
+                  <label className="text-[10px] uppercase tracking-[0.1em] text-muted block mb-1">{p.label}</label>
+                  <input type="number" value={p.value} onChange={(e) => p.set(+e.target.value)} className="w-full border border-border-subtle bg-transparent py-2 px-3 text-sm tabular-nums focus:border-on-surface focus:ring-0" />
+                </div>
+              ))}
             </div>
           )}
 
@@ -247,20 +324,27 @@ export function ImagePreprocessor() {
             ))}
           </div>
           <div className="flex gap-4 mt-4 text-xs">
-            <button className="text-muted hover:text-on-surface flex items-center gap-1">
-              <span className="material-symbols-outlined text-[14px]">undo</span> Undo
+            <button onClick={handleAddOp} className="text-primary hover:text-on-surface flex items-center gap-1">
+              <span className="material-symbols-outlined text-[14px]">add</span> Add Operation
             </button>
-            <button className="text-muted hover:text-on-surface flex items-center gap-1">
-              <span className="material-symbols-outlined text-[14px]">redo</span> Redo
+            <button onClick={() => setHistory((prev) => prev.slice(0, -1))} className="text-muted hover:text-on-surface flex items-center gap-1" disabled={history.length === 0}>
+              <span className="material-symbols-outlined text-[14px]">undo</span> Undo
             </button>
           </div>
         </div>
 
         {/* Save */}
         <div className="p-6">
-          <button className="w-full bg-on-surface text-background py-3.5 text-[11px] uppercase font-bold tracking-[0.15em] hover:opacity-90 transition-all">
-            Save Derivative
+          <button
+            onClick={handleSave}
+            disabled={applyPreprocess.isPending}
+            className="w-full bg-on-surface text-background py-3.5 text-[11px] uppercase font-bold tracking-[0.15em] hover:opacity-90 transition-all disabled:opacity-50"
+          >
+            {applyPreprocess.isPending ? 'Processing...' : 'Save Derivative'}
           </button>
+          {applyPreprocess.error && (
+            <p className="text-[11px] text-accent mt-2">{(applyPreprocess.error as Error).message}</p>
+          )}
         </div>
       </aside>
     </div>

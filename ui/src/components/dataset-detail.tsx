@@ -1,9 +1,14 @@
 import { useParams } from '@tanstack/react-router'
-import { useDataset, thumbUrl } from '@/lib/api'
+import { useDataset, useExportDataset, useForkDataset, thumbUrl } from '@/lib/api'
+import { useState } from 'react'
 
 export function DatasetDetail() {
   const { datasetId } = useParams({ from: '/datasets/$datasetId' })
   const { data, isLoading } = useDataset(datasetId)
+  const exportDataset = useExportDataset()
+  const forkDataset = useForkDataset()
+  const [exportDir, setExportDir] = useState('')
+  const [showExport, setShowExport] = useState(false)
 
   if (isLoading) return <div className="p-12 text-muted">Loading...</div>
   if (!data) return <div className="p-12 text-muted">Dataset not found</div>
@@ -24,11 +29,18 @@ export function DatasetDetail() {
           <span className="text-meta text-muted">{includedCount} / {images.length} included</span>
         </div>
         <div className="flex items-center gap-3">
-          <button className="border border-border-subtle px-4 py-2 text-[11px] uppercase font-bold tracking-[0.1em] hover:bg-surface transition-colors">
-            Fork
+          <button
+            onClick={() => forkDataset.mutate({ id: datasetId, name: `${ds.name} (Fork)` })}
+            disabled={forkDataset.isPending}
+            className="border border-border-subtle px-4 py-2 text-[11px] uppercase font-bold tracking-[0.1em] hover:bg-surface transition-colors disabled:opacity-50"
+          >
+            {forkDataset.isPending ? 'Forking...' : 'Fork'}
           </button>
-          <button className="bg-accent text-white px-6 py-2.5 text-[11px] uppercase font-bold tracking-[0.15em] hover:opacity-90 transition-all">
-            Prepare Bundle
+          <button
+            onClick={() => setShowExport(true)}
+            className="bg-accent text-white px-6 py-2.5 text-[11px] uppercase font-bold tracking-[0.15em] hover:opacity-90 transition-all"
+          >
+            Export
           </button>
         </div>
       </header>
@@ -135,8 +147,11 @@ export function DatasetDetail() {
               <p>Format: {ds.export_config !== '{}' ? 'Configured' : 'Not configured'}</p>
               <p>{includedCount} images will be exported</p>
             </div>
-            <button className="mt-4 w-full bg-accent text-white py-3 text-[11px] uppercase font-bold tracking-[0.15em] hover:opacity-90 transition-all">
-              Prepare Bundle
+            <button
+              onClick={() => setShowExport(true)}
+              className="mt-4 w-full bg-accent text-white py-3 text-[11px] uppercase font-bold tracking-[0.15em] hover:opacity-90 transition-all"
+            >
+              Export to Disk
             </button>
             {ds.description && (
               <div className="mt-6 p-4 bg-surface-low text-xs text-muted leading-relaxed">
@@ -146,6 +161,46 @@ export function DatasetDetail() {
           </div>
         </aside>
       </div>
+
+      {/* Export Dialog */}
+      {showExport && (
+        <div className="fixed inset-0 bg-on-surface/40 z-50 flex items-center justify-center" onClick={() => setShowExport(false)}>
+          <div className="bg-background border border-border-subtle p-8 w-[420px] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-display text-2xl mb-6">Export Dataset</h3>
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Output Directory</label>
+                <input
+                  value={exportDir}
+                  onChange={(e) => setExportDir(e.target.value)}
+                  className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:outline-none"
+                  placeholder="/path/to/export"
+                  autoFocus
+                />
+              </div>
+              <p className="text-[12px] text-muted">{includedCount} images will be exported with caption sidecars.</p>
+              {exportDataset.data && (
+                <p className="text-[12px] text-green-600 bg-green-50 p-3">
+                  Exported {exportDataset.data.exported} images. {exportDataset.data.skipped > 0 ? `${exportDataset.data.skipped} skipped.` : ''} {exportDataset.data.errors > 0 ? `${exportDataset.data.errors} errors.` : ''}
+                </p>
+              )}
+              {exportDataset.error && (
+                <p className="text-[12px] text-accent bg-accent/10 p-3">{(exportDataset.error as Error).message}</p>
+              )}
+              <div className="flex justify-end gap-3 mt-2">
+                <button onClick={() => setShowExport(false)} className="px-4 py-2 text-[11px] uppercase font-bold text-muted">Cancel</button>
+                <button
+                  onClick={() => exportDataset.mutate({ datasetId, outputDir: exportDir })}
+                  disabled={!exportDir.trim() || exportDataset.isPending}
+                  className="bg-on-surface text-background px-6 py-2 text-[11px] uppercase font-bold disabled:opacity-50"
+                >
+                  {exportDataset.isPending ? 'Exporting...' : 'Export'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
