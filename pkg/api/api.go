@@ -11,6 +11,7 @@ import (
 	"github.com/tela/frame/pkg/fig"
 	"github.com/tela/frame/pkg/dataset"
 	"github.com/tela/frame/pkg/image"
+	"github.com/tela/frame/pkg/look"
 	"github.com/tela/frame/pkg/lora"
 	"github.com/tela/frame/pkg/media"
 	"github.com/tela/frame/pkg/poseset"
@@ -32,6 +33,7 @@ type API struct {
 	Templates   *template.Store
 	Shoots      *shoot.Store
 	Audit       *audit.Store
+	Looks       *look.Store
 	Loras       *lora.Store
 	PoseSet     *poseset.Store
 	Bifrost     *bifrost.Client // nil if Bifrost not configured
@@ -152,6 +154,14 @@ func (a *API) Register(mux *http.ServeMux) {
 	// Generation (Bifrost)
 	mux.HandleFunc("POST /api/v1/generate", a.handleGenerate)
 	mux.HandleFunc("GET /api/v1/bifrost/status", a.handleBifrostStatus)
+
+	// Go-see looks
+	mux.HandleFunc("GET /api/v1/characters/{id}/looks", a.listLooks)
+	mux.HandleFunc("POST /api/v1/characters/{id}/looks", a.createLook)
+	mux.HandleFunc("PATCH /api/v1/looks/{lookId}", a.updateLook)
+	mux.HandleFunc("DELETE /api/v1/looks/{lookId}", a.deleteLook)
+	mux.HandleFunc("GET /api/v1/looks/{lookId}/try-on", a.getLookTryOn)
+	mux.HandleFunc("POST /api/v1/looks/{lookId}/generate", a.generateLookTryOn)
 
 	// Standard pose set
 	mux.HandleFunc("GET /api/v1/characters/{id}/pose-set", a.getPoseSetStatus)
