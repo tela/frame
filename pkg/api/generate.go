@@ -24,9 +24,15 @@ type generateRequest struct {
 	LoraAdapter    string   `json:"lora_adapter,omitempty"`
 	LoraStrength   float64  `json:"lora_strength,omitempty"`
 	ContentRating  string   `json:"content_rating,omitempty"`
+	Tier           string   `json:"tier,omitempty"`          // cheap, complex, frontier (default: complex)
+	Workflow       string   `json:"workflow,omitempty"`       // txt2img, img2img, multi_ref, pose_transfer, upscale
 	ProviderName   string   `json:"provider_name,omitempty"`
 	IncludeRefs    bool     `json:"include_refs"`
-	RefImageIDs    []string `json:"ref_image_ids,omitempty"` // additional ref images by ID
+	RefImageIDs    []string `json:"ref_image_ids,omitempty"`
+	SourceImageID  string   `json:"source_image_id,omitempty"` // for img2img/refinement
+	DenoiseStrength float64 `json:"denoise_strength,omitempty"` // for img2img (0.0-1.0)
+	PoseID         string   `json:"pose_id,omitempty"`         // standard pose tracking
+	OutfitID       string   `json:"outfit_id,omitempty"`       // standard outfit tracking
 }
 
 type generateResponse struct {
@@ -99,6 +105,15 @@ func (a *API) handleGenerate(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	// Source image for img2img/refinement workflows
+	if req.SourceImageID != "" {
+		refs = append(refs, bifrost.ReferenceImage{
+			URL:   fmt.Sprintf("http://localhost:%d/api/v1/images/%s", a.Port, req.SourceImageID),
+			Type:  "input_image",
+			Label: "source image for refinement",
+		})
+	}
+
 	// Defaults
 	width := req.Width
 	if width == 0 {
@@ -120,6 +135,10 @@ func (a *API) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	if contentRating == "" {
 		contentRating = bifrost.ContentNSFW
 	}
+	tier := req.Tier
+	if tier == "" {
+		tier = bifrost.TierComplex
+	}
 
 	// Generate images (one at a time since Bifrost returns one per request)
 	jobID := id.New()
@@ -137,10 +156,17 @@ func (a *API) handleGenerate(w http.ResponseWriter, r *http.Request) {
 			LoraAdapter:     req.LoraAdapter,
 			LoraStrength:    req.LoraStrength,
 			Meta: bifrost.RequestMeta{
-				Tier:          bifrost.TierComplex,
+				Tier:          tier,
 				ContentRating: contentRating,
 				ProviderName:  req.ProviderName,
 			},
+		}
+
+		if req.DenoiseStrength > 0 {
+			genReq.DenoiseStrength = req.DenoiseStrength
+		}
+		if req.Workflow != "" {
+			genReq.WorkflowTemplate = req.Workflow
 		}
 
 		imgData, contentType, err := a.Bifrost.GenerateImageBytes(genReq)

@@ -2,17 +2,19 @@ package bifrost
 
 // ImageGenRequest is the request body for POST /v1/images/generate.
 type ImageGenRequest struct {
-	Prompt          string           `json:"prompt"`
-	NegativePrompt  string           `json:"negative_prompt,omitempty"`
-	Model           string           `json:"model,omitempty"`
-	Width           int              `json:"width,omitempty"`
-	Height          int              `json:"height,omitempty"`
-	Steps           int              `json:"steps,omitempty"`
-	StylePrompt     string           `json:"style_prompt,omitempty"`
-	ReferenceImages []ReferenceImage `json:"reference_images,omitempty"`
-	LoraAdapter     string           `json:"lora_adapter,omitempty"`
-	LoraStrength    float64          `json:"lora_strength,omitempty"`
-	Meta            RequestMeta      `json:"meta"`
+	Prompt           string           `json:"prompt"`
+	NegativePrompt   string           `json:"negative_prompt,omitempty"`
+	Model            string           `json:"model,omitempty"`
+	Width            int              `json:"width,omitempty"`
+	Height           int              `json:"height,omitempty"`
+	Steps            int              `json:"steps,omitempty"`
+	StylePrompt      string           `json:"style_prompt,omitempty"`
+	ReferenceImages  []ReferenceImage `json:"reference_images,omitempty"`
+	LoraAdapter      string           `json:"lora_adapter,omitempty"`
+	LoraStrength     float64          `json:"lora_strength,omitempty"`
+	DenoiseStrength  float64          `json:"denoise_strength,omitempty"`  // for img2img (0.0-1.0)
+	WorkflowTemplate string          `json:"workflow_template,omitempty"` // e.g., txt2img, img2img, sdxl_character_gen
+	Meta             RequestMeta     `json:"meta"`
 }
 
 // ReferenceImage is a reference image for guided generation.
