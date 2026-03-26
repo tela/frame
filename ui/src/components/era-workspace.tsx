@@ -2,6 +2,7 @@ import { Link, useParams } from '@tanstack/react-router'
 import { useCharacter, useReferencePackage, useIngestImage, useCharacterImages, useUpdateCharacterImage, thumbUrl } from '@/lib/api'
 import { useState, useCallback } from 'react'
 import { Dropzone } from '@/components/dropzone'
+import { TagPicker } from '@/components/tag-picker'
 import type { CharacterImage } from '@/lib/types'
 
 export function EraWorkspace() {
@@ -10,6 +11,7 @@ export function EraWorkspace() {
   const updateImage = useUpdateCharacterImage()
   const [uploadStatus, setUploadStatus] = useState<string | null>(null)
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set())
+  const [showTagPicker, setShowTagPicker] = useState(false)
   const { data: character, isLoading: charLoading } = useCharacter(characterId)
   const { data: eraImages } = useCharacterImages(characterId, eraId)
   const { data: refPackage } = useReferencePackage(characterId, eraId)
@@ -156,6 +158,9 @@ export function EraWorkspace() {
               <button onClick={() => bulkUpdate('set_type', 'archive')} className="text-ui text-[11px] text-muted hover:text-primary px-2 py-1 border border-border-subtle hover:border-primary transition-colors">Archive</button>
               <button onClick={() => bulkUpdate('triage_status', 'approved')} className="text-ui text-[11px] text-muted hover:text-green-600 px-2 py-1 border border-border-subtle hover:border-green-600 transition-colors">Approve</button>
               <button onClick={() => bulkUpdate('triage_status', 'rejected')} className="text-ui text-[11px] text-muted hover:text-accent px-2 py-1 border border-border-subtle hover:border-accent transition-colors">Reject</button>
+              <button onClick={() => setShowTagPicker(true)} className="text-ui text-[11px] text-muted hover:text-primary px-2 py-1 border border-border-subtle hover:border-primary transition-colors flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">sell</span>Tag
+              </button>
               <button onClick={() => setSelectedImages(new Set())} className="text-ui text-[11px] text-muted hover:text-primary transition-colors">Clear</button>
             </div>
           )}
@@ -206,6 +211,13 @@ export function EraWorkspace() {
           margin-bottom: 2.75rem;
         }
       `}</style>
+
+      {/* Tag Picker */}
+      <TagPicker
+        open={showTagPicker}
+        onClose={() => setShowTagPicker(false)}
+        imageIds={Array.from(selectedImages)}
+      />
     </Dropzone>
   )
 }

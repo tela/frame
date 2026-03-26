@@ -278,9 +278,14 @@ export function useIngestImage() {
       formData.append('file', file)
       if (source) formData.append('source', source)
 
-      const path = eraId
-        ? `/api/v1/characters/${characterId}/eras/${eraId}/ingest`
-        : `/api/v1/characters/${characterId}/images`
+      let path: string
+      if (!characterId) {
+        path = '/api/v1/images/ingest'
+      } else if (eraId) {
+        path = `/api/v1/characters/${characterId}/eras/${eraId}/ingest`
+      } else {
+        path = `/api/v1/characters/${characterId}/images`
+      }
 
       return postFormData<IngestResult>(path, formData)
     },
@@ -394,6 +399,34 @@ export function useBifrostStatus() {
     queryKey: ['bifrost', 'status'],
     queryFn: () => fetchJSON<BifrostStatus>('/api/v1/bifrost/status'),
     refetchInterval: 30_000, // poll every 30s
+  })
+}
+
+// ===== Audit Log =====
+
+export interface AuditEvent {
+  id: string
+  entity_type: string
+  entity_id: string
+  action: string
+  field?: string
+  old_value?: string
+  new_value?: string
+  context: Record<string, string>
+  created_at: string
+}
+
+export function useAuditLog(entityType?: string, entityId?: string) {
+  return useQuery({
+    queryKey: ['audit', entityType, entityId],
+    queryFn: () => {
+      const params = new URLSearchParams()
+      if (entityType) params.set('entity_type', entityType)
+      if (entityId) params.set('entity_id', entityId)
+      params.set('limit', '50')
+      return fetchJSON<{ events: AuditEvent[]; total: number }>(`/api/v1/audit?${params.toString()}`)
+    },
+    enabled: !!(entityType || entityId),
   })
 }
 

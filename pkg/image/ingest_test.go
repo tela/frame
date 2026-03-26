@@ -50,13 +50,10 @@ func TestIngestCharacterImage(t *testing.T) {
 		t.Errorf("format = %q, want png", result.Format)
 	}
 
-	// Verify file path uses slug
-	origPath := ingester.OriginalPath(result.ImageID, "test-abc1234", nil, "png")
-	if !strings.Contains(origPath, "test-abc1234") {
-		t.Errorf("path should contain slug: %s", origPath)
-	}
-	if strings.Contains(origPath, charID) && !strings.Contains("test-abc1234", charID) {
-		t.Errorf("path should use slug not raw ID: %s", origPath)
+	// Verify file path uses slug and flat structure
+	origPath := ingester.OriginalPath(result.ImageID, "test-abc1234", "png")
+	if !strings.Contains(origPath, "test-abc1234/images/") {
+		t.Errorf("path should use flat images dir: %s", origPath)
 	}
 }
 
@@ -82,10 +79,10 @@ func TestIngestStandaloneImage(t *testing.T) {
 		t.Fatal("expected image ID")
 	}
 
-	// Verify file path uses feature folder
-	origPath := ingester.FeatureOriginalPath(result.ImageID, "faces-a7f3b2c", "png")
-	if !strings.Contains(origPath, "features/faces-a7f3b2c") {
-		t.Errorf("path should contain features folder: %s", origPath)
+	// Verify file path uses references directory
+	origPath := ingester.ReferenceOriginalPath(result.ImageID, "png")
+	if !strings.Contains(origPath, "references/images/") {
+		t.Errorf("path should use references/images: %s", origPath)
 	}
 
 	// Verify no character_images record was created

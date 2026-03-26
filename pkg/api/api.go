@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/tela/frame/pkg/audit"
 	"github.com/tela/frame/pkg/bifrost"
 	"github.com/tela/frame/pkg/character"
 	"github.com/tela/frame/pkg/dataset"
@@ -27,6 +28,7 @@ type API struct {
 	Preprocess  *preprocess.Store
 	Templates   *template.Store
 	Shoots      *shoot.Store
+	Audit       *audit.Store
 	Bifrost     *bifrost.Client // nil if Bifrost not configured
 	RootPath    string          // drive root for file serving
 	Port        int             // server port (for self-referencing URLs)
@@ -64,6 +66,9 @@ func (a *API) Register(mux *http.ServeMux) {
 
 	// Post-cast era ingest
 	mux.HandleFunc("POST /api/v1/characters/{id}/eras/{era}/ingest", a.ingestEraImage)
+
+	// Standalone image ingest (no character)
+	mux.HandleFunc("POST /api/v1/images/ingest", a.ingestStandaloneImage)
 
 	// Image search
 	mux.HandleFunc("GET /api/v1/images/search", a.searchImages)
@@ -130,6 +135,9 @@ func (a *API) Register(mux *http.ServeMux) {
 
 	// Import
 	mux.HandleFunc("POST /api/v1/import/directory", a.handleImportDirectory)
+
+	// Audit log
+	mux.HandleFunc("GET /api/v1/audit", a.queryAuditLog)
 
 	// Generation (Bifrost)
 	mux.HandleFunc("POST /api/v1/generate", a.handleGenerate)

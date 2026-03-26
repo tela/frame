@@ -30,6 +30,7 @@ ui:
 # === Development ===
 
 dev:
+	@mkdir -p /tmp/frame-dev
 	go build $(LDFLAGS) -o $(BINARY) $(CMD) && ./$(BINARY) --root /tmp/frame-dev --port 7890
 
 dev-ui:

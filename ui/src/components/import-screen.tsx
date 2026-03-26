@@ -14,6 +14,7 @@ export function ImportScreen() {
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [importResult, setImportResult] = useState<{ imported: number; skipped: number; failed: number; total: number } | null>(null)
+  const [isImporting, setIsImporting] = useState(false)
 
   const addTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
@@ -180,64 +181,92 @@ export function ImportScreen() {
           <div className="border border-border-subtle bg-background p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-ui text-[13px] tracking-[0.15em]">Import Queue</h3>
-              <span className="text-meta text-muted">Est: 0 / 12s</span>
+              {uploadedFiles.length > 0 && (
+                <button
+                  onClick={() => setUploadedFiles([])}
+                  className="text-[10px] uppercase tracking-[0.1em] text-muted hover:text-accent transition-colors"
+                >
+                  Clear
+                </button>
+              )}
             </div>
 
             {/* Preview grid */}
             <div className="grid grid-cols-4 gap-1 mb-6">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="aspect-square bg-surface-low" />
-              ))}
+              {uploadedFiles.length > 0 ? (
+                <>
+                  {uploadedFiles.slice(0, 8).map((file, i) => (
+                    <div key={i} className="aspect-square bg-surface-low overflow-hidden relative">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={file.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                  {uploadedFiles.length > 8 && (
+                    <div className="aspect-square bg-surface-low flex items-center justify-center text-[10px] text-muted font-bold">
+                      +{uploadedFiles.length - 8}
+                    </div>
+                  )}
+                </>
+              ) : (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="aspect-square bg-surface-low" />
+                ))
+              )}
+            </div>
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-meta text-muted">
+                {uploadedFiles.length > 0 ? `${uploadedFiles.length} file${uploadedFiles.length !== 1 ? 's' : ''} queued` : 'No files selected'}
+              </span>
             </div>
 
             <button
-              disabled={(importDirectory.isPending || ingestImage.isPending) || (!directoryPath.trim() && uploadedFiles.length === 0)}
-              onClick={() => {
+              disabled={isImporting || (!directoryPath.trim() && uploadedFiles.length === 0)}
+              onClick={async () => {
                 if (uploadedFiles.length > 0) {
-                  // File upload mode
-                  let completed = 0
+                  setIsImporting(true)
+                  let imported = 0
+                  let failed = 0
                   const total = uploadedFiles.length
                   for (const file of uploadedFiles) {
-                    ingestImage.mutate(
-                      {
-                        characterId: characterId || 'standalone',
+                    try {
+                      await ingestImage.mutateAsync({
+                        characterId: characterId || '',
                         file,
                         source: sourceOrigin,
-                      },
-                      {
-                        onSuccess: () => {
-                          completed++
-                          if (completed === total) {
-                            setImportResult({ imported: completed, skipped: 0, failed: 0, total })
-                            setUploadedFiles([])
-                          }
-                        },
-                        onError: () => {
-                          completed++
-                          if (completed === total) {
-                            setImportResult({ imported: completed - 1, skipped: 0, failed: 1, total })
-                          }
-                        },
-                      }
-                    )
+                      })
+                      imported++
+                    } catch (err) {
+                      console.error('Import failed for', file.name, err)
+                      failed++
+                    }
                   }
+                  setImportResult({ imported, skipped: 0, failed, total })
+                  setUploadedFiles([])
+                  setIsImporting(false)
                 } else if (directoryPath.trim()) {
-                  // Directory mode
-                  const tagStrings = tags.map((t) => `misc:${t}`)
-                  importDirectory.mutate(
-                    {
+                  setIsImporting(true)
+                  try {
+                    const tagStrings = tags.map((t) => `misc:${t}`)
+                    const data = await importDirectory.mutateAsync({
                       path: directoryPath,
                       character_id: characterId || undefined,
                       source: sourceOrigin,
                       tags: tagStrings.length > 0 ? tagStrings : undefined,
-                    },
-                    { onSuccess: (data) => setImportResult(data) }
-                  )
+                    })
+                    setImportResult(data)
+                  } catch (err) {
+                    console.error('Directory import failed', err)
+                    setImportResult({ imported: 0, skipped: 0, failed: 1, total: 1 })
+                  }
+                  setIsImporting(false)
                 }
               }}
               className="w-full bg-accent text-white py-3 text-[11px] uppercase font-bold tracking-[0.15em] hover:opacity-90 transition-all disabled:opacity-50"
             >
-              {(importDirectory.isPending || ingestImage.isPending) ? 'Importing...' : 'Execute Import'}
+              {isImporting ? 'Importing...' : 'Execute Import'}
             </button>
           </div>
 
@@ -255,18 +284,13 @@ export function ImportScreen() {
                 {importResult.failed > 0 && <p className="text-accent">{importResult.failed} failed</p>}
                 <p className="text-muted">{importResult.total} total files processed</p>
               </div>
-            ) : importDirectory.isPending ? (
+            ) : isImporting ? (
               <div className="flex items-center gap-3 text-sm text-muted">
                 <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
                 Importing...
               </div>
             ) : (
               <p className="text-xs text-muted">No active import session</p>
-            )}
-            {importDirectory.isError && (
-              <p className="text-accent text-xs mt-2">
-                Error: {importDirectory.error?.message}
-              </p>
             )}
           </div>
         </div>

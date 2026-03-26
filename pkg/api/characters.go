@@ -51,6 +51,10 @@ func (a *API) createCharacter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if a.Audit != nil {
+		a.Audit.Log("character", c.ID, "created", nil, nil, nil, map[string]string{"name": c.Name, "status": string(c.Status)})
+	}
+
 	writeJSON(w, http.StatusCreated, c)
 }
 

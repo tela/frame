@@ -61,10 +61,6 @@ export function CharacterDetail() {
             {/* Vitals Panel */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-8">
               <div className="flex flex-col gap-1">
-                <span className="text-muted text-[11px] uppercase tracking-ui font-medium">Status</span>
-                <span className="text-primary text-[14px] font-body tabular-nums capitalize">{character.status}</span>
-              </div>
-              <div className="flex flex-col gap-1">
                 <span className="text-muted text-[11px] uppercase tracking-ui font-medium">Eras</span>
                 <span className="text-primary text-[14px] font-body tabular-nums">{character.eras.length}</span>
               </div>
@@ -145,7 +141,7 @@ export function CharacterDetail() {
 
         {/* Prospect / Development view (pre-cast) */}
         {(character.status === 'prospect' || character.status === 'development') && (
-          <ProspectView characterId={character.id} status={character.status} figPublished={character.fig_published} figUrl={character.fig_character_url} />
+          <ProspectView characterId={character.id} status={character.status} />
         )}
 
         {/* Scouted state (from Fig) */}
@@ -163,8 +159,8 @@ export function CharacterDetail() {
 
 type ProspectTab = 'lookbook' | 'scrapbook'
 
-function ProspectView({ characterId, status, figPublished, figUrl }: {
-  characterId: string; status: string; figPublished: boolean; figUrl: string
+function ProspectView({ characterId, status }: {
+  characterId: string; status: string
 }) {
   const [activeTab, setActiveTab] = useState<ProspectTab>('lookbook')
   const { data: allImages } = useCharacterImages(characterId)
@@ -198,19 +194,6 @@ function ProspectView({ characterId, status, figPublished, figUrl }: {
       {uploadStatus && (
         <div className="fixed bottom-6 right-6 z-50 bg-on-surface text-background px-6 py-3 shadow-lg text-sm">
           {uploadStatus}
-        </div>
-      )}
-
-      {/* Fig integration */}
-      {figPublished && (
-        <div className="flex items-center gap-3 mb-6">
-          <span className="w-2 h-2 rounded-full bg-green-500" />
-          <span className="text-[11px] uppercase tracking-[0.15em] text-muted">Published to Fig</span>
-          {figUrl && (
-            <a href={figUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-primary hover:text-accent flex items-center gap-1">
-              Open in Fig <span className="material-symbols-outlined text-[14px]">open_in_new</span>
-            </a>
-          )}
         </div>
       )}
 
