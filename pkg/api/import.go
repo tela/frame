@@ -84,16 +84,11 @@ func (a *API) handleImportDirectory(w http.ResponseWriter, r *http.Request) {
 			eraID = &req.EraID
 		}
 
-		charID := req.CharacterID
-		if charID == "" {
-			charID = "standalone"
-		}
-
 		ingestReq := &image.IngestRequest{
 			Filename:    filepath.Base(path),
 			Data:        data,
 			Source:      source,
-			CharacterID: charID,
+			CharacterID: req.CharacterID,
 			EraID:       eraID,
 		}
 
