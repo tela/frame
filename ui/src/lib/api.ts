@@ -645,6 +645,149 @@ export function useAddDatasetImages() {
   })
 }
 
+// ===== LoRA Registry =====
+
+export interface LoRA {
+  id: string
+  name: string
+  filename: string
+  source_url: string
+  description: string
+  category: string
+  tags: string
+  recommended_strength: number
+  content_rating: string
+  compatible_models: string
+  created_at: string
+  updated_at: string
+}
+
+export function useLoras(category?: string, contentRating?: string) {
+  return useQuery({
+    queryKey: ['loras', category, contentRating],
+    queryFn: () => {
+      const params = new URLSearchParams()
+      if (category) params.set('category', category)
+      if (contentRating) params.set('content_rating', contentRating)
+      const qs = params.toString()
+      return fetchJSON<LoRA[]>(`/api/v1/loras${qs ? '?' + qs : ''}`)
+    },
+  })
+}
+
+export function useCreateLora() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { name: string; filename: string; source_url?: string; description?: string; category?: string; tags?: string; recommended_strength?: number; content_rating?: string; compatible_models?: string }) =>
+      postJSON<LoRA>('/api/v1/loras', body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['loras'] }) },
+  })
+}
+
+export function useDeleteLora() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) =>
+      fetch(`/api/v1/loras/${id}`, { method: 'DELETE' }).then(r => r.json()),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['loras'] }) },
+  })
+}
+
+// ===== Pose Set =====
+
+export interface StandardPose {
+  id: string
+  name: string
+  category: string
+  framing: string
+  content_rating: string
+  prompt_hints: string
+  sort_order: number
+}
+
+export interface StandardOutfit {
+  id: string
+  name: string
+  content_rating: string
+  sort_order: number
+}
+
+export interface PoseSetEntry {
+  pose_id: string
+  pose_name: string
+  category: string
+  outfit_id: string
+  status: string
+  image_id: string | null
+}
+
+export interface PoseSetStatus {
+  character_id: string
+  era_id: string
+  total: number
+  generated: number
+  accepted: number
+  poses: PoseSetEntry[]
+}
+
+export function useStandardPoses() {
+  return useQuery({
+    queryKey: ['standard-poses'],
+    queryFn: () => fetchJSON<StandardPose[]>('/api/v1/standard-poses'),
+  })
+}
+
+export function useStandardOutfits() {
+  return useQuery({
+    queryKey: ['standard-outfits'],
+    queryFn: () => fetchJSON<StandardOutfit[]>('/api/v1/standard-outfits'),
+  })
+}
+
+export function usePoseSetStatus(characterId: string, eraId: string) {
+  return useQuery({
+    queryKey: ['pose-set', characterId, eraId],
+    queryFn: () => fetchJSON<PoseSetStatus>(`/api/v1/characters/${characterId}/pose-set?era_id=${eraId}`),
+    enabled: !!characterId && !!eraId,
+  })
+}
+
+export function useUpdatePoseSetImage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ characterId, ...body }: { characterId: string; era_id: string; pose_id: string; outfit_id: string; image_id?: string; status?: string }) =>
+      postJSON<{ status: string }>(`/api/v1/characters/${characterId}/pose-set`, body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['pose-set'] }) },
+  })
+}
+
+// ===== Fig Integration =====
+
+export interface FigStatus {
+  available: boolean
+  state?: string
+  reason?: string
+}
+
+export function useFigStatus() {
+  return useQuery({
+    queryKey: ['fig', 'status'],
+    queryFn: () => fetchJSON<FigStatus>('/api/v1/fig/status'),
+    refetchInterval: 30_000,
+  })
+}
+
+export function usePublishToFig() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (characterId: string) =>
+      postJSON<{ status: string }>(`/api/v1/characters/${characterId}/publish`, {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['characters'] })
+    },
+  })
+}
+
 // ===== Image URLs =====
 
 export function imageUrl(imageId: string) {
