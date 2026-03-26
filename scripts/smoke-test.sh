@@ -261,6 +261,76 @@ for e in d['events']:
 " "$FIRST_IMAGE"
 fi
 
+# 27. Verify auto-created Standard era
+echo -e "\n--- 27. Auto Standard Era ---"
+curl -s -X POST $BASE/characters \
+  -H "Content-Type: application/json" \
+  -d '{"id":"char_test_auto","name":"Auto Era Test","display_name":"AutoTest","status":"prospect"}' > /dev/null
+curl -s $BASE/characters/char_test_auto | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+eras = d.get('eras', [])
+print(f'  Character has {len(eras)} era(s)')
+for e in eras:
+    print(f'    {e[\"label\"]:20s} age={e.get(\"age_range\",\"?\")} sort={e[\"sort_order\"]}')
+if not eras or eras[0]['label'] != 'Standard':
+    print('  ERROR: Expected auto-created Standard era')
+else:
+    print('  OK: Standard era auto-created')
+"
+
+# 28. Standard poses and outfits catalog
+echo -e "\n--- 28. Standard Poses & Outfits ---"
+curl -s $BASE/standard-poses | python3 -c "
+import json,sys
+poses=json.load(sys.stdin)
+by_cat={}
+for p in poses:
+    by_cat.setdefault(p['category'],[]).append(p)
+for cat,ps in by_cat.items():
+    print(f'  {cat}: {len(ps)} poses')
+"
+curl -s $BASE/standard-outfits | python3 -c "
+import json,sys
+outfits=json.load(sys.stdin)
+print(f'  {len(outfits)} outfits: {[o[\"name\"] for o in outfits]}')
+"
+
+# 29. Pose set status
+echo -e "\n--- 29. Pose Set Status ---"
+AUTO_ERA_ID=$(curl -s $BASE/characters/char_test_auto | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['eras'][0]['id'] if d.get('eras') else '')")
+if [ -n "$AUTO_ERA_ID" ]; then
+  curl -s "$BASE/characters/char_test_auto/pose-set?era_id=$AUTO_ERA_ID" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+print(f'  Total: {d[\"total\"]} | Generated: {d[\"generated\"]} | Accepted: {d[\"accepted\"]}')
+cats={}
+for p in d['poses']:
+    cats.setdefault(p['category'],[]).append(p)
+for cat,entries in cats.items():
+    missing=sum(1 for e in entries if e['status']=='missing')
+    print(f'    {cat}: {len(entries)} slots ({missing} missing)')
+"
+fi
+
+# 30. LoRA registry
+echo -e "\n--- 30. LoRA Registry ---"
+curl -s -X POST $BASE/loras \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Detail Enhance V2","filename":"detail_enhance_v2.safetensors","category":"detail","recommended_strength":0.6,"content_rating":"sfw","source_url":"https://civitai.com/example"}' | python3 -m json.tool
+
+curl -s $BASE/loras | python3 -c "
+import json,sys
+loras=json.load(sys.stdin)
+print(f'  {len(loras)} LoRA(s) registered')
+for l in loras:
+    print(f'    {l[\"name\"]:30s} cat={l[\"category\"]:10s} strength={l[\"recommended_strength\"]} rating={l[\"content_rating\"]}')
+"
+
+# 31. Fig integration status
+echo -e "\n--- 31. Fig Status ---"
+curl -s $BASE/fig/status | python3 -m json.tool
+
 # UI smoke test checklist
 echo -e "\n========================================="
 echo "  UI Smoke Test Checklist"
@@ -275,8 +345,11 @@ echo "    [ ] Search filters by name"
 echo "    [ ] Click Eleanor navigates to detail"
 echo ""
 echo "  Character Detail (Eleanor):"
-echo "    [ ] Shows name, status=cast, 2 eras"
+echo "    [ ] Shows name, status=cast, Standard era + 2 manual eras"
 echo "    [ ] Era cards show 'Young Adult' with image count"
+echo "    [ ] Pose Set Dashboard visible (26-image grid)"
+echo "    [ ] SFW Standard section expanded, NSFW/Anatomical collapsed"
+echo "    [ ] Empty cells show '+' icon, link to Studio"
 echo "    [ ] Click era navigates to workspace"
 echo ""
 echo "  Era Workspace:"
@@ -330,7 +403,11 @@ echo ""
 echo "  Other screens:"
 echo "    [ ] Image Search renders filter sidebar and returns results"
 echo "    [ ] Prompt Templates: create new template, shows in list"
-echo "    [ ] Studio shows config panel + ref image picker"
+echo "    [ ] Studio: workflow selector (txt2img, multi_ref, img2img, etc.)"
+echo "    [ ] Studio: SFW/NSFW toggle, Quality tier (Quick/Standard/Premium)"
+echo "    [ ] Studio: LoRA picker dropdown with strength slider"
+echo "    [ ] Studio: Batch size (1/2/4/8), Dimensions (Portrait/Square/Landscape)"
+echo "    [ ] Studio: Negative prompt field, Steps slider in Parameters"
 echo "    [ ] Triage Queue: press T opens real tag picker"
 echo ""
 echo "  Cleanup: rm -rf $TESTDIR"
