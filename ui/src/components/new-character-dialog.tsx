@@ -8,21 +8,42 @@ interface Props {
   onClose: () => void
 }
 
+const FIRST_NAMES = [
+  'Celeste', 'Elias', 'Marlowe', 'Soren', 'Isolde', 'Caspian', 'Vesper', 'Orion',
+  'Freya', 'Stellan', 'Aurelie', 'Dashiell', 'Esme', 'Theron', 'Neve', 'Lennox',
+  'Seraphina', 'Callum', 'Ingrid', 'Rhys', 'Aria', 'Felix', 'Lyra', 'Hugo',
+  'Petra', 'Silas', 'Wren', 'Jasper', 'Lark', 'Maren', 'Kael', 'Elowen',
+]
+
+const LAST_NAMES = [
+  'Noir', 'Vance', 'Thorne', 'Ashford', 'Blackwell', 'Crane', 'Mercer', 'Sterling',
+  'Volkov', 'Delacroix', 'Graves', 'Hartwell', 'Langley', 'Mortimer', 'Sinclair', 'Wren',
+  'Beaumont', 'Castellano', 'Fairfax', 'Holloway', 'Kingsley', 'Navarro', 'Prescott', 'Ravenswood',
+  'Sato', 'Thornberry', 'Whitmore', 'Yi', 'Zoltan', 'Okafor', 'Chen', 'Moreau',
+]
+
+function randomFrom(arr: string[]): string {
+  return arr[Math.floor(Math.random() * arr.length)]
+}
+
 export function NewCharacterDialog({ open, onClose }: Props) {
   const navigate = useNavigate()
   const createCharacter = useCreateCharacter()
   const ingestImage = useIngestImage()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [files, setFiles] = useState<File[]>([])
   const [nameError, setNameError] = useState('')
   const [creating, setCreating] = useState(false)
 
+  const fullName = `${firstName.trim()} ${lastName.trim()}`.trim()
+
   const handleCreate = async () => {
-    if (!name.trim()) {
-      setNameError('Full name is required')
+    if (!firstName.trim()) {
+      setNameError('First name is required')
       return
     }
     setNameError('')
@@ -30,12 +51,11 @@ export function NewCharacterDialog({ open, onClose }: Props) {
 
     try {
       const character = await createCharacter.mutateAsync({
-        name: name.trim(),
-        display_name: displayName.trim() || name.trim().split(' ')[0],
+        name: fullName,
+        display_name: displayName.trim() || firstName.trim(),
         status: 'prospect',
       })
 
-      // Upload initial images if any
       for (const file of files) {
         try {
           await ingestImage.mutateAsync({
@@ -48,7 +68,8 @@ export function NewCharacterDialog({ open, onClose }: Props) {
         }
       }
 
-      setName('')
+      setFirstName('')
+      setLastName('')
       setDisplayName('')
       setFiles([])
       onClose()
@@ -72,7 +93,7 @@ export function NewCharacterDialog({ open, onClose }: Props) {
       <DialogContent className="bg-surface-lowest border-none shadow-[0_20px_40px_rgba(47,51,51,0.06)] max-w-2xl p-0 gap-0">
         {/* Header */}
         <div className="px-10 pt-10 pb-6 border-b border-surface-low">
-          <h3 className="font-display text-4xl tracking-display text-on-surface">New Character Dialog</h3>
+          <h3 className="font-display text-4xl tracking-display text-on-surface">New Talent Entry</h3>
           <p className="font-body text-muted text-sm mt-4 italic max-w-md">
             Define the foundational identity within the archive. Personality attributes come later in Fig.
           </p>
@@ -80,24 +101,55 @@ export function NewCharacterDialog({ open, onClose }: Props) {
 
         {/* Content */}
         <div className="px-10 py-8 space-y-8">
-          {/* Name inputs */}
-          <div className="grid grid-cols-2 gap-8">
+          {/* Name inputs — 3 columns */}
+          <div className="grid grid-cols-3 gap-6">
             <div className="flex flex-col gap-2">
               <label className="text-[11px] uppercase tracking-[0.15em] font-medium text-muted">
-                Full Name <span className="text-accent">*</span>
+                First Name <span className="text-accent">*</span>
               </label>
-              <input
-                value={name}
-                onChange={(e) => { setName(e.target.value); setNameError('') }}
-                className={`w-full bg-surface-low border-none p-3 text-sm focus:ring-1 focus:ring-on-surface transition-all placeholder:text-muted/50 ${
-                  nameError ? 'ring-1 ring-accent' : ''
-                }`}
-                placeholder="e.g. Alistair Thorne"
-                autoFocus
-              />
+              <div className="relative">
+                <input
+                  value={firstName}
+                  onChange={(e) => { setFirstName(e.target.value); setNameError('') }}
+                  className={`w-full bg-surface-low border-none p-3 pr-9 text-sm focus:ring-1 focus:ring-on-surface transition-all placeholder:text-muted/50 ${
+                    nameError ? 'ring-1 ring-accent' : ''
+                  }`}
+                  placeholder="e.g. Celeste"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setFirstName(randomFrom(FIRST_NAMES))}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 material-symbols-outlined text-muted/40 hover:text-primary text-[18px] transition-colors"
+                  title="Generate random first name"
+                >
+                  casino
+                </button>
+              </div>
               {nameError && (
                 <span className="text-accent text-[11px]">{nameError}</span>
               )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-[11px] uppercase tracking-[0.15em] font-medium text-muted">
+                Last Name
+              </label>
+              <div className="relative">
+                <input
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="w-full bg-surface-low border-none p-3 pr-9 text-sm focus:ring-1 focus:ring-on-surface transition-all placeholder:text-muted/50"
+                  placeholder="e.g. Noir"
+                />
+                <button
+                  type="button"
+                  onClick={() => setLastName(randomFrom(LAST_NAMES))}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 material-symbols-outlined text-muted/40 hover:text-primary text-[18px] transition-colors"
+                  title="Generate random last name"
+                >
+                  casino
+                </button>
+              </div>
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-[11px] uppercase tracking-[0.15em] font-medium text-muted">
@@ -107,10 +159,18 @@ export function NewCharacterDialog({ open, onClose }: Props) {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 className="w-full bg-surface-low border-none p-3 text-sm focus:ring-1 focus:ring-on-surface transition-all placeholder:text-muted/50"
-                placeholder="e.g. Thorne"
+                placeholder={firstName || 'e.g. Celeste'}
               />
             </div>
           </div>
+
+          {/* Preview of full name */}
+          {fullName && (
+            <p className="text-[12px] text-muted">
+              Full name: <span className="text-on-surface font-medium">{fullName}</span>
+              {displayName.trim() ? ` · Display: ${displayName.trim()}` : ` · Display: ${firstName.trim()}`}
+            </p>
+          )}
 
           {/* Image drop zone */}
           <div className="flex flex-col gap-2">
@@ -164,7 +224,7 @@ export function NewCharacterDialog({ open, onClose }: Props) {
             </button>
             <button
               onClick={handleCreate}
-              disabled={creating}
+              disabled={creating || !firstName.trim()}
               className="bg-on-surface text-surface py-3 px-10 text-[11px] uppercase tracking-[0.15em] hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {creating ? 'Creating...' : 'Create'}
