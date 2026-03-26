@@ -184,12 +184,24 @@ export function CharacterDetail() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Age Range</label>
-                <input
+                <select
                   value={newEraAgeRange}
                   onChange={(e) => setNewEraAgeRange(e.target.value)}
                   className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
-                  placeholder="e.g. 18-24, Late 30s"
-                />
+                >
+                  <option value="">Select...</option>
+                  <option value="Child (5-12)">Child (5-12)</option>
+                  <option value="Teen (13-17)">Teen (13-17)</option>
+                  <option value="Young Adult (18-24)">Young Adult (18-24)</option>
+                  <option value="Late 20s (25-29)">Late 20s (25-29)</option>
+                  <option value="Early 30s (30-34)">Early 30s (30-34)</option>
+                  <option value="Mid 30s (35-39)">Mid 30s (35-39)</option>
+                  <option value="Early 40s (40-44)">Early 40s (40-44)</option>
+                  <option value="Mid 40s (45-49)">Mid 40s (45-49)</option>
+                  <option value="50s (50-59)">50s (50-59)</option>
+                  <option value="60s (60-69)">60s (60-69)</option>
+                  <option value="70+ (70+)">70+ (70+)</option>
+                </select>
               </div>
               <div>
                 <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Time Period</label>
