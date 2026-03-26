@@ -1,4 +1,5 @@
 import { Link, useRouterState } from '@tanstack/react-router'
+import { useFigStatus, useBifrostStatus } from '@/lib/api'
 
 const navItems = [
   { to: '/characters', icon: 'group', label: 'Character Library' },
@@ -16,6 +17,8 @@ const footerItems = [
 export function NavSidebar() {
   const routerState = useRouterState()
   const currentPath = routerState.location.pathname
+  const { data: figStatus } = useFigStatus()
+  const { data: bifrostStatus } = useBifrostStatus()
 
   const isActive = (to: string) => {
     if (to === '/characters') {
@@ -50,7 +53,7 @@ export function NavSidebar() {
         })}
       </div>
 
-      <div className="px-8 mt-auto">
+      <div className="px-8 mt-auto flex flex-col gap-6">
         {footerItems.map((item) => {
           const active = isActive(item.to)
           return (
@@ -68,6 +71,18 @@ export function NavSidebar() {
             </Link>
           )
         })}
+
+        {/* Service Status */}
+        <div className="flex flex-col gap-2 pt-4 border-t border-border-subtle/50">
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.1em] text-muted">
+            <span className={`w-1.5 h-1.5 rounded-full ${figStatus?.available ? 'bg-green-500' : 'bg-muted/30'}`} />
+            Fig {figStatus?.available ? 'Connected' : 'Offline'}
+          </div>
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.1em] text-muted">
+            <span className={`w-1.5 h-1.5 rounded-full ${bifrostStatus?.available ? 'bg-green-500' : 'bg-muted/30'}`} />
+            Bifrost {bifrostStatus?.available ? 'Connected' : 'Offline'}
+          </div>
+        </div>
       </div>
     </nav>
   )
