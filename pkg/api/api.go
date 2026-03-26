@@ -8,6 +8,7 @@ import (
 	"github.com/tela/frame/pkg/audit"
 	"github.com/tela/frame/pkg/bifrost"
 	"github.com/tela/frame/pkg/character"
+	"github.com/tela/frame/pkg/fig"
 	"github.com/tela/frame/pkg/dataset"
 	"github.com/tela/frame/pkg/image"
 	"github.com/tela/frame/pkg/media"
@@ -30,6 +31,7 @@ type API struct {
 	Shoots      *shoot.Store
 	Audit       *audit.Store
 	Bifrost     *bifrost.Client // nil if Bifrost not configured
+	Fig         *fig.Client    // nil if Fig not configured
 	RootPath    string          // drive root for file serving
 	Port        int             // server port (for self-referencing URLs)
 }
@@ -142,6 +144,10 @@ func (a *API) Register(mux *http.ServeMux) {
 	// Generation (Bifrost)
 	mux.HandleFunc("POST /api/v1/generate", a.handleGenerate)
 	mux.HandleFunc("GET /api/v1/bifrost/status", a.handleBifrostStatus)
+
+	// Fig integration
+	mux.HandleFunc("POST /api/v1/characters/{id}/publish", a.publishToFig)
+	mux.HandleFunc("GET /api/v1/fig/status", a.handleFigStatus)
 }
 
 // JSON response helpers

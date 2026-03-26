@@ -3,12 +3,14 @@ package main
 import (
 	"log"
 	"path/filepath"
+	"time"
 
 	"github.com/tela/frame/internal/frontend"
 	"github.com/tela/frame/pkg/api"
 	"github.com/tela/frame/pkg/audit"
 	"github.com/tela/frame/pkg/bifrost"
 	"github.com/tela/frame/pkg/character"
+	"github.com/tela/frame/pkg/fig"
 	"github.com/tela/frame/pkg/config"
 	"github.com/tela/frame/pkg/database"
 	"github.com/tela/frame/pkg/dataset"
@@ -59,6 +61,15 @@ func main() {
 		}
 	}
 
+	// Fig client (optional — sync features disabled without it)
+	var figClient *fig.Client
+	if cfg.FigURL != "" {
+		figClient = fig.New(cfg.FigURL, cfg.FigSecret)
+		figClient.Start(5 * time.Second)
+		defer figClient.Stop()
+		log.Printf("fig client configured at %s", cfg.FigURL)
+	}
+
 	// HTTP server
 	srv := server.New(db, version)
 
@@ -75,6 +86,7 @@ func main() {
 		Shoots:     shootStore,
 		Audit:      auditStore,
 		Bifrost:    bifrostClient,
+		Fig:        figClient,
 		RootPath:   cfg.Root,
 		Port:       cfg.Port,
 	}

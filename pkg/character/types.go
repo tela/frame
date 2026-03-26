@@ -13,7 +13,6 @@ type Status string
 
 const (
 	StatusProspect    Status = "prospect"
-	StatusScouted     Status = "scouted"     // created via Fig scout
 	StatusDevelopment Status = "development"
 	StatusCast        Status = "cast"
 )

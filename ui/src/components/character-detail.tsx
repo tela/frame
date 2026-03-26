@@ -154,14 +154,7 @@ export function CharacterDetail() {
           <ProspectView characterId={character.id} status={character.status} />
         )}
 
-        {/* Scouted state (from Fig) */}
-        {character.status === 'scouted' && (
-          <div className="py-12">
-            <p className="text-muted text-[15px]">
-              This character was scouted in Fig. Visual identity curation is available after development.
-            </p>
-          </div>
-        )}
+
       </div>
 
       {/* Create Era Dialog */}

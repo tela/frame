@@ -47,6 +47,9 @@ func (a *API) createMediaItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Sync to Fig (fire-and-forget)
+	a.figSyncMedia(string(contentType), req.ID, req.Name)
+
 	writeJSON(w, http.StatusCreated, item)
 }
 
