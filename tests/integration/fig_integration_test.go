@@ -201,10 +201,10 @@ func TestPublishToFig(t *testing.T) {
 	if regReq.Body["status"] != "prospect" {
 		t.Errorf("status: got %v, want prospect", regReq.Body["status"])
 	}
-	// Check eras array is present
+	// Check eras array is present (Standard auto-era + manually created "Young Adult")
 	eras, ok := regReq.Body["eras"].([]any)
-	if !ok || len(eras) != 1 {
-		t.Errorf("expected 1 era in registration, got %v", regReq.Body["eras"])
+	if !ok || len(eras) != 2 {
+		t.Errorf("expected 2 eras in registration (Standard + Young Adult), got %v", regReq.Body["eras"])
 	}
 
 	// Verify character is marked as published
