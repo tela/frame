@@ -414,11 +414,18 @@ function EraCard({ characterId, era }: { characterId: string; era: EraWithStats 
           </div>
         )}
       </div>
-      <div className="flex justify-between items-baseline px-1">
-        <h3 className="text-[18px] font-display tracking-display text-primary group-hover:text-accent transition-colors">
-          {era.label}
-        </h3>
-        <span className="text-[12px] font-body tabular-nums text-muted">{era.image_count} Assets</span>
+      <div className="px-1">
+        <div className="flex justify-between items-baseline">
+          <h3 className="text-[18px] font-display tracking-display text-primary group-hover:text-accent transition-colors">
+            {era.label}
+          </h3>
+          <span className="text-[12px] font-body tabular-nums text-muted">{era.image_count} Assets</span>
+        </div>
+        {(era.age_range || era.time_period) && (
+          <p className="text-[11px] text-muted mt-1">
+            {[era.age_range, era.time_period].filter(Boolean).join(' · ')}
+          </p>
+        )}
       </div>
     </Link>
   )
