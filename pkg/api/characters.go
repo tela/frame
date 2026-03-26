@@ -120,6 +120,10 @@ func (a *API) updateCharacter(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		// Notify Fig of status change if published
+		if c, _ := a.Characters.Get(id); c != nil && c.FigPublished {
+			a.figSyncStatus(id, *req.Status)
+		}
 	}
 
 	if req.Name != nil || req.DisplayName != nil {

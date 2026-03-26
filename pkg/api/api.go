@@ -144,6 +144,10 @@ func (a *API) Register(mux *http.ServeMux) {
 	// Generation (Bifrost)
 	mux.HandleFunc("POST /api/v1/generate", a.handleGenerate)
 	mux.HandleFunc("GET /api/v1/bifrost/status", a.handleBifrostStatus)
+
+	// Fig integration
+	mux.HandleFunc("POST /api/v1/characters/{id}/publish", a.publishToFig)
+	mux.HandleFunc("GET /api/v1/fig/status", a.handleFigStatus)
 }
 
 // JSON response helpers
