@@ -1,19 +1,18 @@
 import { usePoseSetStatus, useUpdatePoseSetImage, useStandardOutfits, thumbUrl } from '@/lib/api'
 import type { PoseSetEntry } from '@/lib/api'
 import { Link } from '@tanstack/react-router'
+import { useState } from 'react'
 
-const CATEGORY_LABELS: Record<string, string> = {
-  sfw_standard: 'SFW Standard',
-  nsfw_standard: 'NSFW Standard',
-  anatomical_detail: 'Anatomical Detail',
-}
+const CATEGORY_ORDER = ['sfw_standard', 'nsfw_standard', 'anatomical_detail'] as const
 
-const CATEGORY_ORDER = ['sfw_standard', 'nsfw_standard', 'anatomical_detail']
-
-export function PoseSetDashboard({ characterId, eraId }: { characterId: string; eraId: string }) {
+export function PoseSetDashboard({ characterId, eraId, eraLabel }: { characterId: string; eraId: string; eraLabel?: string }) {
   const { data: poseSet } = usePoseSetStatus(characterId, eraId)
   const { data: outfits } = useStandardOutfits()
   const updatePoseSet = useUpdatePoseSetImage()
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
+    nsfw_standard: true,
+    anatomical_detail: true,
+  })
 
   if (!poseSet) return null
 
@@ -24,127 +23,150 @@ export function PoseSetDashboard({ characterId, eraId }: { characterId: string; 
     grouped[entry.category].push(entry)
   }
 
+  const pendingCount = poseSet.generated - poseSet.accepted
+  const missingCount = poseSet.total - poseSet.generated
+
   const handleAccept = (entry: PoseSetEntry) => {
-    updatePoseSet.mutate({
-      characterId,
-      era_id: eraId,
-      pose_id: entry.pose_id,
-      outfit_id: entry.outfit_id,
-      status: 'accepted',
-    })
+    updatePoseSet.mutate({ characterId, era_id: eraId, pose_id: entry.pose_id, outfit_id: entry.outfit_id, status: 'accepted' })
   }
 
   const handleReject = (entry: PoseSetEntry) => {
-    updatePoseSet.mutate({
-      characterId,
-      era_id: eraId,
-      pose_id: entry.pose_id,
-      outfit_id: entry.outfit_id,
-      status: 'rejected',
-    })
+    updatePoseSet.mutate({ characterId, era_id: eraId, pose_id: entry.pose_id, outfit_id: entry.outfit_id, status: 'rejected' })
+  }
+
+  const toggleSection = (cat: string) => {
+    setCollapsed((prev) => ({ ...prev, [cat]: !prev[cat] }))
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      {/* Header */}
-      <div className="flex items-baseline justify-between">
+    <div>
+      {/* Hero Header */}
+      <div className="flex justify-between items-end mb-8">
         <div>
-          <h3 className="font-display text-2xl tracking-display">Reference Set</h3>
-          <p className="text-[11px] text-muted uppercase tracking-[0.1em] mt-1">
-            {poseSet.accepted} of {poseSet.total} accepted
-            {poseSet.generated > poseSet.accepted && ` · ${poseSet.generated - poseSet.accepted} pending review`}
-          </p>
+          <h2 className="font-display text-[40px] tracking-display">
+            Reference Set — {eraLabel || 'Standard Era'}
+          </h2>
         </div>
-        <div className="flex items-center gap-3">
-          {/* Progress bar */}
-          <div className="w-32 h-1.5 bg-surface-high overflow-hidden">
-            <div
-              className="h-full bg-primary transition-all"
-              style={{ width: `${(poseSet.accepted / poseSet.total) * 100}%` }}
-            />
+        <div className="flex gap-3 items-center">
+          <button className="bg-on-surface text-background px-6 py-2.5 text-[11px] uppercase font-bold tracking-[0.15em] hover:opacity-90 transition-opacity">
+            Generate All Missing
+          </button>
+        </div>
+      </div>
+
+      {/* Progress & Stats */}
+      <div className="flex items-center justify-between mb-16">
+        <div className="flex flex-col gap-2 w-72">
+          <div className="flex justify-between text-[10px] uppercase tracking-[0.15em] text-muted">
+            <span>Completion</span>
+            <span className="font-bold text-on-surface">{poseSet.accepted} of {poseSet.total} complete</span>
           </div>
-          <span className="text-[11px] text-muted tabular-nums">{poseSet.accepted}/{poseSet.total}</span>
+          <div className="h-1 w-full bg-surface-high overflow-hidden">
+            <div className="h-full bg-on-surface transition-all duration-1000" style={{ width: `${(poseSet.accepted / poseSet.total) * 100}%` }} />
+          </div>
+        </div>
+        <div className="flex gap-12">
+          <div className="text-center">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-muted mb-1">Accepted</p>
+            <p className="font-display text-xl">{String(poseSet.accepted).padStart(2, '0')}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-muted mb-1">Pending</p>
+            <p className="font-display text-xl">{String(pendingCount).padStart(2, '0')}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-muted mb-1">Missing</p>
+            <p className="font-display text-xl">{String(missingCount).padStart(2, '0')}</p>
+          </div>
         </div>
       </div>
 
       {/* Category Sections */}
-      {CATEGORY_ORDER.map((category) => {
-        const entries = grouped[category]
-        if (!entries?.length) return null
+      <div className="space-y-20">
+        {CATEGORY_ORDER.map((category) => {
+          const entries = grouped[category]
+          if (!entries?.length) return null
 
-        const isSFW = category === 'sfw_standard'
+          const isSFW = category === 'sfw_standard'
+          const isCollapsed = collapsed[category] ?? false
 
-        // Get unique poses in this category (preserving order)
-        const poseIds: string[] = []
-        const poseNames: Record<string, string> = {}
-        for (const e of entries) {
-          if (!poseIds.includes(e.pose_id)) {
-            poseIds.push(e.pose_id)
-            poseNames[e.pose_id] = e.pose_name
+          // Unique poses preserving order
+          const poseIds: string[] = []
+          const poseNames: Record<string, string> = {}
+          for (const e of entries) {
+            if (!poseIds.includes(e.pose_id)) {
+              poseIds.push(e.pose_id)
+              poseNames[e.pose_id] = e.pose_name
+            }
           }
-        }
 
-        // For SFW, columns are the outfit variants. For NSFW/detail, single column.
-        const columns = isSFW
-          ? (outfits ?? []).map((o) => ({ id: o.id, label: o.name }))
-          : [{ id: 'nude', label: 'Nude' }]
+          const columns = isSFW
+            ? (outfits ?? []).map((o) => ({ id: o.id, label: o.name }))
+            : [{ id: 'nude', label: 'Nude' }]
 
-        return (
-          <div key={category}>
-            <div className="flex items-center gap-3 mb-4">
-              <h4 className="text-[11px] uppercase font-bold tracking-[0.15em] text-muted">
-                {CATEGORY_LABELS[category]}
-              </h4>
-              {category !== 'sfw_standard' && (
-                <span className="text-[9px] uppercase font-bold tracking-[0.1em] px-1.5 py-0.5 bg-accent/10 text-accent border border-accent/20">
-                  NSFW
-                </span>
-              )}
-            </div>
+          const colCount = columns.length
 
-            {/* Grid */}
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr>
-                    <th className="w-[140px] text-left text-[10px] uppercase font-bold tracking-[0.1em] text-muted pb-2 pr-3" />
-                    {columns.map((col) => (
-                      <th key={col.id} className="text-center text-[10px] uppercase font-bold tracking-[0.1em] text-muted pb-2 px-1.5" style={{ minWidth: 120 }}>
-                        {col.label}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
+          return (
+            <div key={category} className={isCollapsed ? 'opacity-60' : ''}>
+              {/* Section Header */}
+              <div className="flex items-center gap-4 mb-8">
+                <h3 className="font-display text-2xl italic">{
+                  category === 'sfw_standard' ? 'SFW Standard' :
+                  category === 'nsfw_standard' ? 'NSFW Standard' :
+                  'Anatomical Detail'
+                }</h3>
+                <div className="h-px flex-1 bg-surface-high" />
+                <button onClick={() => toggleSection(category)} className="text-on-surface hover:opacity-70 transition-opacity">
+                  <span className="material-symbols-outlined">
+                    {isCollapsed ? 'keyboard_arrow_down' : 'keyboard_arrow_up'}
+                  </span>
+                </button>
+              </div>
+
+              {!isCollapsed && (
+                <div
+                  className="gap-y-6"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: `180px repeat(${colCount}, 1fr)`,
+                  }}
+                >
+                  {/* Column Headers */}
+                  <div /> {/* Empty corner */}
+                  {columns.map((col) => (
+                    <div key={col.id} className="flex justify-center py-2">
+                      <span className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted">{col.label}</span>
+                    </div>
+                  ))}
+
+                  {/* Rows */}
                   {poseIds.map((poseId) => (
-                    <tr key={poseId}>
-                      <td className="text-[12px] text-muted py-1.5 pr-3 align-top pt-2">
+                    <>
+                      <div key={`label-${poseId}`} className="flex items-center text-[11px] uppercase tracking-[0.15em] text-muted">
                         {poseNames[poseId]}
-                      </td>
+                      </div>
                       {columns.map((col) => {
                         const entry = entries.find((e) => e.pose_id === poseId && e.outfit_id === col.id)
                         return (
-                          <td key={col.id} className="px-1.5 py-1.5">
+                          <div key={`${poseId}-${col.id}`} className="px-3">
                             <PoseCell
                               entry={entry}
                               characterId={characterId}
                               eraId={eraId}
-                              poseId={poseId}
-                              outfitId={col.id}
                               onAccept={entry ? () => handleAccept(entry) : undefined}
                               onReject={entry ? () => handleReject(entry) : undefined}
                             />
-                          </td>
+                          </div>
                         )
                       })}
-                    </tr>
+                    </>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              )}
             </div>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -153,96 +175,89 @@ function PoseCell({
   entry,
   characterId,
   eraId,
-  poseId,
-  outfitId,
   onAccept,
   onReject,
 }: {
   entry?: PoseSetEntry
   characterId: string
   eraId: string
-  poseId: string
-  outfitId: string
   onAccept?: () => void
   onReject?: () => void
 }) {
   const status = entry?.status ?? 'missing'
   const imageId = entry?.image_id
 
-  // Status indicator colors
-  const dotColor: Record<string, string> = {
-    generated: 'bg-yellow-500',
-    accepted: 'bg-green-500',
-    rejected: 'bg-red-400',
-  }
-
   if (status === 'missing' || !imageId) {
     return (
       <Link
         to="/characters/$characterId/eras/$eraId/studio"
         params={{ characterId, eraId }}
-        search={{ pose_id: poseId, outfit_id: outfitId }}
-        className="block aspect-[3/4] border border-dashed border-border-subtle hover:border-primary transition-colors flex items-center justify-center group"
+        className="block aspect-[3/4] border-2 border-dashed border-surface-high flex items-center justify-center hover:bg-surface-low transition-colors cursor-pointer group"
       >
-        <span className="material-symbols-outlined text-[24px] text-muted/30 group-hover:text-primary transition-colors">add</span>
+        <span className="material-symbols-outlined text-muted/30 group-hover:text-on-surface transition-colors">add</span>
       </Link>
     )
   }
 
+  if (status === 'rejected') {
+    return (
+      <div className="relative aspect-[3/4] bg-surface-low overflow-hidden">
+        <img src={thumbUrl(imageId)} alt="" className="w-full h-full object-cover grayscale brightness-50 contrast-75 opacity-40" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="material-symbols-outlined text-[36px] text-accent/60">block</span>
+        </div>
+        <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-accent" />
+      </div>
+    )
+  }
+
   return (
-    <div className={`relative aspect-[3/4] border border-border-subtle overflow-hidden group ${status === 'rejected' ? 'opacity-40' : ''}`}>
+    <div className="relative group aspect-[3/4] bg-surface-low overflow-hidden cursor-pointer">
       <img
         src={thumbUrl(imageId)}
         alt=""
-        className="w-full h-full object-cover"
+        className={`w-full h-full object-cover transition-all duration-300 ${
+          status === 'generated' ? 'grayscale brightness-95 opacity-80 group-hover:grayscale-0' : 'grayscale brightness-95 group-hover:grayscale-0'
+        }`}
       />
       {/* Status dot */}
-      {dotColor[status] && (
-        <div className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${dotColor[status]}`} />
+      {status === 'accepted' && (
+        <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-green-500" style={{ boxShadow: '0 0 8px rgba(16,185,129,0.5)' }} />
+      )}
+      {status === 'generated' && (
+        <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
       )}
       {/* Hover actions */}
-      <div className="absolute inset-0 bg-on-surface/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-        {status === 'generated' && (
-          <>
-            <button
-              onClick={onReject}
-              className="bg-background/90 text-primary p-1.5 hover:text-accent transition-colors"
-              title="Reject"
-            >
-              <span className="material-symbols-outlined text-[16px]">close</span>
-            </button>
-            <button
-              onClick={onAccept}
-              className="bg-accent/90 text-white p-1.5 hover:bg-accent transition-colors"
-              title="Accept"
-            >
-              <span className="material-symbols-outlined text-[16px]">check</span>
-            </button>
-          </>
-        )}
-        {status === 'accepted' && (
+      {status === 'generated' && (
+        <div className="absolute inset-0 bg-on-surface/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+          <button
+            onClick={(e) => { e.preventDefault(); onReject?.() }}
+            className="bg-background/90 text-on-surface p-2 hover:text-accent transition-colors"
+            title="Reject"
+          >
+            <span className="material-symbols-outlined text-[18px]">close</span>
+          </button>
+          <button
+            onClick={(e) => { e.preventDefault(); onAccept?.() }}
+            className="bg-on-surface text-background p-2 hover:bg-accent transition-colors"
+            title="Accept"
+          >
+            <span className="material-symbols-outlined text-[18px]">check</span>
+          </button>
+        </div>
+      )}
+      {status === 'accepted' && (
+        <div className="absolute inset-0 bg-on-surface/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
           <Link
             to="/characters/$characterId/eras/$eraId/studio"
             params={{ characterId, eraId }}
-            search={{ pose_id: poseId, outfit_id: outfitId }}
-            className="bg-background/90 text-primary p-1.5 hover:text-accent transition-colors"
+            className="bg-background/90 text-on-surface p-2 hover:text-accent transition-colors"
             title="Replace"
           >
-            <span className="material-symbols-outlined text-[16px]">refresh</span>
+            <span className="material-symbols-outlined text-[18px]">refresh</span>
           </Link>
-        )}
-        {status === 'rejected' && (
-          <Link
-            to="/characters/$characterId/eras/$eraId/studio"
-            params={{ characterId, eraId }}
-            search={{ pose_id: poseId, outfit_id: outfitId }}
-            className="bg-background/90 text-primary p-1.5 hover:text-accent transition-colors"
-            title="Regenerate"
-          >
-            <span className="material-symbols-outlined text-[16px]">refresh</span>
-          </Link>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

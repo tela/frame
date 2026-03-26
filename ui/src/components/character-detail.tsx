@@ -121,7 +121,7 @@ export function CharacterDetail() {
         {/* Pose Set Dashboard */}
         {(character.status === 'cast' || character.status === 'development') && character.eras.length > 0 && (
           <div className="mb-12">
-            <PoseSetDashboard characterId={character.id} eraId={character.eras[0].id} />
+            <PoseSetDashboard characterId={character.id} eraId={character.eras[0].id} eraLabel={`${character.eras[0].label} (${character.eras[0].age_range || '20'})`} />
           </div>
         )}
 
