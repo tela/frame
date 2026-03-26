@@ -83,8 +83,8 @@ export function CharacterDetail() {
           </div>
         </div>
 
-        {/* Eras Section */}
-        {character.status === 'cast' && (
+        {/* Eras Section — show for cast and development (if eras exist) */}
+        {(character.status === 'cast' || (character.status === 'development' && character.eras.length > 0)) && (
           <>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-[24px] font-display font-normal tracking-display text-primary">Chronological Eras</h2>
@@ -108,7 +108,7 @@ export function CharacterDetail() {
         )}
 
         {/* Datasets Section */}
-        {character.status === 'cast' && characterDatasets.length > 0 && (
+        {(character.status === 'cast' || character.status === 'development') && characterDatasets.length > 0 && (
           <div className="mb-12">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-[24px] font-display font-normal tracking-display text-primary">Datasets</h2>
@@ -139,7 +139,7 @@ export function CharacterDetail() {
           </div>
         )}
 
-        {/* Prospect / Development view (pre-cast) */}
+        {/* Lookbook view — prospect always, development always */}
         {(character.status === 'prospect' || character.status === 'development') && (
           <ProspectView characterId={character.id} status={character.status} />
         )}
