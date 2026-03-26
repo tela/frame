@@ -2,19 +2,28 @@ import { Link } from '@tanstack/react-router'
 import { useCharacters, avatarUrl } from '@/lib/api'
 import { useState } from 'react'
 import { NewCharacterDialog } from '@/components/new-character-dialog'
-import type { Character } from '@/lib/types'
+import type { Character, CharacterStatus } from '@/lib/types'
+
+const STATUS_OPTIONS: { value: CharacterStatus | 'all'; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'prospect', label: 'Prospects' },
+  { value: 'development', label: 'Development' },
+  { value: 'cast', label: 'Cast' },
+]
 
 export function CharacterLibrary() {
   const { data: characters, isLoading } = useCharacters()
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<CharacterStatus | 'all'>('all')
   const [showNewChar, setShowNewChar] = useState(false)
 
   const filtered = (characters ?? []).filter((c) => {
+    if (statusFilter !== 'all' && c.status !== statusFilter) return false
     if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.display_name.toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
 
-  const castCount = (characters ?? []).filter((c) => c.status === 'cast').length
+  const totalCount = (characters ?? []).length
 
   return (
     <>
@@ -31,7 +40,7 @@ export function CharacterLibrary() {
           <span className="material-symbols-outlined absolute left-0 top-1/2 -translate-y-1/2 text-muted text-[18px]">search</span>
           <input
             className="w-full bg-transparent border-b border-transparent focus:border-primary pl-8 py-2 text-[15px] placeholder-muted focus:outline-none transition-colors"
-            placeholder="Search characters..."
+            placeholder="Search talent..."
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -42,13 +51,37 @@ export function CharacterLibrary() {
       {/* Gallery Area */}
       <div className="p-8 md:p-12 flex-1">
         {/* Section Header */}
-        <div className="mb-12 flex items-baseline justify-between">
-          <h2 className="font-display text-[32px] md:text-[40px] tracking-display font-medium">Active Cast</h2>
-          <span className="text-ui text-[13px] text-muted">{castCount} Identities</span>
+        <div className="mb-8 flex items-baseline justify-between">
+          <h2 className="font-display text-[32px] md:text-[40px] tracking-display font-medium">Talent</h2>
+          <span className="text-ui text-[13px] text-muted">{totalCount} on roster</span>
+        </div>
+
+        {/* Status Filter */}
+        <div className="flex gap-3 mb-10">
+          {STATUS_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setStatusFilter(opt.value)}
+              className={`px-4 py-1.5 text-[11px] uppercase font-bold tracking-[0.1em] border transition-colors ${
+                statusFilter === opt.value
+                  ? 'bg-on-surface text-background border-on-surface'
+                  : 'bg-transparent text-muted border-border-subtle hover:border-on-surface hover:text-on-surface'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
 
         {isLoading ? (
           <div className="text-muted text-[15px]">Loading...</div>
+        ) : filtered.length === 0 ? (
+          <div className="py-20 text-center">
+            <span className="material-symbols-outlined text-[48px] text-muted/30 mb-4 block">group</span>
+            <p className="text-muted text-[15px]">
+              {search || statusFilter !== 'all' ? 'No talent matches your filters' : 'No talent on the roster yet'}
+            </p>
+          </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-12">
             {filtered.map((character) => (
@@ -79,12 +112,15 @@ function CharacterCard({ character }: { character: Character }) {
             (e.target as HTMLImageElement).style.display = 'none'
           }}
         />
-        {/* Hover Overlay */}
+        {/* Hover Overlay with status */}
         <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-        <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-1">
-          <span className="bg-background text-primary text-[10px] uppercase font-medium tracking-ui px-1.5 py-0.5 rounded-sm">
+        <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex justify-between items-end">
+          <span className="bg-background/90 backdrop-blur-sm text-primary text-[10px] uppercase font-medium tracking-[0.1em] px-2 py-1 rounded-sm">
             {character.status}
           </span>
+          {character.fig_published && (
+            <span className="w-2 h-2 rounded-full bg-green-500" title="Published to Fig" />
+          )}
         </div>
       </div>
       <div>
