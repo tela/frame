@@ -140,6 +140,9 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/v1/templates/{id}", a.deleteTemplate)
 	mux.HandleFunc("POST /api/v1/templates/{id}/duplicate", a.duplicateTemplate)
 
+	// Preprocessing
+	mux.HandleFunc("POST /api/v1/preprocess/apply", a.applyPreprocess)
+
 	// Import
 	mux.HandleFunc("POST /api/v1/import/directory", a.handleImportDirectory)
 

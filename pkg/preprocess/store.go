@@ -130,6 +130,25 @@ func (s *Store) CreatePreset(p *Preset) error {
 	return err
 }
 
+// GetPreset retrieves a preset by ID.
+func (s *Store) GetPreset(id string) (*Preset, error) {
+	var p Preset
+	var opsJSON, createdAt string
+	err := s.db.QueryRow(`SELECT id, name, operations, created_at FROM preprocess_presets WHERE id = ?`, id).
+		Scan(&p.ID, &p.Name, &opsJSON, &createdAt)
+	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if err := json.Unmarshal([]byte(opsJSON), &p.Operations); err != nil {
+		return nil, fmt.Errorf("unmarshal operations: %w", err)
+	}
+	p.CreatedAt = parseTime(createdAt)
+	return &p, nil
+}
+
 // ListPresets returns all saved presets.
 func (s *Store) ListPresets() ([]Preset, error) {
 	rows, err := s.db.Query(
