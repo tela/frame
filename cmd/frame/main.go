@@ -1,110 +1,53 @@
 package main
 
 import (
-	"log"
-	"path/filepath"
-	"time"
-
-	"github.com/tela/frame/internal/frontend"
-	"github.com/tela/frame/pkg/api"
-	"github.com/tela/frame/pkg/audit"
-	"github.com/tela/frame/pkg/bifrost"
-	"github.com/tela/frame/pkg/character"
-	"github.com/tela/frame/pkg/fig"
-	"github.com/tela/frame/pkg/config"
-	"github.com/tela/frame/pkg/database"
-	"github.com/tela/frame/pkg/dataset"
-	"github.com/tela/frame/pkg/image"
-	"github.com/tela/frame/pkg/look"
-	"github.com/tela/frame/pkg/lora"
-	"github.com/tela/frame/pkg/media"
-	"github.com/tela/frame/pkg/poseset"
-	"github.com/tela/frame/pkg/preprocess"
-	"github.com/tela/frame/pkg/shoot"
-	"github.com/tela/frame/pkg/server"
-	"github.com/tela/frame/pkg/tag"
-	"github.com/tela/frame/pkg/template"
+	"fmt"
+	"os"
 )
 
 var version = "dev"
 
 func main() {
-	cfg, err := config.Load()
-	if err != nil {
-		log.Fatalf("config: %v", err)
+	cmd := "serve"
+	if len(os.Args) > 1 {
+		cmd = os.Args[1]
+		// Strip the subcommand so flag.Parse in config.Load doesn't choke
+		os.Args = append(os.Args[:1], os.Args[2:]...)
 	}
 
-	dbPath := filepath.Join(cfg.Root, "frame.db")
-	db, err := database.Open(dbPath)
-	if err != nil {
-		log.Fatalf("database: %v", err)
+	switch cmd {
+	case "serve":
+		cmdServe()
+	case "dev":
+		cmdDev()
+	case "seed":
+		cmdSeed()
+	case "stop":
+		cmdStop()
+	case "status":
+		cmdStatus()
+	case "build":
+		cmdBuild()
+	case "version":
+		fmt.Println("frame", version)
+	case "help", "-h", "--help":
+		printHelp()
+	default:
+		fmt.Fprintf(os.Stderr, "unknown command: %s\n\n", cmd)
+		printHelp()
+		os.Exit(1)
 	}
-	defer db.Close()
+}
 
-	// Domain stores
-	charStore := character.NewStore(db.DB)
-	imgStore := image.NewStore(db.DB)
-	mediaStore := media.NewStore(db.DB)
-	tagStore := tag.NewStore(db.DB)
-	datasetStore := dataset.NewStore(db.DB)
-	preprocessStore := preprocess.NewStore(db.DB)
-	templateStore := template.NewStore(db.DB)
-	shootStore := shoot.NewStore(db.DB)
-	auditStore := audit.NewStore(db.DB)
-	lookStore := look.NewStore(db.DB)
-	loraStore := lora.NewStore(db.DB)
-	poseSetStore := poseset.NewStore(db.DB)
-	ingester := image.NewIngester(imgStore, cfg.Root)
+func printHelp() {
+	fmt.Println(`Usage: frame <command> [flags]
 
-	// Bifrost client (optional — generation features disabled without it)
-	var bifrostClient *bifrost.Client
-	if cfg.BifrostURL != "" {
-		bifrostClient = bifrost.NewClient(cfg.BifrostURL)
-		if bifrostClient.Available() {
-			log.Printf("bifrost connected at %s", cfg.BifrostURL)
-		} else {
-			log.Printf("bifrost configured at %s but not reachable (generation disabled until available)", cfg.BifrostURL)
-		}
-	}
-
-	// Fig client (optional — sync features disabled without it)
-	var figClient *fig.Client
-	if cfg.FigURL != "" {
-		figClient = fig.New(cfg.FigURL, cfg.FigSecret)
-		figClient.Start(5 * time.Second)
-		defer figClient.Stop()
-		log.Printf("fig client configured at %s", cfg.FigURL)
-	}
-
-	// HTTP server
-	srv := server.New(db, version)
-
-	// REST API
-	a := &api.API{
-		Characters: charStore,
-		Images:     imgStore,
-		Ingester:   ingester,
-		Media:      mediaStore,
-		Tags:       tagStore,
-		Datasets:   datasetStore,
-		Preprocess: preprocessStore,
-		Templates:  templateStore,
-		Shoots:     shootStore,
-		Audit:      auditStore,
-		Looks:      lookStore,
-		Loras:      loraStore,
-		PoseSet:    poseSetStore,
-		Bifrost:    bifrostClient,
-		Fig:        figClient,
-		RootPath:   cfg.Root,
-		Port:       cfg.Port,
-	}
-	a.Register(srv.Mux())
-
-	// Embedded frontend (SPA fallback, must be registered last)
-	srv.Mux().Handle("GET /", frontend.Handler())
-
-	if err := srv.ListenAndServe(cfg.Port); err != nil {
-		log.Fatalf("server: %v", err)
-	}
+Commands:
+  serve     Start the HTTP server (default if no command given)
+  dev       Start server + Vite dev server, ctrl-c kills both
+  seed      Create test characters, eras, wardrobe, and LoRAs
+  stop      Kill any running frame processes
+  status    Show running state, ports, Fig/Bifrost connection
+  build     Rebuild frontend dist
+  version   Print version`)
 }
