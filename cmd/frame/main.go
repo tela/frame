@@ -22,6 +22,8 @@ func main() {
 		cmdDev()
 	case "seed":
 		cmdSeed()
+	case "smoke":
+		cmdSmoke()
 	case "stop":
 		cmdStop()
 	case "status":
@@ -48,6 +50,7 @@ Commands:
   seed      Create test characters, eras, wardrobe, and LoRAs
   stop      Kill any running frame processes
   status    Show running state, ports, Fig/Bifrost connection
+  smoke     Run smoke tests against a running server
   build     Rebuild frontend dist
   version   Print version`)
 }
