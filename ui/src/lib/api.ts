@@ -596,6 +596,70 @@ export function useDeleteTag() {
   })
 }
 
+export function useBulkUpdateCharacterImages() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ characterId, imageIds, update }: {
+      characterId: string
+      imageIds: string[]
+      update: {
+        set_type?: string
+        triage_status?: string
+        rating?: number
+        is_face_ref?: boolean
+        is_body_ref?: boolean
+        ref_rank?: number
+        era_id?: string
+      }
+    }) => {
+      const res = fetch(`/api/v1/characters/${characterId}/images/bulk`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_ids: imageIds, update }),
+      })
+      return res.then(async (r) => {
+        const data = await r.json()
+        if (!r.ok) throw new Error(data.error || r.statusText)
+        return data as { affected: number }
+      })
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'images'] })
+      qc.invalidateQueries({ queryKey: ['characters', vars.characterId] })
+    },
+  })
+}
+
+export function useBulkAddShootImages() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ shootId, imageIds }: { shootId: string; imageIds: string[] }) => {
+      const res = fetch(`/api/v1/shoots/${shootId}/images/bulk`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_ids: imageIds }),
+      })
+      return res.then(async (r) => {
+        const data = await r.json()
+        if (!r.ok) throw new Error(data.error || r.statusText)
+        return data as { added: number }
+      })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['shoots'] })
+    },
+  })
+}
+
+export function useCreateDatasetFromSearch() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { name: string; description?: string; type?: string; search: Record<string, unknown> }) =>
+      postJSON<{ dataset: Dataset; image_count: number }>('/api/v1/datasets/from-search', body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['datasets'] }) },
+  })
+}
+
 export function useImportDirectory() {
   const qc = useQueryClient()
   return useMutation({

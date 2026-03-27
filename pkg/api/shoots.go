@@ -72,6 +72,22 @@ func (a *API) addShootImage(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]string{"status": "added"})
 }
 
+func (a *API) bulkAddShootImages(w http.ResponseWriter, r *http.Request) {
+	shootID := r.PathValue("shootId")
+	var req struct {
+		ImageIDs []string `json:"image_ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+	if err := a.Shoots.AddImages(shootID, req.ImageIDs); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"added": len(req.ImageIDs)})
+}
+
 func (a *API) listShootImages(w http.ResponseWriter, r *http.Request) {
 	shootID := r.PathValue("shootId")
 	ids, err := a.Shoots.ListImages(shootID)

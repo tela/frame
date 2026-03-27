@@ -68,6 +68,45 @@ func (a *API) updateCharacterImage(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, ci)
 }
 
+func (a *API) bulkUpdateCharacterImages(w http.ResponseWriter, r *http.Request) {
+	charID := r.PathValue("id")
+	var req struct {
+		ImageIDs []string                  `json:"image_ids"`
+		Update   image.CharacterImageUpdate `json:"update"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+	if len(req.ImageIDs) == 0 {
+		writeError(w, http.StatusBadRequest, "image_ids is required")
+		return
+	}
+
+	affected, err := a.Images.BulkUpdateCharacterImages(charID, req.ImageIDs, &req.Update)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if a.Audit != nil {
+		action := "bulk_updated"
+		if req.Update.IsFaceRef != nil && *req.Update.IsFaceRef {
+			action = "bulk_face_ref"
+		} else if req.Update.IsBodyRef != nil && *req.Update.IsBodyRef {
+			action = "bulk_body_ref"
+		} else if req.Update.SetType != nil {
+			action = "bulk_set_type_" + string(*req.Update.SetType)
+		} else if req.Update.TriageStatus != nil {
+			action = "bulk_triage_" + string(*req.Update.TriageStatus)
+		}
+		a.Audit.Log("character", charID, action, nil, nil, nil,
+			map[string]string{"count": fmt.Sprintf("%d", affected)})
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"affected": affected})
+}
+
 func (a *API) listPendingImages(w http.ResponseWriter, r *http.Request) {
 	charID := r.PathValue("id")
 	eraID := r.URL.Query().Get("era_id")

@@ -114,6 +114,20 @@ func (s *testServer) postJSON(path string, v any) (int, []byte) {
 	return resp.StatusCode, body
 }
 
+func (s *testServer) putJSON(path string, v any) (int, []byte) {
+	s.t.Helper()
+	data, _ := json.Marshal(v)
+	req, _ := http.NewRequest("PUT", s.url(path), bytes.NewReader(data))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		s.t.Fatalf("PUT %s: %v", path, err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	return resp.StatusCode, body
+}
+
 func (s *testServer) patchJSON(path string, v any) (int, []byte) {
 	s.t.Helper()
 	data, _ := json.Marshal(v)

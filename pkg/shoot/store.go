@@ -80,6 +80,15 @@ func (s *Store) AddImage(shootID, imageID string, sortOrder int) error {
 	return err
 }
 
+func (s *Store) AddImages(shootID string, imageIDs []string) error {
+	for i, imgID := range imageIDs {
+		if err := s.AddImage(shootID, imgID, i); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *Store) RemoveImage(shootID, imageID string) error {
 	_, err := s.db.Exec(`DELETE FROM shoot_images WHERE shoot_id = ? AND image_id = ?`, shootID, imageID)
 	return err
