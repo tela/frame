@@ -1,8 +1,12 @@
 package main
 
 import (
+	"bytes"
+	"compress/zlib"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"hash/crc32"
 	"log"
 	"path/filepath"
 	"time"
@@ -11,6 +15,7 @@ import (
 	"github.com/tela/frame/pkg/config"
 	"github.com/tela/frame/pkg/database"
 	"github.com/tela/frame/pkg/id"
+	"github.com/tela/frame/pkg/image"
 	"github.com/tela/frame/pkg/look"
 	"github.com/tela/frame/pkg/lora"
 	"github.com/tela/frame/pkg/media"
@@ -43,9 +48,11 @@ func cmdSeed() {
 	defer db.Close()
 
 	charStore := character.NewStore(db.DB)
+	imgStore := image.NewStore(db.DB)
 	mediaStore := media.NewStore(db.DB)
 	loraStore := lora.NewStore(db.DB)
 	lookStore := look.NewStore(db.DB)
+	ingester := image.NewIngester(imgStore, cfg.Root)
 
 	fmt.Println("Seeding Frame database...")
 
@@ -94,9 +101,14 @@ func cmdSeed() {
 		}
 		fmt.Printf("  character: %s (%s) [%s]\n", sc.displayName, charID[:8], sc.status)
 
+		var firstEraID string
 		for i, se := range sc.eras {
+			eraID := id.New()
+			if i == 0 {
+				firstEraID = eraID
+			}
 			era := &character.Era{
-				ID:               id.New(),
+				ID:               eraID,
 				CharacterID:      charID,
 				Label:            se.label,
 				AgeRange:         se.ageRange,
@@ -110,6 +122,45 @@ func cmdSeed() {
 			charStore.CreateEra(era)
 			fmt.Printf("    era: %s (%s)\n", se.label, se.ageRange)
 		}
+
+		// Ingest test images for the first era (5 per character)
+		for j := 0; j < 5; j++ {
+			png := makeSeedPNG(byte(j*40+10), byte(j*30+20), byte(j*20+30))
+			eraPtr := &firstEraID
+			result, err := ingester.Ingest(&image.IngestRequest{
+				Filename:      fmt.Sprintf("seed_%s_%d.png", sc.displayName, j),
+				Data:          png,
+				Source:        image.SourceManual,
+				CharacterID:   charID,
+				CharacterSlug: c.Slug(),
+				EraID:         eraPtr,
+			})
+			if err != nil {
+				continue
+			}
+			// Mark first two as face refs, third as body ref
+			if j == 0 || j == 1 {
+				imgStore.UpdateCharacterImage(result.ImageID, charID, &image.CharacterImageUpdate{
+					IsFaceRef:    boolp(true),
+					RefRank:      intp(j + 1),
+					SetType:      setTypePtr(image.SetReference),
+					TriageStatus: triagePtr(image.TriageApproved),
+				})
+			} else if j == 2 {
+				imgStore.UpdateCharacterImage(result.ImageID, charID, &image.CharacterImageUpdate{
+					IsBodyRef:    boolp(true),
+					RefRank:      intp(1),
+					SetType:      setTypePtr(image.SetReference),
+					TriageStatus: triagePtr(image.TriageApproved),
+				})
+			} else {
+				imgStore.UpdateCharacterImage(result.ImageID, charID, &image.CharacterImageUpdate{
+					TriageStatus: triagePtr(image.TriageApproved),
+					SetType:      setTypePtr(image.SetCurated),
+				})
+			}
+		}
+		fmt.Printf("    images: 5 ingested (2 face ref, 1 body ref, 2 curated)\n")
 	}
 
 	// Wardrobe items
@@ -200,3 +251,59 @@ func cmdSeed() {
 
 	fmt.Println("\nSeed complete.")
 }
+
+// makeSeedPNG generates a valid 4x4 PNG with unique color data.
+func makeSeedPNG(r, g, b byte) []byte {
+	var buf bytes.Buffer
+	buf.Write([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}) // PNG signature
+
+	// IHDR: 4x4 pixels, 8-bit RGB
+	ihdr := make([]byte, 13)
+	binary.BigEndian.PutUint32(ihdr[0:4], 4)  // width
+	binary.BigEndian.PutUint32(ihdr[4:8], 4)  // height
+	ihdr[8] = 8                                 // bit depth
+	ihdr[9] = 2                                 // color type: RGB
+	writePNGChunk(&buf, "IHDR", ihdr)
+
+	// IDAT: raw pixel data (filter byte + 4 RGB pixels per row)
+	var raw bytes.Buffer
+	for y := 0; y < 4; y++ {
+		raw.WriteByte(0) // filter: none
+		for x := 0; x < 4; x++ {
+			raw.Write([]byte{r + byte(x*10), g + byte(y*10), b + byte(x+y)})
+		}
+	}
+	var compressed bytes.Buffer
+	w, _ := zlib.NewWriterLevel(&compressed, zlib.BestSpeed)
+	w.Write(raw.Bytes())
+	w.Close()
+	writePNGChunk(&buf, "IDAT", compressed.Bytes())
+
+	// IEND
+	writePNGChunk(&buf, "IEND", nil)
+
+	return buf.Bytes()
+}
+
+func writePNGChunk(buf *bytes.Buffer, chunkType string, data []byte) {
+	var length [4]byte
+	binary.BigEndian.PutUint32(length[:], uint32(len(data)))
+	buf.Write(length[:])
+	buf.WriteString(chunkType)
+	if data != nil {
+		buf.Write(data)
+	}
+	crc := crc32.NewIEEE()
+	crc.Write([]byte(chunkType))
+	if data != nil {
+		crc.Write(data)
+	}
+	var crcBytes [4]byte
+	binary.BigEndian.PutUint32(crcBytes[:], crc.Sum32())
+	buf.Write(crcBytes[:])
+}
+
+func boolp(b bool) *bool             { return &b }
+func intp(i int) *int                { return &i }
+func setTypePtr(s image.SetType) *image.SetType       { return &s }
+func triagePtr(s image.TriageStatus) *image.TriageStatus { return &s }
