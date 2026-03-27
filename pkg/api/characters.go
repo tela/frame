@@ -48,6 +48,7 @@ func (a *API) createCharacter(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
+	c.FolderName = c.Slug()
 
 	if err := a.Characters.Create(c); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())

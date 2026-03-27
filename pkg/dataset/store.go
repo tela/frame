@@ -152,7 +152,7 @@ func (s *Store) Fork(sourceID, newName string) (*Dataset, error) {
 // AddImage adds an image to a dataset.
 func (s *Store) AddImage(datasetID, imageID string, sortOrder int) error {
 	_, err := s.db.Exec(
-		`INSERT OR IGNORE INTO dataset_images (dataset_id, image_id, sort_order) VALUES (?, ?, ?)`,
+		`INSERT OR IGNORE INTO dataset_images (dataset_id, image_id, sort_order, included) VALUES (?, ?, ?, 1)`,
 		datasetID, imageID, sortOrder,
 	)
 	if err == nil {

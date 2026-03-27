@@ -55,6 +55,14 @@ func (a *API) handleImportDirectory(w http.ResponseWriter, r *http.Request) {
 		source = image.SourceManual
 	}
 
+	// Resolve character slug for storage paths
+	var charSlug string
+	if req.CharacterID != "" {
+		if c, err := a.Characters.Get(req.CharacterID); err == nil && c != nil && c.FolderName != "" {
+			charSlug = c.FolderName
+		}
+	}
+
 	result := importResult{}
 	var errors []string
 	var importedIDs []string
@@ -87,11 +95,12 @@ func (a *API) handleImportDirectory(w http.ResponseWriter, r *http.Request) {
 		}
 
 		ingestReq := &image.IngestRequest{
-			Filename:    filepath.Base(path),
-			Data:        data,
-			Source:      source,
-			CharacterID: req.CharacterID,
-			EraID:       eraID,
+			Filename:      filepath.Base(path),
+			Data:          data,
+			Source:        source,
+			CharacterID:   req.CharacterID,
+			CharacterSlug: charSlug,
+			EraID:         eraID,
 		}
 
 		ingestResult, err := a.Ingester.Ingest(ingestReq)
