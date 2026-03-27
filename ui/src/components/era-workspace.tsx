@@ -1,20 +1,53 @@
-import { Link, useParams } from '@tanstack/react-router'
-import { useCharacter, useReferencePackage, useIngestImage, useCharacterImages, useUpdateCharacterImage, thumbUrl } from '@/lib/api'
-import { useState, useCallback } from 'react'
+import { Link, useParams, useSearch, useNavigate } from '@tanstack/react-router'
+import { useCharacter, useReferencePackage, useIngestImage, useCharacterImages, useBulkUpdateCharacterImages, useShoots, useBulkAddShootImages, useShootImages, useCreateShoot, thumbUrl } from '@/lib/api'
+import { useState, useCallback, useMemo } from 'react'
 import { Dropzone } from '@/components/dropzone'
 import { TagPicker } from '@/components/tag-picker'
 import type { CharacterImage } from '@/lib/types'
 
 export function EraWorkspace() {
   const { characterId, eraId } = useParams({ from: '/characters/$characterId/eras/$eraId' })
+  const { shoot: shootFilter } = useSearch({ from: '/characters/$characterId/eras/$eraId' })
+  const navigate = useNavigate()
   const ingestImage = useIngestImage()
-  const updateImage = useUpdateCharacterImage()
+  const bulkUpdate = useBulkUpdateCharacterImages()
+  const bulkAddShoot = useBulkAddShootImages()
+  const createShoot = useCreateShoot()
   const [uploadStatus, setUploadStatus] = useState<string | null>(null)
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set())
   const [showTagPicker, setShowTagPicker] = useState(false)
+  const [showShootDropdown, setShowShootDropdown] = useState(false)
+  const [showSetTypeDropdown, setShowSetTypeDropdown] = useState(false)
+  const [newShootName, setNewShootName] = useState('')
+  const [showNewShootInput, setShowNewShootInput] = useState(false)
   const { data: character, isLoading: charLoading } = useCharacter(characterId)
   const { data: eraImages } = useCharacterImages(characterId, eraId)
   const { data: refPackage } = useReferencePackage(characterId, eraId)
+  const { data: shoots } = useShoots(characterId)
+  const { data: shootImageIds } = useShootImages(shootFilter ?? '')
+
+  // Build a map of image_id -> shoot name for badges
+  const shootMap = useMemo(() => {
+    const map = new Map<string, string>()
+    // We only populate for the active shoot filter since we get image IDs per shoot
+    if (shootFilter && shootImageIds && shoots) {
+      const shoot = shoots.find(s => s.id === shootFilter)
+      if (shoot) {
+        for (const id of shootImageIds) {
+          map.set(id, shoot.name)
+        }
+      }
+    }
+    return map
+  }, [shootFilter, shootImageIds, shoots])
+
+  // Filter images by shoot if a shoot filter is active
+  const filteredImages = useMemo(() => {
+    const images = eraImages ?? []
+    if (!shootFilter || !shootImageIds) return images
+    const idSet = new Set(shootImageIds)
+    return images.filter(ci => idSet.has(ci.image_id))
+  }, [eraImages, shootFilter, shootImageIds])
 
   if (charLoading) {
     return <div className="p-12 text-muted text-[15px]">Loading...</div>
@@ -66,16 +99,60 @@ export function EraWorkspace() {
     })
   }, [])
 
-  const bulkUpdate = useCallback((field: string, value: string) => {
-    for (const imageId of selectedImages) {
-      updateImage.mutate({ characterId, imageId, [field]: value })
-    }
+  const handleBulkUpdate = useCallback((field: string, value: string) => {
+    bulkUpdate.mutate({
+      characterId,
+      imageIds: Array.from(selectedImages),
+      update: { [field]: value },
+    })
     setSelectedImages(new Set())
-  }, [selectedImages, characterId, updateImage])
+  }, [selectedImages, characterId, bulkUpdate])
 
   const handleSingleUpdate = useCallback((imageId: string, field: string, value: unknown) => {
-    updateImage.mutate({ characterId, imageId, [field]: value })
-  }, [characterId, updateImage])
+    bulkUpdate.mutate({
+      characterId,
+      imageIds: [imageId],
+      update: { [field]: value },
+    })
+  }, [characterId, bulkUpdate])
+
+  const handleMoveToShoot = useCallback((shootId: string) => {
+    bulkAddShoot.mutate({
+      shootId,
+      imageIds: Array.from(selectedImages),
+    })
+    setSelectedImages(new Set())
+    setShowShootDropdown(false)
+  }, [selectedImages, bulkAddShoot])
+
+  const handleCreateAndMoveToShoot = useCallback(() => {
+    if (!newShootName.trim()) return
+    createShoot.mutate(
+      { characterId, name: newShootName.trim() },
+      {
+        onSuccess: (newShoot) => {
+          bulkAddShoot.mutate({
+            shootId: newShoot.id,
+            imageIds: Array.from(selectedImages),
+          })
+          setSelectedImages(new Set())
+          setShowShootDropdown(false)
+          setShowNewShootInput(false)
+          setNewShootName('')
+        },
+      }
+    )
+  }, [newShootName, characterId, selectedImages, createShoot, bulkAddShoot])
+
+  const handleShootFilterChange = (shootId: string) => {
+    navigate({
+      to: '/characters/$characterId/eras/$eraId',
+      params: { characterId, eraId },
+      search: shootId ? { shoot: shootId } : {},
+    })
+  }
+
+  const activeShoot = shoots?.find(s => s.id === shootFilter)
 
   return (
     <Dropzone onFiles={handleFileDrop} accept=".png,.jpg,.jpeg,.webp" className="flex-1 flex flex-col">
@@ -128,49 +205,48 @@ export function EraWorkspace() {
         </section>
       )}
 
-      {/* Action Bar */}
-      <section className="mx-12 mb-8 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link
-            to="/characters/$characterId/eras/$eraId/triage"
-            params={{ characterId, eraId }}
-            className="text-ui text-[13px] text-muted hover:text-primary transition-colors flex items-center gap-2"
+      {/* Filter Bar */}
+      <section className="mx-12 mb-4 flex items-center gap-4">
+        <Link
+          to="/characters/$characterId/eras/$eraId/triage"
+          params={{ characterId, eraId }}
+          className="text-ui text-[13px] text-muted hover:text-primary transition-colors flex items-center gap-2"
+        >
+          <span className="material-symbols-outlined text-[18px]">filter_list</span>
+          Triage
+        </Link>
+        <Link
+          to="/characters/$characterId/eras/$eraId/studio"
+          params={{ characterId, eraId }}
+          className="text-ui text-[13px] text-muted hover:text-primary transition-colors flex items-center gap-2"
+        >
+          <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+          Studio
+        </Link>
+        {/* Shoot filter dropdown */}
+        <div className="ml-auto flex items-center gap-4">
+          <select
+            value={shootFilter ?? ''}
+            onChange={(e) => handleShootFilterChange(e.target.value)}
+            className="bg-transparent border border-border-subtle text-[13px] text-muted py-1.5 px-3 focus:border-on-surface focus:ring-0 focus:outline-none"
           >
-            <span className="material-symbols-outlined text-[18px]">filter_list</span>
-            Triage
-          </Link>
-          <Link
-            to="/characters/$characterId/eras/$eraId/studio"
-            params={{ characterId, eraId }}
-            className="text-ui text-[13px] text-muted hover:text-primary transition-colors flex items-center gap-2"
-          >
-            <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
-            Studio
-          </Link>
-        </div>
-        <div className="flex items-center gap-4">
-          {selectedImages.size > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-meta">{selectedImages.size} selected</span>
-              <button onClick={() => bulkUpdate('set_type', 'reference')} className="text-ui text-[11px] text-muted hover:text-primary px-2 py-1 border border-border-subtle hover:border-primary transition-colors">Reference</button>
-              <button onClick={() => bulkUpdate('set_type', 'curated')} className="text-ui text-[11px] text-muted hover:text-primary px-2 py-1 border border-border-subtle hover:border-primary transition-colors">Curated</button>
-              <button onClick={() => bulkUpdate('set_type', 'training')} className="text-ui text-[11px] text-muted hover:text-primary px-2 py-1 border border-border-subtle hover:border-primary transition-colors">Training</button>
-              <button onClick={() => bulkUpdate('set_type', 'archive')} className="text-ui text-[11px] text-muted hover:text-primary px-2 py-1 border border-border-subtle hover:border-primary transition-colors">Archive</button>
-              <button onClick={() => bulkUpdate('triage_status', 'approved')} className="text-ui text-[11px] text-muted hover:text-green-600 px-2 py-1 border border-border-subtle hover:border-green-600 transition-colors">Approve</button>
-              <button onClick={() => bulkUpdate('triage_status', 'rejected')} className="text-ui text-[11px] text-muted hover:text-accent px-2 py-1 border border-border-subtle hover:border-accent transition-colors">Reject</button>
-              <button onClick={() => setShowTagPicker(true)} className="text-ui text-[11px] text-muted hover:text-primary px-2 py-1 border border-border-subtle hover:border-primary transition-colors flex items-center gap-1">
-                <span className="material-symbols-outlined text-[14px]">sell</span>Tag
-              </button>
-              <button onClick={() => setSelectedImages(new Set())} className="text-ui text-[11px] text-muted hover:text-primary transition-colors">Clear</button>
-            </div>
+            <option value="">All Shoots</option>
+            {(shoots ?? []).map((s) => (
+              <option key={s.id} value={s.id}>{s.name} ({s.image_count})</option>
+            ))}
+          </select>
+          {activeShoot && (
+            <span className="text-[11px] text-muted">
+              Showing: <span className="text-on-surface font-medium">{activeShoot.name}</span>
+            </span>
           )}
-          <span className="text-meta">{(eraImages ?? []).length} assets</span>
+          <span className="text-meta">{filteredImages.length} assets</span>
         </div>
       </section>
 
       {/* Image Grid */}
       <section className="px-12 pb-24">
-        {(eraImages ?? []).length === 0 ? (
+        {filteredImages.length === 0 ? (
           <div className="py-20 text-center">
             <p className="text-muted text-[15px] mb-4">No images in this era yet.</p>
             <p className="text-muted text-[13px] mb-6">Drag and drop images here, or</p>
@@ -185,13 +261,14 @@ export function EraWorkspace() {
           </div>
         ) : (
           <div className="masonry-grid">
-            {(eraImages ?? []).map((ci) => (
+            {filteredImages.map((ci) => (
               <EraImageCard
                 key={ci.image_id}
                 ci={ci}
                 isSelected={selectedImages.has(ci.image_id)}
                 onToggleSelect={() => toggleSelect(ci.image_id)}
                 onUpdate={(field, value) => handleSingleUpdate(ci.image_id, field, value)}
+                shootName={shootMap.get(ci.image_id)}
               />
             ))}
           </div>
@@ -212,6 +289,120 @@ export function EraWorkspace() {
         }
       `}</style>
 
+      {/* Bulk Action Bar */}
+      {selectedImages.size > 0 && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-on-surface text-background px-6 py-3 shadow-2xl flex items-center gap-4 rounded-sm">
+          <span className="text-[13px] font-bold tracking-[0.05em] uppercase">
+            {selectedImages.size} Selected
+          </span>
+          <div className="w-px h-5 bg-background/20" />
+
+          {/* Set Type dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => { setShowSetTypeDropdown(!showSetTypeDropdown); setShowShootDropdown(false) }}
+              className="text-[11px] uppercase font-bold tracking-[0.1em] text-background/80 hover:text-background flex items-center gap-1 transition-colors"
+            >
+              Set Type
+              <span className="material-symbols-outlined text-[14px]">arrow_drop_down</span>
+            </button>
+            {showSetTypeDropdown && (
+              <div className="absolute bottom-full left-0 mb-2 bg-background border border-border-subtle shadow-lg py-1 min-w-[140px]">
+                {['reference', 'curated', 'training', 'archive'].map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => { handleBulkUpdate('set_type', type); setShowSetTypeDropdown(false) }}
+                    className="w-full text-left px-4 py-2 text-[12px] text-on-surface hover:bg-surface-low transition-colors capitalize"
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => handleBulkUpdate('triage_status', 'approved')}
+            className="text-[11px] uppercase font-bold tracking-[0.1em] text-green-400 hover:text-green-300 transition-colors"
+          >
+            Approve
+          </button>
+          <button
+            onClick={() => handleBulkUpdate('triage_status', 'rejected')}
+            className="text-[11px] uppercase font-bold tracking-[0.1em] text-red-400 hover:text-red-300 transition-colors"
+          >
+            Reject
+          </button>
+          <button
+            onClick={() => { setShowTagPicker(true); setShowShootDropdown(false); setShowSetTypeDropdown(false) }}
+            className="text-[11px] uppercase font-bold tracking-[0.1em] text-background/80 hover:text-background transition-colors"
+          >
+            Tag
+          </button>
+
+          {/* Move to Shoot dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => { setShowShootDropdown(!showShootDropdown); setShowSetTypeDropdown(false) }}
+              className="text-[11px] uppercase font-bold tracking-[0.1em] text-background/80 hover:text-background flex items-center gap-1 transition-colors"
+            >
+              Move to Shoot
+              <span className="material-symbols-outlined text-[14px]">arrow_drop_down</span>
+            </button>
+            {showShootDropdown && (
+              <div className="absolute bottom-full right-0 mb-2 bg-background border border-border-subtle shadow-lg py-1 min-w-[200px]">
+                {(shoots ?? []).map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => handleMoveToShoot(s.id)}
+                    className="w-full text-left px-4 py-2 text-[12px] text-on-surface hover:bg-surface-low transition-colors"
+                  >
+                    {s.name}
+                  </button>
+                ))}
+                <div className="border-t border-border-subtle mt-1 pt-1">
+                  {showNewShootInput ? (
+                    <div className="px-3 py-2 flex gap-2">
+                      <input
+                        value={newShootName}
+                        onChange={(e) => setNewShootName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleCreateAndMoveToShoot() }}
+                        className="flex-1 border border-border-subtle bg-transparent py-1 px-2 text-[12px] text-on-surface focus:border-on-surface focus:outline-none"
+                        placeholder="Shoot name..."
+                        autoFocus
+                      />
+                      <button
+                        onClick={handleCreateAndMoveToShoot}
+                        disabled={!newShootName.trim()}
+                        className="text-[11px] font-bold text-on-surface hover:text-accent disabled:opacity-50"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">check</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowNewShootInput(true)}
+                      className="w-full text-left px-4 py-2 text-[12px] text-muted hover:text-on-surface hover:bg-surface-low transition-colors flex items-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">add</span>
+                      New Shoot...
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="w-px h-5 bg-background/20" />
+          <button
+            onClick={() => { setSelectedImages(new Set()); setShowShootDropdown(false); setShowSetTypeDropdown(false) }}
+            className="text-background/60 hover:text-background transition-colors"
+          >
+            <span className="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
+      )}
+
       {/* Tag Picker */}
       <TagPicker
         open={showTagPicker}
@@ -222,11 +413,12 @@ export function EraWorkspace() {
   )
 }
 
-function EraImageCard({ ci, isSelected, onToggleSelect, onUpdate }: {
+function EraImageCard({ ci, isSelected, onToggleSelect, onUpdate, shootName }: {
   ci: CharacterImage
   isSelected: boolean
   onToggleSelect: () => void
   onUpdate: (field: string, value: unknown) => void
+  shootName?: string
 }) {
   const [editingCaption, setEditingCaption] = useState(false)
   const [captionText, setCaptionText] = useState(ci.caption ?? '')
@@ -237,7 +429,7 @@ function EraImageCard({ ci, isSelected, onToggleSelect, onUpdate }: {
   }
 
   return (
-    <div className={`masonry-item relative group overflow-hidden ${isSelected ? 'ring-2 ring-accent' : ''}`}>
+    <div className={`masonry-item relative group overflow-hidden ${isSelected ? 'ring-2 ring-on-surface ring-offset-4' : ''}`}>
       {/* Selection checkbox */}
       <button
         onClick={(e) => { e.stopPropagation(); onToggleSelect() }}
@@ -249,6 +441,15 @@ function EraImageCard({ ci, isSelected, onToggleSelect, onUpdate }: {
       >
         <span className="material-symbols-outlined text-[16px]">check</span>
       </button>
+
+      {/* Shoot badge */}
+      {shootName && (
+        <div className="absolute top-2 left-10 z-20">
+          <span className="bg-on-surface/70 text-background text-[9px] px-2 py-0.5 rounded-full backdrop-blur-sm">
+            {shootName}
+          </span>
+        </div>
+      )}
 
       <div className="bg-surface-lowest p-1">
         <img

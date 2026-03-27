@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { useDatasets, useCreateDataset, useCharacters } from '@/lib/api'
+import { useDatasets, useCreateDataset, useCreateDatasetFromSearch, useImageSearch, useCharacters } from '@/lib/api'
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import type { DatasetType, DatasetWithStats } from '@/lib/types'
@@ -25,6 +25,7 @@ export function DatasetManager() {
   const [newType, setNewType] = useState<DatasetType>('lora')
   const [newDescription, setNewDescription] = useState('')
   const [newCharacterId, setNewCharacterId] = useState('')
+  const [showSearchCreate, setShowSearchCreate] = useState(false)
 
   const filtered = (datasets ?? []).filter((d) => {
     if (typeFilter !== 'all' && d.type !== typeFilter) return false
@@ -98,6 +99,13 @@ export function DatasetManager() {
               </button>
             ))}
           </div>
+          <button
+            onClick={() => setShowSearchCreate(true)}
+            className="border border-border-subtle px-5 py-2.5 text-[11px] uppercase font-bold tracking-[0.15em] hover:bg-surface transition-colors flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined text-[16px]">search</span>
+            Create from Search
+          </button>
           <button
             onClick={() => setShowCreate(true)}
             className="bg-on-surface text-background px-6 py-2.5 text-[11px] uppercase font-bold tracking-[0.15em] hover:opacity-90 transition-all flex items-center gap-2"
@@ -214,7 +222,167 @@ export function DatasetManager() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Create from Search Dialog */}
+      <CreateFromSearchDialog
+        open={showSearchCreate}
+        onClose={() => setShowSearchCreate(false)}
+      />
     </>
+  )
+}
+
+function CreateFromSearchDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { data: characters } = useCharacters()
+  const createFromSearch = useCreateDatasetFromSearch()
+  const [name, setName] = useState('')
+  const [characterFilter, setCharacterFilter] = useState('')
+  const [tagsInput, setTagsInput] = useState('')
+  const [ratingMin, setRatingMin] = useState<number | undefined>(undefined)
+  const [sourceFilter, setSourceFilter] = useState('')
+  const [setTypeFilter, setSetTypeFilter] = useState('')
+
+  const searchParams = {
+    character: characterFilter || undefined,
+    tags: tagsInput.trim() ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : undefined,
+    rating_min: ratingMin,
+    source: sourceFilter || undefined,
+    set_type: setTypeFilter || undefined,
+    limit: 1, // just need the count
+  }
+
+  const { data: preview } = useImageSearch(searchParams)
+
+  const handleCreate = () => {
+    if (!name.trim()) return
+    const search: Record<string, unknown> = {}
+    if (characterFilter) search.character = characterFilter
+    if (tagsInput.trim()) search.tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean)
+    if (ratingMin) search.rating_min = ratingMin
+    if (sourceFilter) search.source = sourceFilter
+    if (setTypeFilter) search.set_type = setTypeFilter
+
+    createFromSearch.mutate(
+      { name: name.trim(), search },
+      {
+        onSuccess: () => {
+          onClose()
+          setName('')
+          setCharacterFilter('')
+          setTagsInput('')
+          setRatingMin(undefined)
+          setSourceFilter('')
+          setSetTypeFilter('')
+        },
+      }
+    )
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
+      <DialogContent className="bg-background border-border-subtle max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl">Create Dataset from Search</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-4 mt-4">
+          <div>
+            <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Dataset Name <span className="text-accent">*</span></label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
+              placeholder="e.g., High-rated portraits"
+              autoFocus
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Character</label>
+            <select
+              value={characterFilter}
+              onChange={(e) => setCharacterFilter(e.target.value)}
+              className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
+            >
+              <option value="">All Characters</option>
+              {(characters ?? []).map((c) => (
+                <option key={c.id} value={c.id}>{c.display_name || c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Tags</label>
+            <input
+              value={tagsInput}
+              onChange={(e) => setTagsInput(e.target.value)}
+              className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
+              placeholder="Comma-separated tags"
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Min Rating</label>
+              <select
+                value={ratingMin ?? ''}
+                onChange={(e) => setRatingMin(e.target.value ? Number(e.target.value) : undefined)}
+                className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
+              >
+                <option value="">Any</option>
+                {[1, 2, 3, 4, 5].map((r) => (
+                  <option key={r} value={r}>{r}+</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Source</label>
+              <select
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value)}
+                className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
+              >
+                <option value="">Any</option>
+                <option value="fig">Fig</option>
+                <option value="comfyui">ComfyUI</option>
+                <option value="manual">Manual</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Set Type</label>
+              <select
+                value={setTypeFilter}
+                onChange={(e) => setSetTypeFilter(e.target.value)}
+                className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
+              >
+                <option value="">Any</option>
+                <option value="reference">Reference</option>
+                <option value="curated">Curated</option>
+                <option value="training">Training</option>
+                <option value="archive">Archive</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Preview count */}
+          <div className="bg-surface-low p-3 text-[13px]">
+            <span className="text-muted">This search matches </span>
+            <span className="text-on-surface font-bold tabular-nums">{preview?.total ?? 0}</span>
+            <span className="text-muted"> images</span>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-2">
+            <button onClick={onClose} className="px-4 py-2 text-[11px] uppercase font-bold text-muted hover:text-on-surface transition-colors">Cancel</button>
+            <button
+              onClick={handleCreate}
+              disabled={!name.trim() || createFromSearch.isPending}
+              className="bg-on-surface text-background px-6 py-2 text-[11px] uppercase font-bold tracking-[0.1em] hover:opacity-90 disabled:opacity-50 transition-all"
+            >
+              {createFromSearch.isPending ? 'Creating...' : 'Create Dataset'}
+            </button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 

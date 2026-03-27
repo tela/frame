@@ -159,6 +159,14 @@ export function useCreateShoot() {
   })
 }
 
+export function useShootImages(shootId: string) {
+  return useQuery({
+    queryKey: ['shoots', shootId, 'images'],
+    queryFn: () => fetchJSON<string[]>(`/api/v1/shoots/${shootId}/images`),
+    enabled: !!shootId,
+  })
+}
+
 // ===== Favorites =====
 
 export function useFavorites(characterId: string) {
