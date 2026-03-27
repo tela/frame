@@ -46,7 +46,7 @@ test-all:
 	go test ./...
 
 smoke:
-	bash scripts/smoke-test.sh
+	./$(BINARY) smoke
 
 clean:
 	rm -f $(BINARY) $(BINARY)-*
