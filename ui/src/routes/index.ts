@@ -52,6 +52,9 @@ const eraWorkspaceRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/characters/$characterId/eras/$eraId',
   component: EraWorkspace,
+  validateSearch: (search: Record<string, unknown>): { shoot?: string } => ({
+    shoot: (search.shoot as string) || undefined,
+  }),
 })
 
 const triageRoute = createRoute({

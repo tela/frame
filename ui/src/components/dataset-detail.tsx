@@ -1,14 +1,17 @@
 import { useParams } from '@tanstack/react-router'
-import { useDataset, useExportDataset, useForkDataset, thumbUrl } from '@/lib/api'
+import { useDataset, useExportDataset, useForkDataset, useAddDatasetImages, useImageSearch, useCharacters, thumbUrl } from '@/lib/api'
 import { useState } from 'react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 export function DatasetDetail() {
   const { datasetId } = useParams({ from: '/datasets/$datasetId' })
   const { data, isLoading } = useDataset(datasetId)
   const exportDataset = useExportDataset()
   const forkDataset = useForkDataset()
+  const addImages = useAddDatasetImages()
   const [exportDir, setExportDir] = useState('')
   const [showExport, setShowExport] = useState(false)
+  const [showAddImages, setShowAddImages] = useState(false)
 
   if (isLoading) return <div className="p-12 text-muted">Loading...</div>
   if (!data) return <div className="p-12 text-muted">Dataset not found</div>
@@ -29,6 +32,13 @@ export function DatasetDetail() {
           <span className="text-meta text-muted">{includedCount} / {images.length} included</span>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowAddImages(true)}
+            className="border border-border-subtle px-4 py-2 text-[11px] uppercase font-bold tracking-[0.1em] hover:bg-surface transition-colors flex items-center gap-1.5"
+          >
+            <span className="material-symbols-outlined text-[14px]">add_photo_alternate</span>
+            Add Images
+          </button>
           <button
             onClick={() => forkDataset.mutate({ id: datasetId, name: `${ds.name} (Fork)` })}
             disabled={forkDataset.isPending}
@@ -115,7 +125,7 @@ export function DatasetDetail() {
             <div className="py-20 text-center">
               <span className="material-symbols-outlined text-[48px] text-muted/30 mb-4 block">dataset</span>
               <p className="text-muted">No images in this dataset yet.</p>
-              <button className="mt-4 text-[11px] uppercase font-bold text-accent hover:underline">
+              <button onClick={() => setShowAddImages(true)} className="mt-4 text-[11px] uppercase font-bold text-accent hover:underline">
                 Add from Image Search
               </button>
             </div>
@@ -201,6 +211,158 @@ export function DatasetDetail() {
           </div>
         </div>
       )}
+
+      {/* Add Images Modal */}
+      <AddImagesModal
+        open={showAddImages}
+        onClose={() => setShowAddImages(false)}
+        onAdd={(imageIds) => {
+          addImages.mutate({ datasetId, imageIds })
+          setShowAddImages(false)
+        }}
+      />
     </>
+  )
+}
+
+function AddImagesModal({ open, onClose, onAdd }: {
+  open: boolean
+  onClose: () => void
+  onAdd: (imageIds: string[]) => void
+}) {
+  const { data: characters } = useCharacters()
+  const [characterFilter, setCharacterFilter] = useState('')
+  const [tagsInput, setTagsInput] = useState('')
+  const [ratingMin, setRatingMin] = useState<number | undefined>(undefined)
+  const [sourceFilter, setSourceFilter] = useState('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+
+  const searchParams = {
+    character: characterFilter || undefined,
+    tags: tagsInput.trim() ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : undefined,
+    rating_min: ratingMin,
+    source: sourceFilter || undefined,
+    limit: 100,
+  }
+
+  const { data: results } = useImageSearch(searchParams)
+
+  const toggle = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const handleConfirm = () => {
+    onAdd(Array.from(selected))
+    setSelected(new Set())
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
+      <DialogContent className="bg-background border-border-subtle max-w-5xl max-h-[85vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl">Add Images from Search</DialogTitle>
+        </DialogHeader>
+
+        {/* Filters */}
+        <div className="flex flex-wrap gap-3 mt-2 pb-4 border-b border-border-subtle">
+          <select
+            value={characterFilter}
+            onChange={(e) => setCharacterFilter(e.target.value)}
+            className="border border-border-subtle bg-transparent py-1.5 px-3 text-[13px] focus:border-on-surface focus:ring-0 focus:outline-none"
+          >
+            <option value="">All Characters</option>
+            {(characters ?? []).map((c) => (
+              <option key={c.id} value={c.id}>{c.display_name || c.name}</option>
+            ))}
+          </select>
+          <input
+            value={tagsInput}
+            onChange={(e) => setTagsInput(e.target.value)}
+            className="border border-border-subtle bg-transparent py-1.5 px-3 text-[13px] focus:border-on-surface focus:ring-0 focus:outline-none w-48"
+            placeholder="Tags (comma separated)"
+          />
+          <select
+            value={ratingMin ?? ''}
+            onChange={(e) => setRatingMin(e.target.value ? Number(e.target.value) : undefined)}
+            className="border border-border-subtle bg-transparent py-1.5 px-3 text-[13px] focus:border-on-surface focus:ring-0 focus:outline-none"
+          >
+            <option value="">Any Rating</option>
+            {[1, 2, 3, 4, 5].map((r) => (
+              <option key={r} value={r}>{r}+ stars</option>
+            ))}
+          </select>
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value)}
+            className="border border-border-subtle bg-transparent py-1.5 px-3 text-[13px] focus:border-on-surface focus:ring-0 focus:outline-none"
+          >
+            <option value="">Any Source</option>
+            <option value="fig">Fig</option>
+            <option value="comfyui">ComfyUI</option>
+            <option value="manual">Manual</option>
+          </select>
+          <span className="text-meta text-muted self-center ml-auto">
+            {results?.total ?? 0} results · {selected.size} selected
+          </span>
+        </div>
+
+        {/* Results grid */}
+        <div className="flex-1 overflow-y-auto min-h-0 mt-4">
+          {(results?.images ?? []).length === 0 ? (
+            <div className="py-12 text-center text-muted text-[13px]">
+              <span className="material-symbols-outlined text-[48px] text-muted/20 block mb-4">search</span>
+              No images match the current filters.
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
+              {(results?.images ?? []).map((img) => (
+                <button
+                  key={img.id}
+                  onClick={() => toggle(img.id)}
+                  className={`relative aspect-square overflow-hidden border-2 transition-all ${
+                    selected.has(img.id) ? 'border-accent shadow-md' : 'border-transparent hover:border-border-subtle'
+                  }`}
+                >
+                  <img
+                    src={thumbUrl(img.id)}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                  />
+                  {selected.has(img.id) && (
+                    <div className="absolute top-1 right-1 w-5 h-5 bg-accent rounded-full flex items-center justify-center">
+                      <span className="material-symbols-outlined text-white text-[14px]">check</span>
+                    </div>
+                  )}
+                  {img.character_name && (
+                    <div className="absolute bottom-1 left-1 bg-on-surface/60 text-background text-[8px] px-1 py-0.5 rounded-sm backdrop-blur-sm">
+                      {img.character_name}
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 pt-4 border-t border-border-subtle mt-2">
+          <button onClick={onClose} className="px-4 py-2 text-[11px] uppercase font-bold text-muted">Cancel</button>
+          <button
+            onClick={handleConfirm}
+            disabled={selected.size === 0}
+            className="bg-on-surface text-background px-6 py-2 text-[11px] uppercase font-bold disabled:opacity-50"
+          >
+            Add {selected.size} Selected
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
