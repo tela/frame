@@ -12,11 +12,13 @@ frame dev        # Start Go server + Vite dev server, ctrl-c kills both
 frame seed       # Create test characters, eras, wardrobe, LoRAs, looks
 frame stop       # Kill any running frame/vite processes
 frame status     # Show server, port, Vite, Fig, Bifrost connection state
+frame smoke      # Run smoke tests against running server (automated pass/fail)
 frame build      # Rebuild frontend dist to internal/frontend/dist/
 frame version    # Print version
 ```
 
 - Before testing the app manually, run `frame seed` to populate test data
+- Use `frame smoke` to verify the server is working (requires server + seed data)
 - Use `frame dev` for development (not separate `make dev` + `make dev-ui`)
 - Use `frame build` before `go build` to update the embedded frontend
 - Use `frame status` to check if services are running, not manual curl/pgrep
