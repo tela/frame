@@ -265,6 +265,68 @@ func (s *Store) UpdateCharacterImage(imageID, characterID string, update *Charac
 	return nil
 }
 
+// BulkUpdateCharacterImages applies the same update to multiple images for a character.
+func (s *Store) BulkUpdateCharacterImages(characterID string, imageIDs []string, update *CharacterImageUpdate) (int, error) {
+	if len(imageIDs) == 0 {
+		return 0, nil
+	}
+
+	// Build placeholder list
+	placeholders := ""
+	args := make([]any, 0, len(imageIDs)+2)
+	for i, id := range imageIDs {
+		if i > 0 {
+			placeholders += ","
+		}
+		placeholders += "?"
+		args = append(args, id)
+	}
+
+	applyBulk := func(field string, value any) error {
+		query := fmt.Sprintf(`UPDATE character_images SET %s = ? WHERE character_id = ? AND image_id IN (%s)`, field, placeholders)
+		allArgs := append([]any{value, characterID}, args...)
+		_, err := s.db.Exec(query, allArgs...)
+		return err
+	}
+
+	if update.SetType != nil {
+		if err := applyBulk("set_type", *update.SetType); err != nil {
+			return 0, err
+		}
+	}
+	if update.TriageStatus != nil {
+		if err := applyBulk("triage_status", *update.TriageStatus); err != nil {
+			return 0, err
+		}
+	}
+	if update.Rating != nil {
+		if err := applyBulk("rating", *update.Rating); err != nil {
+			return 0, err
+		}
+	}
+	if update.IsFaceRef != nil {
+		if err := applyBulk("is_face_ref", boolToInt(*update.IsFaceRef)); err != nil {
+			return 0, err
+		}
+	}
+	if update.IsBodyRef != nil {
+		if err := applyBulk("is_body_ref", boolToInt(*update.IsBodyRef)); err != nil {
+			return 0, err
+		}
+	}
+	if update.RefRank != nil {
+		if err := applyBulk("ref_rank", *update.RefRank); err != nil {
+			return 0, err
+		}
+	}
+	if update.EraID != nil {
+		if err := applyBulk("era_id", *update.EraID); err != nil {
+			return 0, err
+		}
+	}
+	return len(imageIDs), nil
+}
+
 // ListPendingByCharacter returns images with triage_status='pending' for a character, optionally filtered by era.
 func (s *Store) ListPendingByCharacter(characterID string, eraID *string) ([]CharacterImage, error) {
 	var rows *sql.Rows

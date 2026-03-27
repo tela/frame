@@ -58,6 +58,7 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/characters/{id}/images", a.listCharacterImages)
 	mux.HandleFunc("POST /api/v1/characters/{id}/images", a.ingestCharacterImage)
 	mux.HandleFunc("PATCH /api/v1/characters/{id}/images/{imageId}", a.updateCharacterImage)
+	mux.HandleFunc("PUT /api/v1/characters/{id}/images/bulk", a.bulkUpdateCharacterImages)
 	mux.HandleFunc("GET /api/v1/characters/{id}/images/pending", a.listPendingImages)
 	mux.HandleFunc("GET /api/v1/characters/{id}/avatar", a.getCharacterAvatar)
 
@@ -71,6 +72,7 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/v1/shoots/{shootId}", a.deleteShoot)
 	mux.HandleFunc("GET /api/v1/shoots/{shootId}/images", a.listShootImages)
 	mux.HandleFunc("POST /api/v1/shoots/{shootId}/images", a.addShootImage)
+	mux.HandleFunc("PUT /api/v1/shoots/{shootId}/images/bulk", a.bulkAddShootImages)
 
 	// Post-cast era ingest
 	mux.HandleFunc("POST /api/v1/characters/{id}/eras/{era}/ingest", a.ingestEraImage)
@@ -130,6 +132,7 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/v1/datasets/{id}", a.deleteDataset)
 	mux.HandleFunc("POST /api/v1/datasets/{id}/fork", a.forkDataset)
 	mux.HandleFunc("POST /api/v1/datasets/{id}/export", a.exportDataset)
+	mux.HandleFunc("POST /api/v1/datasets/from-search", a.createDatasetFromSearch)
 	mux.HandleFunc("POST /api/v1/datasets/{id}/images", a.addDatasetImages)
 	mux.HandleFunc("DELETE /api/v1/datasets/{id}/images/{imgId}", a.removeDatasetImage)
 	mux.HandleFunc("PATCH /api/v1/datasets/{id}/images/{imgId}", a.updateDatasetImage)

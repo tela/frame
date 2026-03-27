@@ -15,6 +15,7 @@ type importDirectoryRequest struct {
 	Path        string   `json:"path"`
 	CharacterID string   `json:"character_id,omitempty"`
 	EraID       string   `json:"era_id,omitempty"`
+	ShootID     string   `json:"shoot_id,omitempty"` // assign imported images to this shoot
 	Source      string   `json:"source,omitempty"`
 	Tags        []string `json:"tags,omitempty"`
 }
@@ -56,6 +57,7 @@ func (a *API) handleImportDirectory(w http.ResponseWriter, r *http.Request) {
 
 	result := importResult{}
 	var errors []string
+	var importedIDs []string
 
 	err = filepath.Walk(req.Path, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -103,6 +105,7 @@ func (a *API) handleImportDirectory(w http.ResponseWriter, r *http.Request) {
 			result.Skipped++
 		} else {
 			result.Imported++
+			importedIDs = append(importedIDs, ingestResult.ImageID)
 		}
 
 		// Apply tags if specified
@@ -119,6 +122,13 @@ func (a *API) handleImportDirectory(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+
+	// Assign to shoot if specified
+	if req.ShootID != "" && len(importedIDs) > 0 {
+		if err := a.Shoots.AddImages(req.ShootID, importedIDs); err != nil {
+			errors = append(errors, fmt.Sprintf("shoot assignment: %s", err))
+		}
 	}
 
 	result.Errors = errors
