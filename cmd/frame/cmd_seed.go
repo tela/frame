@@ -4,11 +4,16 @@ import (
 	"bytes"
 	"compress/zlib"
 	"encoding/binary"
+	"encoding/csv"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"hash/crc32"
+	"io"
 	"log"
+	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/tela/frame/pkg/character"
@@ -37,6 +42,12 @@ type seedEra struct {
 }
 
 func cmdSeed() {
+	fs := flag.NewFlagSet("seed", flag.ExitOnError)
+	fileFlag := fs.String("file", "", "CSV file path for character/era seed data")
+	fs.Parse(os.Args[1:])
+	// Clear parsed seed flags so config.Load()'s flag.Parse doesn't see them.
+	os.Args = os.Args[:1]
+
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("config: %v", err)
@@ -50,6 +61,12 @@ func cmdSeed() {
 	defer db.Close()
 
 	charStore := character.NewStore(db.DB)
+
+	if *fileFlag != "" {
+		seedFromCSV(charStore, *fileFlag)
+		return
+	}
+
 	imgStore := image.NewStore(db.DB)
 	mediaStore := media.NewStore(db.DB)
 	garmentStore := garment.NewStore(db.DB)
@@ -309,6 +326,129 @@ func cmdSeed() {
 		}
 		if err := lookStore.Create(lk); err == nil {
 			fmt.Printf("  look: Casting Day for Elara (%d garments)\n", len(lookGarmentIDs))
+		}
+	}
+
+	fmt.Println("\nSeed complete.")
+}
+
+func seedFromCSV(charStore *character.Store, path string) {
+	f, err := os.Open(path)
+	if err != nil {
+		log.Fatalf("open csv: %v", err)
+	}
+	defer f.Close()
+
+	reader := csv.NewReader(f)
+	header, err := reader.Read()
+	if err != nil {
+		log.Fatalf("read csv header: %v", err)
+	}
+
+	col := make(map[string]int, len(header))
+	for i, h := range header {
+		col[h] = i
+	}
+
+	field := func(row []string, name string) string {
+		if idx, ok := col[name]; ok && idx < len(row) {
+			return row[idx]
+		}
+		return ""
+	}
+
+	intField := func(row []string, name string) *int {
+		s := field(row, name)
+		if s == "" {
+			return nil
+		}
+		v, err := strconv.Atoi(s)
+		if err != nil {
+			return nil
+		}
+		return &v
+	}
+
+	// Group rows by character_name
+	type csvRow = []string
+	groups := map[string][]csvRow{}
+	var order []string
+	for {
+		row, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatalf("read csv: %v", err)
+		}
+		name := field(row, "character_name")
+		if _, seen := groups[name]; !seen {
+			order = append(order, name)
+		}
+		groups[name] = append(groups[name], row)
+	}
+
+	now := time.Now().UTC()
+	fmt.Printf("Seeding from %s (%d characters)...\n", path, len(order))
+
+	for _, name := range order {
+		rows := groups[name]
+		first := rows[0]
+
+		charID := id.New()
+		c := &character.Character{
+			ID:                     charID,
+			Name:                   name,
+			DisplayName:            field(first, "display_name"),
+			Status:                 character.Status(field(first, "status")),
+			Source:                 "frame",
+			Ethnicity:              field(first, "ethnicity"),
+			SkinTone:               field(first, "skin_tone"),
+			EyeColor:               field(first, "eye_color"),
+			EyeShape:               field(first, "eye_shape"),
+			NaturalHairColor:       field(first, "natural_hair_color"),
+			NaturalHairTexture:     field(first, "natural_hair_texture"),
+			DistinguishingFeatures: field(first, "distinguishing_features"),
+			CreatedAt:              now,
+			UpdatedAt:              now,
+		}
+		if err := charStore.Create(c); err != nil {
+			fmt.Printf("  skip %s: %v\n", name, err)
+			continue
+		}
+		fmt.Printf("  character: %s (%s) [%s]\n", c.DisplayName, charID[:8], c.Status)
+
+		for i, row := range rows {
+			eraID := id.New()
+			era := &character.Era{
+				ID:                eraID,
+				CharacterID:       charID,
+				Label:             field(row, "era_label"),
+				AgeRange:          field(row, "era_age_range"),
+				TimePeriod:        field(row, "era_time_period"),
+				Description:       field(row, "era_description"),
+				VisualDescription: field(row, "era_visual_description"),
+				PromptPrefix:      field(row, "era_prompt_prefix"),
+				PipelineSettings:  "{}",
+				SortOrder:         i,
+				HeightCM:          intField(row, "era_height_cm"),
+				WeightKG:          intField(row, "era_weight_kg"),
+				Build:             field(row, "era_build"),
+				BreastSize:        field(row, "era_breast_size"),
+				BreastTanner:      field(row, "era_breast_tanner"),
+				HipShape:          field(row, "era_hip_shape"),
+				PubicHairStyle:    field(row, "era_pubic_hair_style"),
+				PubicHairTanner:   field(row, "era_pubic_hair_tanner"),
+				HairColor:         field(row, "era_hair_color"),
+				HairLength:        field(row, "era_hair_length"),
+				CreatedAt:         now,
+				UpdatedAt:         now,
+			}
+			if err := charStore.CreateEra(era); err != nil {
+				fmt.Printf("    skip era %s: %v\n", era.Label, err)
+				continue
+			}
+			fmt.Printf("    era: %s (%s)\n", era.Label, era.AgeRange)
 		}
 	}
 
