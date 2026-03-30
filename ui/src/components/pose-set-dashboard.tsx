@@ -128,7 +128,7 @@ export function PoseSetDashboard({ characterId, eraId, eraLabel }: { characterId
                   className="gap-y-6"
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: `180px repeat(${colCount}, 1fr)`,
+                    gridTemplateColumns: `180px repeat(${colCount}, minmax(0, 200px))`,
                   }}
                 >
                   {/* Column Headers */}
