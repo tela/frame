@@ -102,7 +102,8 @@ func Load() (*Config, error) {
 }
 
 // resolveRoot finds the drive root directory.
-// Priority: explicit flag > directory containing the binary > current working directory.
+// Priority: explicit flag > sibling "frame/" dir next to binary's parent >
+// directory containing the binary > current working directory.
 func resolveRoot(explicit string) (string, error) {
 	if explicit != "" {
 		abs, err := filepath.Abs(explicit)
@@ -112,10 +113,16 @@ func resolveRoot(explicit string) (string, error) {
 		return abs, nil
 	}
 
-	// Check next to the executable
+	// Check sibling "frame/" directory relative to binary's parent.
+	// Supports drive layout: bin/frame (binary), frame/ (config+db).
 	exe, err := os.Executable()
 	if err == nil {
 		exeDir := filepath.Dir(exe)
+		siblingDir := filepath.Join(filepath.Dir(exeDir), "frame")
+		if hasConfigFile(siblingDir) {
+			return siblingDir, nil
+		}
+		// Check next to the executable (legacy flat layout)
 		if hasConfigFile(exeDir) {
 			return exeDir, nil
 		}
