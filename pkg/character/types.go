@@ -28,6 +28,16 @@ type Character struct {
 	FigPublished    bool      `json:"fig_published"`
 	FigCharacterURL string    `json:"fig_character_url,omitempty"`
 	Source          string    `json:"source"` // "frame" or "fig"
+
+	// Physical attributes (immutable across eras)
+	Ethnicity            string `json:"ethnicity"`
+	SkinTone             string `json:"skin_tone"`
+	EyeColor             string `json:"eye_color"`
+	EyeShape             string `json:"eye_shape"`
+	NaturalHairColor     string `json:"natural_hair_color"`
+	NaturalHairTexture   string `json:"natural_hair_texture"`
+	DistinguishingFeatures string `json:"distinguishing_features"`
+
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
@@ -65,6 +75,19 @@ type Era struct {
 	PromptPrefix      string    `json:"prompt_prefix"`
 	PipelineSettings  string    `json:"pipeline_settings"`  // JSON blob
 	SortOrder         int       `json:"sort_order"`
+
+	// Physical attributes (vary per era)
+	HeightCM        *int   `json:"height_cm"`
+	WeightKG        *int   `json:"weight_kg"`
+	Build           string `json:"build"`
+	BreastSize      string `json:"breast_size"`
+	BreastTanner    string `json:"breast_tanner"`
+	HipShape        string `json:"hip_shape"`
+	PubicHairStyle  string `json:"pubic_hair_style"`
+	PubicHairTanner string `json:"pubic_hair_tanner"`
+	HairColor       string `json:"hair_color"`
+	HairLength      string `json:"hair_length"`
+
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
 }
