@@ -14,6 +14,7 @@ import (
 	"github.com/tela/frame/pkg/database"
 	"github.com/tela/frame/pkg/dataset"
 	"github.com/tela/frame/pkg/fig"
+	"github.com/tela/frame/pkg/garment"
 	"github.com/tela/frame/pkg/image"
 	"github.com/tela/frame/pkg/look"
 	"github.com/tela/frame/pkg/lora"
@@ -52,6 +53,7 @@ func cmdServe() {
 	lookStore := look.NewStore(db.DB)
 	loraStore := lora.NewStore(db.DB)
 	poseSetStore := poseset.NewStore(db.DB)
+	garmentStore := garment.NewStore(db.DB)
 	ingester := image.NewIngester(imgStore, cfg.Root)
 
 	// Bifrost client (optional)
@@ -91,6 +93,7 @@ func cmdServe() {
 		Looks:      lookStore,
 		Loras:      loraStore,
 		PoseSet:    poseSetStore,
+		Garments:   garmentStore,
 		Bifrost:    bifrostClient,
 		Fig:        figClient,
 		RootPath:   cfg.Root,

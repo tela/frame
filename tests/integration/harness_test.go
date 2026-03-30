@@ -19,6 +19,7 @@ import (
 	"github.com/tela/frame/pkg/image"
 	"github.com/tela/frame/pkg/look"
 	"github.com/tela/frame/pkg/lora"
+	"github.com/tela/frame/pkg/garment"
 	"github.com/tela/frame/pkg/media"
 	"github.com/tela/frame/pkg/poseset"
 	"github.com/tela/frame/pkg/preprocess"
@@ -57,6 +58,7 @@ func newTestServer(t *testing.T) *testServer {
 	lookStore := look.NewStore(db.DB)
 	loraStore := lora.NewStore(db.DB)
 	poseSetStore := poseset.NewStore(db.DB)
+	garmentStore := garment.NewStore(db.DB)
 	ingester := image.NewIngester(imgStore, rootDir)
 
 	srv := server.New(db, "test")
@@ -74,6 +76,7 @@ func newTestServer(t *testing.T) *testServer {
 		Looks:      lookStore,
 		Loras:      loraStore,
 		PoseSet:    poseSetStore,
+		Garments:   garmentStore,
 		RootPath:   rootDir,
 		Port:       0,
 	}
