@@ -10,6 +10,7 @@ import (
 	"github.com/tela/frame/pkg/character"
 	"github.com/tela/frame/pkg/fig"
 	"github.com/tela/frame/pkg/garment"
+	"github.com/tela/frame/pkg/hairstyle"
 	"github.com/tela/frame/pkg/dataset"
 	"github.com/tela/frame/pkg/image"
 	"github.com/tela/frame/pkg/look"
@@ -39,6 +40,7 @@ type API struct {
 	Loras       *lora.Store
 	PoseSet     *poseset.Store
 	Garments    *garment.Store
+	Hairstyles  *hairstyle.Store
 	Stylist     *stylist.SessionStore
 	Bifrost     *bifrost.Client // nil if Bifrost not configured
 	Fig         *fig.Client    // nil if Fig not configured
@@ -203,6 +205,20 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/wardrobe/{id}/affinity", a.addGarmentAffinity)
 	mux.HandleFunc("DELETE /api/v1/wardrobe/{id}/affinity/{charId}", a.removeGarmentAffinity)
 	mux.HandleFunc("GET /api/v1/wardrobe/{id}/affinity", a.listGarmentAffinity)
+
+	// Hair
+	mux.HandleFunc("GET /api/v1/hair", a.listHairstyles)
+	mux.HandleFunc("GET /api/v1/hair/facets", a.getHairstyleFacets)
+	mux.HandleFunc("POST /api/v1/hair", a.createHairstyle)
+	mux.HandleFunc("GET /api/v1/hair/{id}", a.getHairstyle)
+	mux.HandleFunc("PATCH /api/v1/hair/{id}", a.updateHairstyle)
+	mux.HandleFunc("DELETE /api/v1/hair/{id}", a.deleteHairstyle)
+	mux.HandleFunc("POST /api/v1/hair/{id}/images", a.addHairstyleImage)
+	mux.HandleFunc("PATCH /api/v1/hair/{id}/primary-image", a.setHairstylePrimaryImage)
+	mux.HandleFunc("PUT /api/v1/hair/bulk-status", a.bulkUpdateHairstyleStatus)
+	mux.HandleFunc("POST /api/v1/hair/{id}/affinity", a.addHairstyleAffinity)
+	mux.HandleFunc("DELETE /api/v1/hair/{id}/affinity/{charId}", a.removeHairstyleAffinity)
+	mux.HandleFunc("GET /api/v1/hair/{id}/affinity", a.listHairstyleAffinity)
 
 	// Fig integration
 	mux.HandleFunc("POST /api/v1/characters/{id}/publish", a.publishToFig)

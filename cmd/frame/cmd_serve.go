@@ -15,6 +15,7 @@ import (
 	"github.com/tela/frame/pkg/dataset"
 	"github.com/tela/frame/pkg/fig"
 	"github.com/tela/frame/pkg/garment"
+	"github.com/tela/frame/pkg/hairstyle"
 	"github.com/tela/frame/pkg/image"
 	"github.com/tela/frame/pkg/look"
 	"github.com/tela/frame/pkg/lora"
@@ -55,6 +56,7 @@ func cmdServe() {
 	loraStore := lora.NewStore(db.DB)
 	poseSetStore := poseset.NewStore(db.DB)
 	garmentStore := garment.NewStore(db.DB)
+	hairstyleStore := hairstyle.NewStore(db.DB)
 	stylistStore := stylist.NewSessionStore(cfg.Root)
 	ingester := image.NewIngester(imgStore, cfg.Root)
 
@@ -96,6 +98,7 @@ func cmdServe() {
 		Loras:      loraStore,
 		PoseSet:    poseSetStore,
 		Garments:   garmentStore,
+		Hairstyles: hairstyleStore,
 		Stylist:    stylistStore,
 		Bifrost:    bifrostClient,
 		Fig:        figClient,
