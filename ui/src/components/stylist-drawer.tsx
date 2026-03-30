@@ -8,9 +8,8 @@ import {
   useSendStylistMessage,
   useCharacter,
   thumbUrl,
-  imageUrl,
 } from '@/lib/api'
-import type { StylistSession, StylistMessage, StylistSessionContext } from '@/lib/types'
+import type { StylistMessage, StylistSessionContext } from '@/lib/types'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 
 // ===== Context for global drawer state =====

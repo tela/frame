@@ -16,12 +16,10 @@ import {
   avatarUrl,
   type GarmentListParams,
 } from '@/lib/api'
-import type { Garment, GarmentFacets, FacetCounts } from '@/lib/types'
+import type { Garment } from '@/lib/types'
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
-  SheetTitle,
 } from '@/components/ui/sheet'
 
 const STATUS_COLORS: Record<string, string> = {
