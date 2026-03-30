@@ -245,6 +245,58 @@ export interface PreprocessPreset {
   created_at: string
 }
 
+// Garments
+export interface Garment {
+  id: string
+  name: string
+  description: string
+  category: string
+  occasion_energy: string
+  era: string
+  aesthetic_cluster: string
+  dominant_signal: string
+  recessive_signal: string
+  material: string
+  color: string
+  tags: string[]
+  primary_image_id: string | null
+  source: string
+  provenance: string
+  source_url: string
+  source_site: string
+  status: string
+  created_at: string
+  updated_at: string
+  affinity_count?: number
+}
+
+export interface GarmentDetail {
+  garment: Garment
+  images: GarmentImage[]
+  affinity: string[]
+}
+
+export interface GarmentImage {
+  garment_id: string
+  image_id: string
+  sort_order: number
+  created_at: string
+}
+
+export type FacetCounts = Record<string, number>
+
+export interface GarmentFacets {
+  category: FacetCounts
+  occasion_energy: FacetCounts
+  era: FacetCounts
+  aesthetic_cluster: FacetCounts
+  dominant_signal: FacetCounts
+  material: FacetCounts
+  provenance: FacetCounts
+  source_site: FacetCounts
+  status: FacetCounts
+}
+
 // Reference Package
 export interface RefImage {
   image_id: string

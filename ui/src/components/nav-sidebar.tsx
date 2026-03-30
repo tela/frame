@@ -3,6 +3,7 @@ import { useFigStatus, useBifrostStatus } from '@/lib/api'
 
 const navItems = [
   { to: '/characters', icon: 'group', label: 'Character Library' },
+  { to: '/wardrobe', icon: 'checkroom', label: 'Wardrobe' },
   { to: '/media', icon: 'photo_library', label: 'Media Library' },
   { to: '/datasets', icon: 'dataset', label: 'Datasets' },
   { to: '/search', icon: 'search', label: 'Image Search' },

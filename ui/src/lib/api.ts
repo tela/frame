@@ -995,3 +995,141 @@ export function thumbUrl(imageId: string) {
 export function avatarUrl(characterId: string) {
   return `/api/v1/characters/${characterId}/avatar`
 }
+
+// ===== Wardrobe (Garments) =====
+
+import type { Garment, GarmentDetail, GarmentFacets } from './types'
+
+export interface GarmentListParams {
+  q?: string
+  category?: string
+  occasion_energy?: string
+  era?: string
+  aesthetic_cluster?: string
+  dominant_signal?: string
+  material?: string
+  provenance?: string
+  source_site?: string
+  status?: string
+  character?: string
+  sort?: string
+  order?: string
+  limit?: number
+  offset?: number
+}
+
+function garmentQueryString(params: GarmentListParams): string {
+  const p = new URLSearchParams()
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== '' && v !== null) p.set(k, String(v))
+  }
+  const s = p.toString()
+  return s ? `?${s}` : ''
+}
+
+export function useGarments(params: GarmentListParams = {}) {
+  return useQuery({
+    queryKey: ['garments', params],
+    queryFn: () => fetchJSON<Garment[]>(`/api/v1/wardrobe${garmentQueryString(params)}`),
+  })
+}
+
+export function useGarmentFacets(params: GarmentListParams = {}) {
+  return useQuery({
+    queryKey: ['garments', 'facets', params],
+    queryFn: () => fetchJSON<GarmentFacets>(`/api/v1/wardrobe/facets${garmentQueryString(params)}`),
+  })
+}
+
+export function useGarment(id: string) {
+  return useQuery({
+    queryKey: ['garments', id],
+    queryFn: () => fetchJSON<GarmentDetail>(`/api/v1/wardrobe/${id}`),
+    enabled: !!id,
+  })
+}
+
+export function useCreateGarment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { name: string; category?: string; description?: string }) =>
+      postJSON<Garment>('/api/v1/wardrobe', body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['garments'] })
+    },
+  })
+}
+
+export function useUpdateGarment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string } & Partial<Garment>) =>
+      patchJSON<Garment>(`/api/v1/wardrobe/${id}`, body),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['garments'] })
+      qc.invalidateQueries({ queryKey: ['garments', vars.id] })
+    },
+  })
+}
+
+export function useDeleteGarment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) =>
+      fetch(`/api/v1/wardrobe/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['garments'] })
+    },
+  })
+}
+
+export function useBulkUpdateGarmentStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { ids: string[]; status: string }) =>
+      fetch('/api/v1/wardrobe/bulk-status', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['garments'] })
+    },
+  })
+}
+
+export function useAddGarmentAffinity() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ garmentId, characterId }: { garmentId: string; characterId: string }) =>
+      postJSON<void>(`/api/v1/wardrobe/${garmentId}/affinity`, { character_id: characterId }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['garments', vars.garmentId] })
+    },
+  })
+}
+
+export function useRemoveGarmentAffinity() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ garmentId, characterId }: { garmentId: string; characterId: string }) =>
+      fetch(`/api/v1/wardrobe/${garmentId}/affinity/${characterId}`, { method: 'DELETE' }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['garments', vars.garmentId] })
+    },
+  })
+}
+
+export function useAddGarmentImage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ garmentId, file }: { garmentId: string; file: File }) => {
+      const fd = new FormData()
+      fd.append('file', file)
+      return postFormData<{ image_id: string }>(`/api/v1/wardrobe/${garmentId}/images`, fd)
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['garments', vars.garmentId] })
+    },
+  })
+}
