@@ -20,6 +20,7 @@ import { ImportScreen } from '@/components/import-screen'
 import { ImagePreprocessor } from '@/components/image-preprocessor'
 import { ImageDetail } from '@/components/image-detail'
 import { Wardrobe } from '@/components/wardrobe'
+import { HairCatalog } from '@/components/hair-catalog'
 
 // Root
 const rootRoute = createRootRoute({
@@ -82,6 +83,13 @@ const wardrobeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/wardrobe',
   component: Wardrobe,
+})
+
+// Hair
+const hairRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/hair',
+  component: HairCatalog,
 })
 
 // Search
@@ -149,6 +157,7 @@ const routeTree = rootRoute.addChildren([
   studioRoute,
   mediaRoute,
   wardrobeRoute,
+  hairRoute,
   searchRoute,
   templatesRoute,
   tagsRoute,

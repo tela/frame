@@ -998,7 +998,7 @@ export function avatarUrl(characterId: string) {
 
 // ===== Wardrobe (Garments) =====
 
-import type { Garment, GarmentDetail, GarmentFacets, StylistSession, StylistSessionContext, StylistMessage } from './types'
+import type { Garment, GarmentDetail, GarmentFacets, Hairstyle, HairstyleDetail, HairstyleFacets, StylistSession, StylistSessionContext, StylistMessage } from './types'
 
 export interface GarmentListParams {
   q?: string
@@ -1131,6 +1131,130 @@ export function useAddGarmentImage() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['garments', vars.garmentId] })
     },
+  })
+}
+
+// ===== Hair =====
+
+export interface HairListParams {
+  q?: string
+  length?: string
+  texture?: string
+  style?: string
+  status?: string
+  character?: string
+  sort?: string
+  order?: string
+  limit?: number
+  offset?: number
+}
+
+function hairQueryString(params: HairListParams): string {
+  const p = new URLSearchParams()
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== '' && v !== null) p.set(k, String(v))
+  }
+  const s = p.toString()
+  return s ? `?${s}` : ''
+}
+
+export function useHairstyles(params: HairListParams = {}) {
+  return useQuery({
+    queryKey: ['hairstyles', params],
+    queryFn: () => fetchJSON<Hairstyle[]>(`/api/v1/hair${hairQueryString(params)}`),
+  })
+}
+
+export function useHairstyleFacets(params: HairListParams = {}) {
+  return useQuery({
+    queryKey: ['hairstyles', 'facets', params],
+    queryFn: () => fetchJSON<HairstyleFacets>(`/api/v1/hair/facets${hairQueryString(params)}`),
+  })
+}
+
+export function useHairstyle(id: string) {
+  return useQuery({
+    queryKey: ['hairstyles', id],
+    queryFn: () => fetchJSON<HairstyleDetail>(`/api/v1/hair/${id}`),
+    enabled: !!id,
+  })
+}
+
+export function useCreateHairstyle() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { name: string; length?: string; texture?: string; style?: string; color?: string }) =>
+      postJSON<Hairstyle>('/api/v1/hair', body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['hairstyles'] }) },
+  })
+}
+
+export function useUpdateHairstyle() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string } & Partial<Hairstyle>) =>
+      patchJSON<Hairstyle>(`/api/v1/hair/${id}`, body),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['hairstyles'] })
+      qc.invalidateQueries({ queryKey: ['hairstyles', vars.id] })
+    },
+  })
+}
+
+export function useDeleteHairstyle() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => fetch(`/api/v1/hair/${id}`, { method: 'DELETE' }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['hairstyles'] }) },
+  })
+}
+
+export function useAddHairstyleImage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ hairstyleId, file }: { hairstyleId: string; file: File }) => {
+      const fd = new FormData()
+      fd.append('file', file)
+      return postFormData<{ image_id: string }>(`/api/v1/hair/${hairstyleId}/images`, fd)
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['hairstyles', vars.hairstyleId] })
+    },
+  })
+}
+
+export function useAddHairstyleAffinity() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ hairstyleId, characterId }: { hairstyleId: string; characterId: string }) =>
+      postJSON<void>(`/api/v1/hair/${hairstyleId}/affinity`, { character_id: characterId }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['hairstyles', vars.hairstyleId] })
+    },
+  })
+}
+
+export function useRemoveHairstyleAffinity() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ hairstyleId, characterId }: { hairstyleId: string; characterId: string }) =>
+      fetch(`/api/v1/hair/${hairstyleId}/affinity/${characterId}`, { method: 'DELETE' }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['hairstyles', vars.hairstyleId] })
+    },
+  })
+}
+
+export function useBulkUpdateHairstyleStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { ids: string[]; status: string }) =>
+      fetch('/api/v1/hair/bulk-status', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['hairstyles'] }) },
   })
 }
 
