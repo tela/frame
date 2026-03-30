@@ -19,6 +19,7 @@ import { DatasetDetail } from '@/components/dataset-detail'
 import { ImportScreen } from '@/components/import-screen'
 import { ImagePreprocessor } from '@/components/image-preprocessor'
 import { ImageDetail } from '@/components/image-detail'
+import { Wardrobe } from '@/components/wardrobe'
 
 // Root
 const rootRoute = createRootRoute({
@@ -74,6 +75,13 @@ const mediaRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/media',
   component: MediaLibrary,
+})
+
+// Wardrobe
+const wardrobeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/wardrobe',
+  component: Wardrobe,
 })
 
 // Search
@@ -140,6 +148,7 @@ const routeTree = rootRoute.addChildren([
   triageRoute,
   studioRoute,
   mediaRoute,
+  wardrobeRoute,
   searchRoute,
   templatesRoute,
   tagsRoute,
