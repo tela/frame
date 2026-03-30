@@ -297,6 +297,47 @@ export interface GarmentFacets {
   status: FacetCounts
 }
 
+// Hairstyles
+export interface Hairstyle {
+  id: string
+  name: string
+  description: string
+  length: string
+  texture: string
+  style: string
+  color: string
+  tags: string[]
+  primary_image_id: string | null
+  source: string
+  provenance: string
+  source_url: string
+  source_site: string
+  status: string
+  created_at: string
+  updated_at: string
+  affinity_count?: number
+}
+
+export interface HairstyleDetail {
+  hairstyle: Hairstyle
+  images: HairstyleImage[]
+  affinity: string[]
+}
+
+export interface HairstyleImage {
+  hairstyle_id: string
+  image_id: string
+  sort_order: number
+  created_at: string
+}
+
+export interface HairstyleFacets {
+  length: FacetCounts
+  texture: FacetCounts
+  style: FacetCounts
+  status: FacetCounts
+}
+
 // Stylist Sessions
 export interface StylistSessionContext {
   screen?: string

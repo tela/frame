@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Editorial Archive | Hair Catalog</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-low": "#f3f4f3",
+                        "outline": "#777c7b",
+                        "surface": "#faf9f8",
+                        "on-primary-fixed": "#403f3f",
+                        "inverse-on-surface": "#9d9d9c",
+                        "secondary": "#5f5f5d",
+                        "surface-tint": "#5f5e5e",
+                        "on-surface-variant": "#5b605f",
+                        "on-secondary-fixed-variant": "#5b5c5a",
+                        "surface-container-highest": "#dfe3e2",
+                        "outline-variant": "#aeb3b2",
+                        "on-primary": "#faf7f6",
+                        "primary-dim": "#535252",
+                        "primary-container": "#e5e2e1",
+                        "error": "#9f403d",
+                        "tertiary-dim": "#3c5666",
+                        "primary-fixed": "#e5e2e1",
+                        "surface-variant": "#dfe3e2",
+                        "on-background": "#2f3333",
+                        "surface-container": "#edeeed",
+                        "inverse-primary": "#ffffff",
+                        "on-tertiary": "#f4faff",
+                        "primary-fixed-dim": "#d7d4d3",
+                        "tertiary-fixed-dim": "#c2def0",
+                        "secondary-fixed-dim": "#d5d4d2",
+                        "surface-dim": "#d6dbda",
+                        "background": "#faf9f8",
+                        "on-surface": "#2f3333",
+                        "tertiary-fixed": "#d0ecff",
+                        "on-secondary": "#faf9f6",
+                        "on-tertiary-fixed": "#2c4655",
+                        "on-error-container": "#752121",
+                        "secondary-fixed": "#e3e2e0",
+                        "primary": "#5f5e5e",
+                        "secondary-container": "#e3e2e0",
+                        "surface-container-high": "#e6e9e8",
+                        "on-tertiary-container": "#3e5868",
+                        "on-primary-fixed-variant": "#5c5b5b",
+                        "on-tertiary-fixed-variant": "#486272",
+                        "on-secondary-fixed": "#3f3f3e",
+                        "inverse-surface": "#0d0e0e",
+                        "tertiary-container": "#d0ecff",
+                        "tertiary": "#486272",
+                        "surface-container-lowest": "#ffffff",
+                        "error-dim": "#4e0309",
+                        "error-container": "#fe8983",
+                        "on-primary-container": "#525151",
+                        "on-error": "#fff7f6",
+                        "secondary-dim": "#535352",
+                        "surface-bright": "#faf9f8",
+                        "on-secondary-container": "#515250"
+                    },
+                    fontFamily: {
+                        "headline": ["Newsreader", "serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+            font-size: 20px;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #faf9f8;
+            color: #2f3333;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-background text-on-surface">
+<!-- Top Navigation Shell -->
+<nav class="bg-[#FAF9F8]/80 dark:bg-[#2F3333]/80 backdrop-blur-md text-[#2F3333] dark:text-[#FAF9F8] docked full-width top-0 sticky z-50 border-b border-[#2F3333]/5 dark:border-[#FAF9F8]/5 flex justify-between items-center w-full px-12 py-6 max-w-[1920px] mx-auto">
+<div class="flex items-center gap-12">
+<span class="font-serif text-2xl font-medium tracking-tight text-[#2F3333] dark:text-[#FAF9F8]">Editorial Archive</span>
+<div class="hidden md:flex gap-8 items-center">
+<a class="text-[#2F3333] dark:text-[#FAF9F8] font-semibold border-b border-[#2F3333] dark:border-[#FAF9F8] pb-1 font-serif italic text-lg hover:text-[#2F3333] dark:hover:text-[#FAF9F8] transition-colors duration-300" href="#">Library</a>
+<a class="text-[#8C8C8A] dark:text-[#8C8C8A] font-normal pb-1 font-serif italic text-lg hover:text-[#2F3333] dark:hover:text-[#FAF9F8] transition-colors duration-300" href="#">Wardrobe</a>
+<a class="text-[#8C8C8A] dark:text-[#8C8C8A] font-normal pb-1 font-serif italic text-lg hover:text-[#2F3333] dark:hover:text-[#FAF9F8] transition-colors duration-300" href="#">Eras</a>
+<a class="text-[#8C8C8A] dark:text-[#8C8C8A] font-normal pb-1 font-serif italic text-lg hover:text-[#2F3333] dark:hover:text-[#FAF9F8] transition-colors duration-300" href="#">Studio</a>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative hidden lg:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="bg-surface-container-low border-none pl-10 pr-4 py-2 text-sm w-64 focus:ring-1 focus:ring-on-surface rounded-sm" placeholder="Search archive..." type="text"/>
+</div>
+<span class="material-symbols-outlined cursor-pointer hover:opacity-70 transition-opacity" data-icon="account_circle">account_circle</span>
+</div>
+</nav>
+<div class="flex min-h-screen">
+<!-- Side Navigation Shell -->
+<aside class="hidden md:flex flex-col w-64 h-[calc(100vh-88px)] sticky top-[88px] p-8 bg-[#FAF9F8] dark:bg-[#2F3333] docked border-r border-[#2F3333]/10 overflow-y-auto hide-scrollbar">
+<div class="mb-10">
+<h2 class="font-serif text-xl italic text-[#2F3333] dark:text-[#FAF9F8]">Editorial</h2>
+<p class="font-sans text-xs tracking-widest uppercase text-[#8C8C8A] dark:text-[#8C8C8A]">Archive System</p>
+</div>
+<nav class="space-y-6">
+<!-- Status Filter -->
+<div>
+<span class="font-sans text-[10px] tracking-[0.2em] uppercase text-outline font-bold block mb-4">Status</span>
+<ul class="space-y-2">
+<li class="flex justify-between items-center text-xs group cursor-pointer">
+<span class="text-on-surface font-medium">ingested</span>
+<span class="text-outline tabular-nums">42</span>
+</li>
+<li class="flex justify-between items-center text-xs group cursor-pointer">
+<span class="text-outline">reviewed</span>
+<span class="text-outline tabular-nums">88</span>
+</li>
+<li class="flex justify-between items-center text-xs group cursor-pointer">
+<span class="text-outline">available</span>
+<span class="text-outline tabular-nums">12</span>
+</li>
+</ul>
+</div>
+<!-- Length Filter -->
+<div>
+<span class="font-sans text-[10px] tracking-[0.2em] uppercase text-outline font-bold block mb-4">Length</span>
+<ul class="space-y-2">
+<li class="flex justify-between items-center text-xs group cursor-pointer"><span class="text-outline">pixie</span><span class="text-outline tabular-nums">4</span></li>
+<li class="flex justify-between items-center text-xs group cursor-pointer"><span class="text-outline">short</span><span class="text-outline tabular-nums">18</span></li>
+<li class="flex justify-between items-center text-xs group cursor-pointer font-bold"><span class="text-on-surface">medium</span><span class="text-on-surface tabular-nums">54</span></li>
+<li class="flex justify-between items-center text-xs group cursor-pointer"><span class="text-outline">long</span><span class="text-outline tabular-nums">46</span></li>
+<li class="flex justify-between items-center text-xs group cursor-pointer"><span class="text-outline">very_long</span><span class="text-outline tabular-nums">20</span></li>
+</ul>
+</div>
+<!-- Texture Filter -->
+<div>
+<span class="font-sans text-[10px] tracking-[0.2em] uppercase text-outline font-bold block mb-4">Texture</span>
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 bg-surface-container text-[10px] uppercase tracking-wider text-on-surface-variant font-medium cursor-pointer hover:bg-surface-container-high transition-colors">straight</span>
+<span class="px-2 py-1 bg-surface-container text-[10px] uppercase tracking-wider text-on-surface-variant font-medium cursor-pointer hover:bg-surface-container-high transition-colors">wavy</span>
+<span class="px-2 py-1 bg-primary-container text-[10px] uppercase tracking-wider text-on-primary-container font-bold cursor-pointer">curly</span>
+<span class="px-2 py-1 bg-surface-container text-[10px] uppercase tracking-wider text-on-surface-variant font-medium cursor-pointer hover:bg-surface-container-high transition-colors">coily</span>
+<span class="px-2 py-1 bg-surface-container text-[10px] uppercase tracking-wider text-on-surface-variant font-medium cursor-pointer hover:bg-surface-container-high transition-colors">kinky</span>
+</div>
+</div>
+<!-- Style Filter -->
+<div>
+<span class="font-sans text-[10px] tracking-[0.2em] uppercase text-outline font-bold block mb-4">Style</span>
+<ul class="space-y-2">
+<li class="flex items-center gap-2 text-xs text-outline cursor-pointer hover:text-on-surface">
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
+                            updo
+                        </li>
+<li class="flex items-center gap-2 text-xs text-outline cursor-pointer hover:text-on-surface">
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
+                            down
+                        </li>
+<li class="flex items-center gap-2 text-xs text-on-surface font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-on-surface"></span>
+                            braids
+                        </li>
+</ul>
+</div>
+</nav>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 px-12 py-12">
+<!-- Header Section -->
+<header class="flex flex-col md:flex-row justify-between items-baseline mb-16 gap-6">
+<div>
+<h1 class="font-headline text-[3.5rem] leading-none mb-4 font-normal tracking-tight">Hair</h1>
+<div class="flex items-center gap-3">
+<span class="font-label text-xs tracking-widest uppercase text-outline">142 styles</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="font-label text-xs tracking-widest uppercase text-outline">3 characters</span>
+</div>
+</div>
+<button class="bg-on-surface text-inverse-primary px-6 py-3 font-label text-xs font-semibold tracking-widest uppercase hover:opacity-90 transition-opacity">
+                    + New Style
+                </button>
+</header>
+<!-- Grid Layout -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-16">
+<!-- Hairstyle Card 1 -->
+<div class="group cursor-pointer">
+<div class="aspect-[3/4] overflow-hidden bg-surface-container-low mb-6 relative">
+<img alt="Victory Rolls hairstyle" class="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" data-alt="Close-up studio portrait of elaborate vintage Victory Rolls hairstyle on a model with warm dramatic lighting and clean background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhZo45rP7CT0BrnAvDwLBorvm9em_QYRiBZaICZP07MZ1Gh3yn4cL_QiPA8tSRpbd3qZaYhH8K_fdw8euZTRkz5i_Nzr2594_kosXq7_FDV1a8a_wHSga27byutVbXKB3ZvaQRBWROP0pw312LkfdedJ4ylHRZoJhZeqfJg0KtB4aKQ4C_FyXmHtTcOJ8-V5EEG6wg5fpUuYV99B7ZhIBB3F9RZnqBaYDa6rTDKfQzDagqMxu3m-GISJOkiSzpzbqjwK4mFzuiNTM"/>
+<div class="absolute top-4 right-4 flex gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-green-500 shadow-sm" title="Available"></span>
+</div>
+</div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline text-xl italic font-medium tracking-tight">Victory Rolls</h3>
+<div class="flex items-center gap-1 text-[#8C8C8A]">
+<span class="material-symbols-outlined !text-sm">person</span>
+<span class="text-[10px] font-bold">1</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="font-label text-[10px] tracking-wider uppercase text-outline px-2 py-0.5 border border-outline/10">medium</span>
+<span class="font-label text-[10px] tracking-wider uppercase text-outline px-2 py-0.5 border border-outline/10">structured</span>
+</div>
+</div>
+<!-- Hairstyle Card 2 -->
+<div class="group cursor-pointer">
+<div class="aspect-[3/4] overflow-hidden bg-surface-container-low mb-6 relative">
+<img alt="Loose Beach Waves" class="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" data-alt="Artistic fashion shot of long loose beach waves hair flowing in the wind with soft golden hour natural sunlight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVdXqJIu996eA04vt8RKdtH_y4bVlfzUAyr7EZq-7tZRzzhArZyp-FvE10CfhQ8z5NYHmiL63dTL8IkAkhuKsJ5cNqfWWTsxyusA9pFWEGLzGsB7Hbn1yKJXAOxMbXKvvjfTtDb7mJMwrJ7XvSu9s1jq7VMys4KwY5KWHmFWg9dJXe0da5sah4mLFs9FlNfSsdnNwJIuDK3142uLDzho9VS7hqOK0JasiOotl3qOGqMkXwtpIMj5y291vfzm_11CaxXQ78tCrNcKg"/>
+<div class="absolute top-4 right-4 flex gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm" title="Reviewed"></span>
+</div>
+</div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline text-xl italic font-medium tracking-tight">Loose Beach Waves</h3>
+<div class="flex items-center gap-1 text-[#8C8C8A]">
+<span class="material-symbols-outlined !text-sm">person</span>
+<span class="text-[10px] font-bold">3</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="font-label text-[10px] tracking-wider uppercase text-outline px-2 py-0.5 border border-outline/10">long</span>
+<span class="font-label text-[10px] tracking-wider uppercase text-outline px-2 py-0.5 border border-outline/10">wavy</span>
+</div>
+</div>
+<!-- Hairstyle Card 3 -->
+<div class="group cursor-pointer">
+<div class="aspect-[3/4] overflow-hidden bg-surface-container-low mb-6 relative">
+<img alt="Sculptural Braids" class="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" data-alt="Detail of intricate architectural sculptural braids on dark hair against a minimalist off-white editorial background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcNrUgA1PZ98w2wzeOBnDxAsZ5dXD8T5tKufSayzD5IVXwJJ2vud4q4FTvUPV6xqpI8KKJcj0z2nqjpEbK-3IxlRPi4CvB26YElGBGmxHknLJBJTMBGuw_UnbqHrc7y1V5_Wc3G2aw5RW8_SVY9n42rKRowE3ulYOLvk3tR_R7ATknp08kXcbIMDC32TyfFABk-vJoJ_5GSfCtDw3mpzp69Aajh5oBOyeHakx-GNzPdbQX-0sc0F964BKHucJ4x3UqIRU3tBjBz-o"/>
+<div class="absolute top-4 right-4 flex gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-green-500 shadow-sm" title="Available"></span>
+</div>
+</div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline text-xl italic font-medium tracking-tight">Sculptural Braids</h3>
+<div class="flex items-center gap-1 text-[#8C8C8A]">
+<span class="material-symbols-outlined !text-sm">person</span>
+<span class="text-[10px] font-bold">2</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="font-label text-[10px] tracking-wider uppercase text-outline px-2 py-0.5 border border-outline/10">very_long</span>
+<span class="font-label text-[10px] tracking-wider uppercase text-outline px-2 py-0.5 border border-outline/10">coily</span>
+</div>
+</div>
+<!-- Hairstyle Card 4 -->
+<div class="group cursor-pointer">
+<div class="aspect-[3/4] overflow-hidden bg-surface-container-low mb-6 relative">
+<img alt="Minimalist Pixie" class="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" data-alt="Sharp high-fashion blonde pixie cut with precise edges and textured layers captured in high contrast black and white style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuADYVZf49JUj49RrH3WLBcnwvqqTnmVqVXk1h1jx2lVSByPAgQIzdCDYQVO69gio8R0la3J1VTmMMcJrDbIwGxCBg9_nNgdTLEwbrZaBtgrH3R8_DFr4oFw1-e2pCiAHfoRtZO8YOnOFwv8EpmADFuKQHpwWpTa2TFPFoJ_wGmuG7_k8z4tnEP9oWLnGpCGMK6ejBflezo4t0n29oZIhH4U0yUVKGWzbhzPUg8yoCyxi_5b7VN-JdBoXu4H0DSYTKKzC5jd8M1QWrg"/>
+<div class="absolute top-4 right-4 flex gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-gray-300 shadow-sm" title="Ingested"></span>
+</div>
+</div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline text-xl italic font-medium tracking-tight">Minimalist Pixie</h3>
+<div class="flex items-center gap-1 text-[#8C8C8A]">
+<span class="material-symbols-outlined !text-sm">person</span>
+<span class="text-[10px] font-bold">0</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="font-label text-[10px] tracking-wider uppercase text-outline px-2 py-0.5 border border-outline/10">pixie</span>
+<span class="font-label text-[10px] tracking-wider uppercase text-outline px-2 py-0.5 border border-outline/10">straight</span>
+</div>
+</div>
+<!-- Hairstyle Card 5 -->
+<div class="group cursor-pointer">
+<div class="aspect-[3/4] overflow-hidden bg-surface-container-low mb-6 relative">
+<img alt="Modern High Bun" class="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" data-alt="Back view of a sleek high bun hairstyle with wispy flyaways on a model wearing an editorial silk garment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbG3S4B7NEm5vKubxvxk6mNPtJlpbm9BUER5-cPt8vZW7I58hlU9bcbzRLYI2w3q5jJrbgnwashcDs_lTjuF6_UDinjBCjT2j1Mt_XgAYKOY7iaxlKTVcrzvOrZ4dhohLzrGR5JBhWtj__HBgIqS_uayUwE_XmrNfP9d7wxQIRnj-Dx6dv9WvJYqkS9nGbYce9_lve7EKf0cz-MORdS8idj6dON1v6sI6EUgC6qkTaqUfigmAzmeHVbBLPgyLodUV7BHd0Y3XfA0o"/>
+<div class="absolute top-4 right-4 flex gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-green-500 shadow-sm" title="Available"></span>
+</div>
+</div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline text-xl italic font-medium tracking-tight">Modern High Bun</h3>
+<div class="flex items-center gap-1 text-[#8C8C8A]">
+<span class="material-symbols-outlined !text-sm">person</span>
+<span class="text-[10px] font-bold">1</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="font-label text-[10px] tracking-wider uppercase text-outline px-2 py-0.5 border border-outline/10">medium</span>
+<span class="font-label text-[10px] tracking-wider uppercase text-outline px-2 py-0.5 border border-outline/10">updo</span>
+</div>
+</div>
+<!-- Hairstyle Card 6 -->
+<div class="group cursor-pointer">
+<div class="aspect-[3/4] overflow-hidden bg-surface-container-low mb-6 relative">
+<img alt="Botticelli Curls" class="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" data-alt="Lush cascades of long natural Botticelli curls with high shine and depth in deep chocolate brown tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuChuM2FV9k5_5aIKNjYcZ_mvQmKk1xGan51mljbls_lT4erG3qV4lIRC34ierqtPNf2Hj6vx9DD9-ym3p3YEZxyH4WfsMROzFQEtAZ2yiSfZbkYDqrDDLB9cKqrlLgf7QFi4aJJ7ZJbDW1QyRgEM3tvwuRfcZHqooG7eh5Lel-nfIDlWVQYhP7P-Dx0AaWeaCY6oLsg7483IR5rWkRfVrZwXZAK065WgLpeXi3GVQBV3GzubOkN9-8Z_0DBs7ZTkKvoT-QD6YZiGj8"/>
+<div class="absolute top-4 right-4 flex gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm" title="Reviewed"></span>
+</div>
+</div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline text-xl italic font-medium tracking-tight">Botticelli Curls</h3>
+<div class="flex items-center gap-1 text-[#8C8C8A]">
+<span class="material-symbols-outlined !text-sm">person</span>
+<span class="text-[10px] font-bold">2</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="font-label text-[10px] tracking-wider uppercase text-outline px-2 py-0.5 border border-outline/10">very_long</span>
+<span class="font-label text-[10px] tracking-wider uppercase text-outline px-2 py-0.5 border border-outline/10">curly</span>
+</div>
+</div>
+<!-- Hairstyle Card 7 -->
+<div class="group cursor-pointer">
+<div class="aspect-[3/4] overflow-hidden bg-surface-container-low mb-6 relative">
+<img alt="Textured Shag" class="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" data-alt="Editorial close-up of a messy textured shag haircut with curtain bangs and effortless cool-girl aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkpnWmfzQQbuZTDdo_xUXdukOHhIEYyze1Xc4j_WYovQLwNiA902Tx9HGzla0hkaLvt3bSaw5WhZKYhG8sL96uTWN6QiH16n6lK8yOyfSThOZIuzL7v7FzS5ATWP98Lwg9tYzyMq-M2xjsZxT8s2g5sqMx4pkeEKVvKcy93cNKQEAZrRH9hc8UbK_WuYh6xCwJrd6da9cqraxjPAAWi3_HQzpn3oRHXxNyniEimNhw4a_z0KmA2bh_Gig50bHUaHH_jkGdWhzKvw4"/>
+<div class="absolute top-4 right-4 flex gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-green-500 shadow-sm" title="Available"></span>
+</div>
+</div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline text-xl italic font-medium tracking-tight">Textured Shag</h3>
+<div class="flex items-center gap-1 text-[#8C8C8A]">
+<span class="material-symbols-outlined !text-sm">person</span>
+<span class="text-[10px] font-bold">1</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="font-label text-[10px] tracking-wider uppercase text-outline px-2 py-0.5 border border-outline/10">medium</span>
+<span class="font-label text-[10px] tracking-wider uppercase text-outline px-2 py-0.5 border border-outline/10">down</span>
+</div>
+</div>
+<!-- Hairstyle Card 8 -->
+<div class="group cursor-pointer">
+<div class="aspect-[3/4] overflow-hidden bg-surface-container-low mb-6 relative">
+<img alt="Regal Ponytail" class="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" data-alt="Profile shot of a sleek high-shine ponytail wrapped with a strand of hair, minimal and powerful editorial style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDpeb44SyFkmbspmS9vZ9ChcCBu8lla1zRW_PGL0oBC3RXxKzRMH5rpX7kdR49LWW1KtaFd_Hap98WykrjtqozwxGBfW-OuQhKrD5nI5Gp04rXsemqalcN5FKIFlq3kcJvNMUj5tH51VPZ-g8cxnq_iOVYgJyVbd7PegYuoc8Tw8itPMH9rypmHKdsi2htP2umf5Zi5wiTStoP6L5N2mGOvi1Slsj8kmWuJS2dJLHVG4DtbYzEt5yQOG50mqDCxo89vcrDP4oQm1jQ"/>
+<div class="absolute top-4 right-4 flex gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-gray-300 shadow-sm" title="Ingested"></span>
+</div>
+</div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline text-xl italic font-medium tracking-tight">Regal Ponytail</h3>
+<div class="flex items-center gap-1 text-[#8C8C8A]">
+<span class="material-symbols-outlined !text-sm">person</span>
+<span class="text-[10px] font-bold">1</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="font-label text-[10px] tracking-wider uppercase text-outline px-2 py-0.5 border border-outline/10">long</span>
+<span class="font-label text-[10px] tracking-wider uppercase text-outline px-2 py-0.5 border border-outline/10">ponytail</span>
+</div>
+</div>
+</div>
+<!-- Footer Pagination Placeholder -->
+<footer class="mt-24 pt-12 border-t border-outline/5 flex justify-between items-center">
+<span class="font-label text-[10px] tracking-widest uppercase text-outline">Viewing 1-8 of 142 Styles</span>
+<div class="flex gap-8">
+<button class="font-label text-[10px] tracking-widest uppercase text-outline hover:text-on-surface transition-colors cursor-pointer">Previous</button>
+<button class="font-label text-[10px] tracking-widest uppercase text-on-surface font-bold cursor-pointer underline underline-offset-8">Next</button>
+</div>
+</footer>
+</main>
+</div>
+<!-- Mobile Navigation Shell (Suppressed on large screens) -->
+<div class="md:hidden fixed bottom-0 left-0 right-0 bg-surface-container-lowest backdrop-blur-lg border-t border-outline/5 z-50 flex justify-around items-center py-4 px-6">
+<span class="material-symbols-outlined text-on-surface">auto_stories</span>
+<span class="material-symbols-outlined text-outline">checkroom</span>
+<span class="material-symbols-outlined text-outline">history_edu</span>
+<span class="material-symbols-outlined text-outline">theater_comedy</span>
+</div>
+</body></html>
