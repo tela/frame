@@ -14,6 +14,8 @@ import (
 	"github.com/tela/frame/pkg/character"
 	"github.com/tela/frame/pkg/config"
 	"github.com/tela/frame/pkg/database"
+	"github.com/tela/frame/pkg/garment"
+	"github.com/tela/frame/pkg/hairstyle"
 	"github.com/tela/frame/pkg/id"
 	"github.com/tela/frame/pkg/image"
 	"github.com/tela/frame/pkg/look"
@@ -50,6 +52,8 @@ func cmdSeed() {
 	charStore := character.NewStore(db.DB)
 	imgStore := image.NewStore(db.DB)
 	mediaStore := media.NewStore(db.DB)
+	garmentStore := garment.NewStore(db.DB)
+	hairstyleStore := hairstyle.NewStore(db.DB)
 	loraStore := lora.NewStore(db.DB)
 	lookStore := look.NewStore(db.DB)
 	ingester := image.NewIngester(imgStore, cfg.Root)
@@ -163,31 +167,102 @@ func cmdSeed() {
 		fmt.Printf("    images: 5 ingested (2 face ref, 1 body ref, 2 curated)\n")
 	}
 
-	// Wardrobe items
+	// Legacy wardrobe media items (for backward compat with media library)
 	wardrobeItems := []struct{ name string }{
 		{"Black Silk Dress"},
 		{"White Linen Blouse"},
-		{"Lace Lingerie Set"},
-		{"Red Evening Gown"},
-		{"Denim Jacket"},
-		{"Black Heels"},
-		{"Swimsuit — Black"},
-		{"Swimsuit — White"},
 	}
 	for _, w := range wardrobeItems {
 		item := &media.Item{
-			ID:          id.New(),
-			ContentType: media.ContentWardrobe,
-			Name:        w.name,
-			CreatedAt:   now,
-			UpdatedAt:   now,
+			ID: id.New(), ContentType: media.ContentWardrobe, Name: w.name, CreatedAt: now, UpdatedAt: now,
 		}
-		if err := mediaStore.Create(item); err != nil {
-			fmt.Printf("  skip wardrobe %s: %v\n", w.name, err)
+		mediaStore.Create(item)
+	}
+
+	// Garments (new wardrobe catalog)
+	type seedGarment struct {
+		name, category, occasion, era, aesthetic, dominant, material, color string
+	}
+	garments := []seedGarment{
+		{"Midnight Silk Slip Dress", "dress", "formal", "contemporary", "minimalist", "elegance", "silk", "midnight navy"},
+		{"Vintage Lace Bodysuit", "lingerie", "intimate", "vintage", "dark_romantic", "vulnerability", "lace", "ivory"},
+		{"Oversized Blazer", "outerwear", "formal", "contemporary", "minimalist", "power", "wool", "charcoal"},
+		{"Red Sundress", "dress", "casual", "contemporary", "", "softness", "cotton", "cherry red"},
+		{"Leather Harness Top", "top", "provocative", "contemporary", "maximalist", "provocation", "leather", "black"},
+		{"High-Waist Trousers", "bottom", "formal", "timeless", "minimalist", "elegance", "wool", "cream"},
+		{"Stiletto Heels", "footwear", "formal", "timeless", "", "power", "patent leather", "black"},
+		{"Pearl Drop Earrings", "accessory", "formal", "timeless", "minimalist", "elegance", "pearl", "white"},
+		{"Mesh Bodysuit", "lingerie", "intimate", "contemporary", "", "provocation", "mesh", "black"},
+		{"Denim Jacket", "outerwear", "casual", "90s", "", "comfort", "denim", "medium wash"},
+		{"Silk Kimono Robe", "outerwear", "loungewear", "timeless", "", "softness", "silk", "dusty rose"},
+		{"Athletic Bralette", "lingerie", "athletic", "contemporary", "minimalist", "comfort", "nylon", "grey"},
+	}
+	var garmentIDs []string
+	for _, sg := range garments {
+		g := &garment.Garment{
+			ID: id.New(), Name: sg.name, Category: sg.category,
+			OccasionEnergy: sg.occasion, Era: sg.era, AestheticCluster: sg.aesthetic,
+			DominantSignal: sg.dominant, Material: sg.material, Color: sg.color,
+			Source: "manual", Status: "available",
+		}
+		if err := garmentStore.Create(g); err != nil {
+			fmt.Printf("  skip garment %s: %v\n", sg.name, err)
 			continue
 		}
-		fmt.Printf("  wardrobe: %s\n", w.name)
+		garmentIDs = append(garmentIDs, g.ID)
+		fmt.Printf("  garment: %s (%s, %s)\n", sg.name, sg.category, sg.occasion)
 	}
+
+	// Hairstyles
+	type seedHair struct {
+		name, length, texture, style, color string
+	}
+	hairs := []seedHair{
+		{"Victory Rolls", "medium", "wavy", "structured", "honey blonde"},
+		{"Loose Beach Waves", "long", "wavy", "down", "sun-kissed brown"},
+		{"Sculptural Braids", "very_long", "curly", "braids", "jet black"},
+		{"Minimalist Pixie", "pixie", "straight", "structured", "platinum"},
+		{"Modern High Bun", "medium", "straight", "updo", "chestnut"},
+		{"Botticelli Curls", "very_long", "curly", "down", "auburn"},
+		{"Textured Shag", "medium", "wavy", "loose", "dark brown"},
+		{"Regal Ponytail", "long", "straight", "ponytail", "black"},
+		{"Messy Half-Up", "long", "wavy", "half_up", "caramel highlights"},
+		{"Sleek Bob", "short", "straight", "down", "blue-black"},
+	}
+	var hairstyleIDs []string
+	for _, sh := range hairs {
+		h := &hairstyle.Hairstyle{
+			ID: id.New(), Name: sh.name, Length: sh.length,
+			Texture: sh.texture, Style: sh.style, Color: sh.color,
+			Source: "manual", Status: "available",
+		}
+		if err := hairstyleStore.Create(h); err != nil {
+			fmt.Printf("  skip hairstyle %s: %v\n", sh.name, err)
+			continue
+		}
+		hairstyleIDs = append(hairstyleIDs, h.ID)
+		fmt.Printf("  hairstyle: %s (%s, %s)\n", sh.name, sh.length, sh.texture)
+	}
+
+	// Character affinity — assign some garments and hairstyles to Elara
+	chars, _ := charStore.List()
+	var elaraID string
+	for _, c := range chars {
+		if c.DisplayName == "Elara" {
+			elaraID = c.ID
+			// Assign first 4 garments to Elara
+			for i := 0; i < 4 && i < len(garmentIDs); i++ {
+				garmentStore.AddAffinity(garmentIDs[i], c.ID)
+			}
+			// Assign first 3 hairstyles to Elara
+			for i := 0; i < 3 && i < len(hairstyleIDs); i++ {
+				hairstyleStore.AddAffinity(hairstyleIDs[i], c.ID)
+			}
+			fmt.Printf("  affinity: 4 garments + 3 hairstyles → %s\n", c.DisplayName)
+			break
+		}
+	}
+	_ = elaraID
 
 	// LoRAs
 	loras := []struct {
@@ -220,32 +295,20 @@ func cmdSeed() {
 		fmt.Printf("  lora: %s (%s, %s)\n", l.name, l.category, l.rating)
 	}
 
-	// Create a default look for the first character (Elara)
-	// List characters to find Elara's ID
-	chars, _ := charStore.List()
-	for _, c := range chars {
-		if c.DisplayName == "Elara" {
-			// Get wardrobe items
-			wardrobeList, _ := mediaStore.ListByType(media.ContentWardrobe)
-			var garmentIDs []string
-			for _, w := range wardrobeList {
-				if w.Name == "Black Silk Dress" || w.Name == "Black Heels" || w.Name == "Lace Lingerie Set" {
-					garmentIDs = append(garmentIDs, w.ID)
-				}
-			}
-			idsJSON, _ := json.Marshal(garmentIDs)
-			lk := &look.Look{
-				ID:              id.New(),
-				CharacterID:     c.ID,
-				Name:            "Casting Day",
-				WardrobeItemIDs: string(idsJSON),
-				IsDefault:       true,
-				CreatedAt:       nowStr,
-			}
-			if err := lookStore.Create(lk); err == nil {
-				fmt.Printf("  look: %s for %s (%d garments)\n", lk.Name, c.DisplayName, len(garmentIDs))
-			}
-			break
+	// Create a default look for Elara using garment IDs
+	if elaraID != "" && len(garmentIDs) >= 3 {
+		lookGarmentIDs := garmentIDs[:3]
+		idsJSON, _ := json.Marshal(lookGarmentIDs)
+		lk := &look.Look{
+			ID:              id.New(),
+			CharacterID:     elaraID,
+			Name:            "Casting Day",
+			WardrobeItemIDs: string(idsJSON),
+			IsDefault:       true,
+			CreatedAt:       nowStr,
+		}
+		if err := lookStore.Create(lk); err == nil {
+			fmt.Printf("  look: Casting Day for Elara (%d garments)\n", len(lookGarmentIDs))
 		}
 	}
 
