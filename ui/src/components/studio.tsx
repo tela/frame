@@ -8,6 +8,47 @@ type Workflow = 'txt2img' | 'multi_ref' | 'img2img' | 'pose_transfer' | 'upscale
 type Tier = 'cheap' | 'complex' | 'frontier'
 type ContentRating = 'sfw' | 'nsfw'
 
+interface PromptTemplate {
+  value: string
+  label: string
+  prompt: string
+  negative: string
+}
+
+const TEMPLATES: PromptTemplate[] = [
+  { value: '', label: 'Custom', prompt: '', negative: '' },
+  {
+    value: 'headshot',
+    label: 'Headshot',
+    prompt: 'professional headshot portrait, soft studio lighting, shallow depth of field, neutral background, sharp focus on eyes, natural expression',
+    negative: 'full body, hands, deformed, blurry, low quality, watermark, text',
+  },
+  {
+    value: 'headshot_editorial',
+    label: 'Headshot — Editorial',
+    prompt: 'editorial headshot portrait, dramatic side lighting, high contrast, moody atmosphere, confident expression, fashion magazine quality',
+    negative: 'full body, hands, deformed, blurry, low quality, watermark, text, flat lighting',
+  },
+  {
+    value: 'portrait_half',
+    label: 'Half-Body Portrait',
+    prompt: 'half-body portrait from waist up, natural lighting, clean composition, relaxed pose, detailed skin texture',
+    negative: 'full body, legs, deformed, blurry, low quality, watermark, text',
+  },
+  {
+    value: 'full_body',
+    label: 'Full Body',
+    prompt: 'full body portrait, standing pose, even studio lighting, full figure visible head to toe, clean background',
+    negative: 'cropped, cut off, deformed, blurry, low quality, watermark, text',
+  },
+  {
+    value: 'detail_face',
+    label: 'Detail — Face Close-up',
+    prompt: 'extreme close-up face portrait, macro detail, sharp focus on skin texture and eyes, soft diffused lighting',
+    negative: 'full body, hands, deformed, blurry, low quality, watermark, text',
+  },
+]
+
 const WORKFLOWS: { value: Workflow; label: string; description: string }[] = [
   { value: 'txt2img', label: 'Text to Image', description: 'Generate from prompt only' },
   { value: 'multi_ref', label: 'Multi-Reference', description: 'Use face + body reference images' },
@@ -17,9 +58,9 @@ const WORKFLOWS: { value: Workflow; label: string; description: string }[] = [
 ]
 
 const TIERS: { value: Tier; label: string }[] = [
-  { value: 'cheap', label: 'Quick' },
-  { value: 'complex', label: 'Standard' },
-  { value: 'frontier', label: 'Premium' },
+  { value: 'cheap', label: 'Lo' },
+  { value: 'complex', label: 'Mid' },
+  { value: 'frontier', label: 'Hi' },
 ]
 
 const DIMENSIONS: { label: string; w: number; h: number }[] = [
@@ -46,6 +87,7 @@ export function Studio() {
   const { data: loras } = useLoras()
   const generate = useGenerate()
 
+  const [template, setTemplate] = useState('')
   const [prompt, setPrompt] = useState('')
   const [negativePrompt, setNegativePrompt] = useState('')
   const [workflow, setWorkflow] = useState<Workflow>('txt2img')
@@ -59,6 +101,7 @@ export function Studio() {
   const [denoiseStrength, setDenoiseStrength] = useState(0.6)
   const [showParams, setShowParams] = useState(false)
   const [sessionImages, setSessionImages] = useState<GeneratedImage[]>([])
+  const [panelOpen, setPanelOpen] = useState(true)
   const [showRefPicker, setShowRefPicker] = useState(false)
   const [showSourcePicker, setShowSourcePicker] = useState(false)
   const [selectedRefs, setSelectedRefs] = useState<string[]>([])
@@ -128,19 +171,40 @@ export function Studio() {
 
   return (
     <div className="flex h-full">
+      {/* Collapse Toggle */}
+      {!panelOpen && (
+        <button
+          onClick={() => setPanelOpen(true)}
+          className="flex-shrink-0 w-12 border-r border-border-subtle bg-background flex flex-col items-center pt-6 gap-3 hover:bg-surface transition-colors"
+          title="Show studio panel"
+        >
+          <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+          <span className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted [writing-mode:vertical-lr]">Studio</span>
+        </button>
+      )}
+
       {/* Configuration Panel (Left) */}
-      <aside className="w-[400px] flex-shrink-0 border-r border-border-subtle bg-background flex flex-col">
-        <div className="px-8 py-6 border-b border-border-subtle">
-          <h2 className="font-display text-3xl tracking-display">Studio</h2>
-          <p className="text-muted text-sm mt-1">
-            {character?.display_name || character?.name}{era ? ` — ${era.label}` : ''}
-          </p>
-          {!bifrostAvailable && (
-            <p className="text-accent text-xs mt-2 flex items-center gap-1">
-              <span className="material-symbols-outlined text-[14px]">warning</span>
-              Bifrost unavailable — generation disabled
+      <aside className={`w-[480px] flex-shrink-0 border-r border-border-subtle bg-background flex flex-col ${panelOpen ? '' : 'hidden'}`}>
+        <div className="px-8 py-6 border-b border-border-subtle flex items-start justify-between">
+          <div>
+            <h2 className="font-display text-3xl tracking-display">Studio</h2>
+            <p className="text-muted text-sm mt-1">
+              {character?.display_name || character?.name}{era ? ` — ${era.label}` : ''}
             </p>
-          )}
+            {!bifrostAvailable && (
+              <p className="text-accent text-xs mt-2 flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">warning</span>
+                Bifrost unavailable — generation disabled
+              </p>
+            )}
+          </div>
+          <button
+            onClick={() => setPanelOpen(false)}
+            className="text-muted hover:text-primary transition-colors mt-1"
+            title="Collapse panel"
+          >
+            <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-6">
@@ -162,16 +226,16 @@ export function Studio() {
             <p className="text-[11px] text-muted">{WORKFLOWS.find((w) => w.value === workflow)?.description}</p>
           </div>
 
-          {/* Content Rating + Tier */}
-          <div className="flex gap-3">
-            <div className="flex-1 flex flex-col gap-2">
+          {/* Content Rating + Quality */}
+          <div className="flex gap-4 items-end">
+            <div className="flex flex-col gap-2">
               <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Content</label>
               <div className="flex">
                 {(['sfw', 'nsfw'] as const).map((cr) => (
                   <button
                     key={cr}
                     onClick={() => setContentRating(cr)}
-                    className={`flex-1 py-2 text-[11px] uppercase font-bold tracking-[0.1em] border transition-colors ${
+                    className={`w-16 py-2 text-[11px] uppercase font-bold tracking-[0.1em] border transition-colors ${
                       contentRating === cr
                         ? cr === 'nsfw' ? 'bg-accent text-white border-accent' : 'bg-on-surface text-background border-on-surface'
                         : 'bg-transparent text-muted border-border-subtle hover:border-on-surface'
@@ -182,14 +246,14 @@ export function Studio() {
                 ))}
               </div>
             </div>
-            <div className="flex-1 flex flex-col gap-2">
+            <div className="flex flex-col gap-2">
               <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Quality</label>
               <div className="flex">
                 {TIERS.map((t) => (
                   <button
                     key={t.value}
                     onClick={() => setTier(t.value)}
-                    className={`flex-1 py-2 text-[11px] uppercase font-bold tracking-[0.1em] border transition-colors ${
+                    className={`w-14 py-2 text-[11px] uppercase font-bold tracking-[0.1em] border transition-colors ${
                       tier === t.value
                         ? 'bg-on-surface text-background border-on-surface'
                         : 'bg-transparent text-muted border-border-subtle hover:border-on-surface'
@@ -199,6 +263,31 @@ export function Studio() {
                   </button>
                 ))}
               </div>
+            </div>
+          </div>
+
+          {/* Template */}
+          <div className="flex flex-col gap-2">
+            <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Template</label>
+            <div className="relative">
+              <select
+                value={template}
+                onChange={(e) => {
+                  const t = TEMPLATES.find((t) => t.value === e.target.value)
+                  setTemplate(e.target.value)
+                  if (t && t.value) {
+                    const prefix = era?.prompt_prefix ? `${era.prompt_prefix}, ` : ''
+                    setPrompt(prefix + t.prompt)
+                    setNegativePrompt(t.negative)
+                  }
+                }}
+                className="w-full appearance-none bg-transparent border border-border-subtle py-2.5 px-3 text-sm focus:outline-none focus:border-primary cursor-pointer"
+              >
+                {TEMPLATES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted text-[18px]">expand_more</span>
             </div>
           </div>
 
