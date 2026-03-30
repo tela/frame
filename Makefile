@@ -2,7 +2,7 @@ BINARY = frame
 CMD = ./cmd/frame
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 LDFLAGS = -ldflags "-X main.version=$(VERSION)"
-DRIVE ?=
+DRIVE ?= /Volumes/FRAME
 
 .PHONY: build build-mac-arm build-mac-amd build-linux-amd build-linux-arm \
         dev dev-ui test clean ui deploy smoke
@@ -55,36 +55,40 @@ clean:
 
 deploy: _check-drive build
 	@echo "Deploying Frame $(VERSION) to $(DRIVE)..."
-	@cp $(BINARY) "$(DRIVE)/frame"
-	@chmod +x "$(DRIVE)/frame"
-	@mkdir -p "$(DRIVE)/assets/characters"
-	@mkdir -p "$(DRIVE)/assets/references/images"
-	@mkdir -p "$(DRIVE)/assets/references/thumbs"
-	@mkdir -p "$(DRIVE)/assets/exports"
-	@if [ ! -f "$(DRIVE)/frame.toml" ]; then \
-		echo '# Frame configuration' > "$(DRIVE)/frame.toml"; \
-		echo 'port = 7890' >> "$(DRIVE)/frame.toml"; \
-		echo '' >> "$(DRIVE)/frame.toml"; \
-		echo '# Bifrost integration (image generation)' >> "$(DRIVE)/frame.toml"; \
-		echo 'bifrost_url = "http://localhost:9090"' >> "$(DRIVE)/frame.toml"; \
-		echo '' >> "$(DRIVE)/frame.toml"; \
-		echo '# Fig integration (character publishing)' >> "$(DRIVE)/frame.toml"; \
-		echo 'fig_url = "http://localhost:7700"' >> "$(DRIVE)/frame.toml"; \
-		echo "Created $(DRIVE)/frame.toml"; \
+	@mkdir -p "$(DRIVE)/bin"
+	@cp $(BINARY) "$(DRIVE)/bin/frame"
+	@chmod +x "$(DRIVE)/bin/frame"
+	@mkdir -p "$(DRIVE)/frame/cache/thumbs"
+	@mkdir -p "$(DRIVE)/assets/source/incoming"
+	@mkdir -p "$(DRIVE)/assets/source/managed/characters"
+	@mkdir -p "$(DRIVE)/assets/source/managed/pool"
+	@mkdir -p "$(DRIVE)/assets/generated/characters"
+	@mkdir -p "$(DRIVE)/models/lora"
+	@mkdir -p "$(DRIVE)/models/ipadapter"
+	@mkdir -p "$(DRIVE)/models/voice"
+	@mkdir -p "$(DRIVE)/models/llm"
+	@if [ ! -f "$(DRIVE)/frame/frame.toml" ]; then \
+		echo '# Frame configuration' > "$(DRIVE)/frame/frame.toml"; \
+		echo 'port = 7890' >> "$(DRIVE)/frame/frame.toml"; \
+		echo '' >> "$(DRIVE)/frame/frame.toml"; \
+		echo '# Bifrost integration (image generation)' >> "$(DRIVE)/frame/frame.toml"; \
+		echo 'bifrost_url = "http://localhost:9090"' >> "$(DRIVE)/frame/frame.toml"; \
+		echo '' >> "$(DRIVE)/frame/frame.toml"; \
+		echo '# Fig integration (character publishing)' >> "$(DRIVE)/frame/frame.toml"; \
+		echo 'fig_url = "http://localhost:7700"' >> "$(DRIVE)/frame/frame.toml"; \
+		echo "Created $(DRIVE)/frame/frame.toml"; \
 	fi
 	@echo ""
 	@echo "=== Deploy complete ==="
-	@echo "Binary:  $(DRIVE)/frame ($(VERSION))"
-	@echo "Config:  $(DRIVE)/frame.toml"
-	@echo "Data:    $(DRIVE)/assets/"
+	@echo "Binary:  $(DRIVE)/bin/frame ($(VERSION))"
+	@echo "Config:  $(DRIVE)/frame/frame.toml"
+	@echo "DB:      $(DRIVE)/frame/frame.db (created on first run)"
+	@echo "Assets:  $(DRIVE)/assets/"
 	@echo ""
-	@echo "To start:  cd $(DRIVE) && ./frame"
-	@echo "To stop:   pkill frame"
+	@echo "To start:  cd $(DRIVE)/frame && ../bin/frame"
+	@echo "To stop:   frame stop"
 
 _check-drive:
-ifndef DRIVE
-	$(error DRIVE is not set. Usage: make deploy DRIVE=/Volumes/YOUR_DRIVE)
-endif
 	@if [ ! -d "$(DRIVE)" ]; then \
 		echo "Error: $(DRIVE) does not exist or is not mounted"; \
 		exit 1; \
