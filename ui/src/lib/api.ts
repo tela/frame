@@ -998,7 +998,7 @@ export function avatarUrl(characterId: string) {
 
 // ===== Wardrobe (Garments) =====
 
-import type { Garment, GarmentDetail, GarmentFacets } from './types'
+import type { Garment, GarmentDetail, GarmentFacets, StylistSession, StylistSessionContext, StylistMessage } from './types'
 
 export interface GarmentListParams {
   q?: string
@@ -1130,6 +1130,66 @@ export function useAddGarmentImage() {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['garments', vars.garmentId] })
+    },
+  })
+}
+
+// ===== Stylist =====
+
+export function useStylistSessions() {
+  return useQuery({
+    queryKey: ['stylist', 'sessions'],
+    queryFn: () => fetchJSON<StylistSession[]>('/api/v1/stylist/sessions'),
+  })
+}
+
+export function useStylistSession(id: string | null) {
+  return useQuery({
+    queryKey: ['stylist', 'sessions', id],
+    queryFn: () => fetchJSON<StylistSession>(`/api/v1/stylist/sessions/${id}`),
+    enabled: !!id,
+    refetchInterval: 3000,
+  })
+}
+
+export function useActiveStylistSession() {
+  return useQuery({
+    queryKey: ['stylist', 'active'],
+    queryFn: () => fetchJSON<StylistSession | null>('/api/v1/stylist/sessions/active'),
+    refetchInterval: 5000,
+  })
+}
+
+export function useStartStylistSession() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (context: StylistSessionContext) =>
+      postJSON<StylistSession>('/api/v1/stylist/sessions', { context }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['stylist'] })
+    },
+  })
+}
+
+export function useEndStylistSession() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) =>
+      fetch(`/api/v1/stylist/sessions/${id}`, { method: 'PATCH' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['stylist'] })
+    },
+  })
+}
+
+export function useSendStylistMessage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ sessionId, content }: { sessionId: string; content: string }) =>
+      postJSON<StylistMessage>(`/api/v1/stylist/sessions/${sessionId}/messages`, { content }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['stylist', 'sessions', vars.sessionId] })
+      qc.invalidateQueries({ queryKey: ['stylist', 'active'] })
     },
   })
 }

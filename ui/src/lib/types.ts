@@ -297,6 +297,36 @@ export interface GarmentFacets {
   status: FacetCounts
 }
 
+// Stylist Sessions
+export interface StylistSessionContext {
+  screen?: string
+  character_id?: string
+  era_id?: string
+}
+
+export interface StylistMessage {
+  id: string
+  role: 'user' | 'stylist'
+  content: string
+  images?: StylistMessageImage[]
+  tool_activity?: string
+  sent_at: string
+}
+
+export interface StylistMessageImage {
+  id: string
+  thumb_url: string
+  full_url: string
+}
+
+export interface StylistSession {
+  id: string
+  context: StylistSessionContext
+  messages: StylistMessage[] | null
+  started_at: string
+  ended_at: string | null
+}
+
 // Reference Package
 export interface RefImage {
   image_id: string

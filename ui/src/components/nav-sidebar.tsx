@@ -1,5 +1,6 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useFigStatus, useBifrostStatus } from '@/lib/api'
+import { StylistTriggerButton } from '@/components/stylist-drawer'
 
 const navItems = [
   { to: '/characters', icon: 'group', label: 'Character Library' },
@@ -52,6 +53,10 @@ export function NavSidebar() {
             </Link>
           )
         })}
+      </div>
+
+      <div className="px-8 mb-4">
+        <StylistTriggerButton />
       </div>
 
       <div className="px-8 mt-auto flex flex-col gap-6">

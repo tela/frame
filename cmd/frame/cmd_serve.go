@@ -23,6 +23,7 @@ import (
 	"github.com/tela/frame/pkg/preprocess"
 	"github.com/tela/frame/pkg/server"
 	"github.com/tela/frame/pkg/shoot"
+	"github.com/tela/frame/pkg/stylist"
 	"github.com/tela/frame/pkg/tag"
 	"github.com/tela/frame/pkg/template"
 )
@@ -54,6 +55,7 @@ func cmdServe() {
 	loraStore := lora.NewStore(db.DB)
 	poseSetStore := poseset.NewStore(db.DB)
 	garmentStore := garment.NewStore(db.DB)
+	stylistStore := stylist.NewSessionStore(cfg.Root)
 	ingester := image.NewIngester(imgStore, cfg.Root)
 
 	// Bifrost client (optional)
@@ -94,6 +96,7 @@ func cmdServe() {
 		Loras:      loraStore,
 		PoseSet:    poseSetStore,
 		Garments:   garmentStore,
+		Stylist:    stylistStore,
 		Bifrost:    bifrostClient,
 		Fig:        figClient,
 		RootPath:   cfg.Root,

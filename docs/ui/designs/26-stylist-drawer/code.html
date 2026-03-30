@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Instrument+Sans:ital,wght@0,400..700;1,400..700&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "inverse-on-surface": "#9d9d9c",
+              "on-tertiary": "#f4faff",
+              "primary-fixed-dim": "#d7d4d3",
+              "on-surface": "#2f3333",
+              "primary": "#5f5e5e",
+              "on-secondary": "#faf9f6",
+              "surface-container": "#edeeed",
+              "surface-container-lowest": "#ffffff",
+              "secondary-fixed-dim": "#d5d4d2",
+              "surface-variant": "#dfe3e2",
+              "surface-tint": "#5f5e5e",
+              "on-secondary-fixed": "#3f3f3e",
+              "surface": "#faf9f8",
+              "on-secondary-fixed-variant": "#5b5c5a",
+              "on-primary-fixed-variant": "#5c5b5b",
+              "tertiary-fixed": "#d0ecff",
+              "primary-fixed": "#e5e2e1",
+              "surface-container-highest": "#dfe3e2",
+              "on-primary": "#faf7f6",
+              "error-container": "#fe8983",
+              "on-primary-container": "#525151",
+              "surface-dim": "#d6dbda",
+              "error": "#9f403d",
+              "surface-container-high": "#e6e9e8",
+              "on-primary-fixed": "#403f3f",
+              "error-dim": "#4e0309",
+              "on-surface-variant": "#5b605f",
+              "tertiary-fixed-dim": "#c2def0",
+              "outline": "#777c7b",
+              "outline-variant": "#aeb3b2",
+              "on-error": "#fff7f6",
+              "background": "#faf9f8",
+              "secondary": "#5f5f5d",
+              "tertiary-container": "#d0ecff",
+              "inverse-primary": "#ffffff",
+              "on-tertiary-container": "#3e5868",
+              "tertiary": "#486272",
+              "surface-container-low": "#f3f4f3",
+              "secondary-dim": "#535352",
+              "tertiary-dim": "#3c5666",
+              "secondary-fixed": "#e3e2e0",
+              "on-tertiary-fixed": "#2c4655",
+              "primary-dim": "#535252",
+              "primary-container": "#e5e2e1",
+              "on-secondary-container": "#515250",
+              "on-background": "#2f3333",
+              "on-error-container": "#752121",
+              "surface-bright": "#faf9f8",
+              "on-tertiary-fixed-variant": "#486272",
+              "inverse-surface": "#0d0e0e",
+              "secondary-container": "#e3e2e0"
+            },
+            fontFamily: {
+              "headline": ["Newsreader"],
+              "body": ["Inter"],
+              "label": ["Inter"],
+              "serif": ["Newsreader"],
+              "sans": ["Instrument Sans"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+            font-size: 20px;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FAF9F8;
+            color: #2F3333;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-surface overflow-hidden">
+<!-- Background Wardrobe Library (Screen 85 Proxy) -->
+<main class="fixed inset-0 flex flex-col p-8 opacity-40 grayscale pointer-events-none">
+<header class="flex justify-between items-end mb-24">
+<div>
+<h1 class="font-serif text-5xl tracking-tight text-on-surface">Wardrobe Archive</h1>
+<p class="font-sans text-xs uppercase tracking-widest mt-4 text-muted-metadata">Autumn/Winter 2024 Collection</p>
+</div>
+<div class="flex gap-4">
+<div class="h-10 w-48 bg-surface-container"></div>
+<div class="h-10 w-10 bg-surface-container"></div>
+</div>
+</header>
+<div class="grid grid-cols-4 gap-12">
+<div class="aspect-[3/4] bg-surface-container-high"></div>
+<div class="aspect-[3/4] bg-surface-container-high"></div>
+<div class="aspect-[3/4] bg-surface-container-high"></div>
+<div class="aspect-[3/4] bg-surface-container-high"></div>
+</div>
+</main>
+<!-- Top Navigation Anchor -->
+<nav class="bg-[#FAF9F8]/80 backdrop-blur-xl flex justify-between items-center w-full px-8 py-4 fixed top-0 z-50">
+<div class="text-2xl font-bold font-['Newsreader'] text-[#111111]">Stylist Drawer</div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-[#8C8C8A] hover:text-[#2F3333] transition-colors" href="#">Archive</a>
+<a class="text-[#8C8C8A] hover:text-[#2F3333] transition-colors" href="#">Wardrobe</a>
+<a class="text-[#111111] border-b-2 border-[#111111] pb-1" href="#">Eras</a>
+<a class="text-[#8C8C8A] hover:text-[#2F3333] transition-colors" href="#">Studio</a>
+</div>
+<div class="flex items-center gap-6">
+<span class="material-symbols-outlined text-on-surface">history</span>
+<span class="material-symbols-outlined text-on-surface">settings</span>
+</div>
+</nav>
+<!-- THE STYLIST DRAWER (SideNavBar Component Extension) -->
+<aside class="fixed right-0 top-0 h-full flex flex-col z-[60] bg-[#FAF9F8] w-full md:w-[450px] shadow-[-20px_0_40px_rgba(47,51,51,0.04)] border-l border-surface-container">
+<!-- Header -->
+<div class="p-6 pt-10 border-b border-surface-container-low">
+<div class="flex justify-between items-start mb-1">
+<span class="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface">STYLIST</span>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="flex items-baseline gap-2">
+<h2 class="font-serif italic text-xl text-on-surface">Aria Thorne</h2>
+<span class="text-xs text-outline">•</span>
+<span class="font-sans text-xs text-outline uppercase tracking-wider">Standard Era</span>
+</div>
+</div>
+<!-- Conversation Scroll Area -->
+<div class="flex-1 overflow-y-auto p-6 space-y-8 hide-scrollbar">
+<!-- User Message -->
+<div class="flex flex-col items-end">
+<div class="max-w-[85%] bg-surface-container p-4 rounded-sm">
+<p class="text-sm leading-relaxed text-on-surface">
+                        I need something for the gallery opening next Thursday. Think "architectural" but comfortable enough for standing three hours. Use my current black blazers as a base.
+                    </p>
+</div>
+<span class="text-[10px] font-sans uppercase tracking-widest text-outline mt-2">14:20</span>
+</div>
+<!-- Stylist Response -->
+<div class="flex flex-col items-start">
+<div class="max-w-full space-y-4">
+<div class="text-sm leading-relaxed text-on-surface space-y-3">
+<p>Understood. I'm focusing on your <strong>Saint Laurent</strong> structured blazer but pairing it with fluid, high-contrast textures to soften the architectural edge.</p>
+<p>Here are three generated concepts blending your existing pieces with new sculptural silhouettes:</p>
+</div>
+<!-- Image Generation Strip -->
+<div class="flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
+<!-- Card 1 -->
+<div class="flex-shrink-0 w-44 group relative">
+<div class="aspect-[3/4] bg-surface-container-high overflow-hidden rounded-sm mb-2">
+<img class="w-full h-full object-cover" data-alt="editorial fashion photography, minimalist black blazer with oversized white sculptural trousers, high fashion gallery aesthetic, soft studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCA5WS8E00RgDPjlcwRk1RfyM1iMa6usjUMhOMiCUykCr1sK1PftxpK12fTohlXHUODOIZBqFSd_HBG_-A0Xc0WNz6NYJ61CHszWOisw4vAwN_9caf55YQNCf44_bNKcbN7w7bYZhXojH8ebrhdvx-Z8EcDNI2XH8JOwh_yKu1x1xScAy7QbsAyHifWGbflZjV1skxJ7y02PZVfYIB5Tu8DvsgQs9YJij3c_2Rh55AdOwVA6So1hodGEYkYWFT9fS4IptcCIRdnSmc"/>
+<div class="absolute inset-x-0 bottom-0 p-2 flex justify-center gap-2 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-200">
+<button class="bg-surface-container-lowest h-8 w-8 rounded-full flex items-center justify-center shadow-sm text-on-surface hover:bg-on-surface hover:text-white transition-colors">
+<span class="material-symbols-outlined !text-[18px]">check</span>
+</button>
+<button class="bg-surface-container-lowest h-8 w-8 rounded-full flex items-center justify-center shadow-sm text-on-surface hover:bg-on-surface hover:text-white transition-colors">
+<span class="material-symbols-outlined !text-[18px]">close</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="flex-shrink-0 w-44 group relative">
+<div class="aspect-[3/4] bg-surface-container-high overflow-hidden rounded-sm mb-2">
+<img class="w-full h-full object-cover" data-alt="fashion editorial model wearing charcoal grey tailored coat with avant-garde pleating, muted warm tones, textured concrete background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAtrEPD3nCao7ipyD4Mzwmkp6Nafv1BJmjmk9LbtZAa5XMYLBo3Jw4pmLiA_5qBvJskrQqUbPM2l39tyYbOLo3ae6FvFIJ1UgX8qHoGlYHlSD1Yq6zDbxJM4Pq_0iCcdgU3x-ZsBZXFjzeltaXL5xoxnYm7a8hyWqyFLVskc3zBGlYfccvURt0VTzqH1_YN0bVQuP4bcNW0e_ClqzUPiQzHtG1SqyM_SSnFnWRNQuvgGTenGln4X5aiXskkYwiEPOFb-1U2qsyPE-o"/>
+<div class="absolute inset-x-0 bottom-0 p-2 flex justify-center gap-2 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-200">
+<button class="bg-surface-container-lowest h-8 w-8 rounded-full flex items-center justify-center shadow-sm text-on-surface">
+<span class="material-symbols-outlined !text-[18px]">check</span>
+</button>
+<button class="bg-surface-container-lowest h-8 w-8 rounded-full flex items-center justify-center shadow-sm text-on-surface">
+<span class="material-symbols-outlined !text-[18px]">close</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="flex-shrink-0 w-44 group relative">
+<div class="aspect-[3/4] bg-surface-container-high overflow-hidden rounded-sm mb-2">
+<img class="w-full h-full object-cover" data-alt="monochrome outfit featuring silk wide leg pants and structured vest, high contrast light and shadow, museum atmosphere" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBNErMZoVpGwT0AE3SZVclYNwIwbJgDj9yGp1f0wKJXMgwdQHFmrwlCJ8VP1qAqT9LHnXY75yDc4KTy3IDoB8w_bhhtmTAYvHYttKcTBBaRRPMoYiQtT3Q30aUEXkVfklkeh-MNKwzaadnhSaAh_VIgbL_p8fc6AP3o6b4XsvqZ4P6yzZbWfvDIoFGD1lAsW56yYB1JEA5oxzMawkZ9B9ZH32Bdm7Kl4LmcR0mT750FmyHQ8-tdJyv_KyXEN67WWyMcBZwz9AaL7tg"/>
+<div class="absolute inset-x-0 bottom-0 p-2 flex justify-center gap-2 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-200">
+<button class="bg-surface-container-lowest h-8 w-8 rounded-full flex items-center justify-center shadow-sm text-on-surface">
+<span class="material-symbols-outlined !text-[18px]">check</span>
+</button>
+<button class="bg-surface-container-lowest h-8 w-8 rounded-full flex items-center justify-center shadow-sm text-on-surface">
+<span class="material-symbols-outlined !text-[18px]">close</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<span class="text-[10px] font-sans uppercase tracking-widest text-outline mt-2">14:21</span>
+</div>
+<!-- Activity Indicator -->
+<div class="flex items-center gap-3">
+<div class="flex gap-1">
+<div class="w-1 h-1 bg-primary rounded-full animate-pulse"></div>
+<div class="w-1 h-1 bg-primary rounded-full animate-pulse [animation-delay:0.2s]"></div>
+<div class="w-1 h-1 bg-primary rounded-full animate-pulse [animation-delay:0.4s]"></div>
+</div>
+<span class="text-[10px] font-sans uppercase tracking-[0.15em] text-outline italic">Searching wardrobe archives...</span>
+</div>
+</div>
+<!-- Message Input -->
+<div class="p-6 pb-10 border-t border-surface-container-low">
+<div class="relative flex flex-col gap-4">
+<div class="flex gap-2 mb-2">
+<span class="px-2 py-1 bg-surface-container-low text-[10px] font-sans uppercase tracking-wider text-on-surface-variant rounded-sm border border-outline-variant/10">Architecture</span>
+<span class="px-2 py-1 bg-surface-container-low text-[10px] font-sans uppercase tracking-wider text-on-surface-variant rounded-sm border border-outline-variant/10">Archive Pieces</span>
+</div>
+<div class="relative">
+<textarea class="w-full bg-surface-container-low border-none focus:ring-0 text-sm py-4 pl-4 pr-12 rounded-sm resize-none placeholder:text-outline font-sans" placeholder="Discuss style adjustments..." rows="1"></textarea>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface hover:opacity-70 transition-opacity">
+<span class="material-symbols-outlined">north_east</span>
+</button>
+</div>
+<div class="flex justify-between items-center px-1">
+<div class="flex gap-4">
+<button class="text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined !text-[18px]">photo_camera</span>
+</button>
+<button class="text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined !text-[18px]">draw</span>
+</button>
+</div>
+<span class="text-[10px] font-sans uppercase tracking-widest text-outline/60">Klein 9B Active</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Side Navigation Shell (Hidden logic on mobile, represented as icons on drawer) -->
+<div class="fixed right-[450px] top-0 h-full w-16 border-r border-surface-container flex flex-col items-center py-10 gap-10 bg-surface/40 backdrop-blur-sm">
+<div class="font-serif italic text-xl">S</div>
+<div class="flex flex-col gap-8 text-outline">
+<span class="material-symbols-outlined cursor-pointer hover:text-on-surface transition-colors" style="font-variation-settings: 'FILL' 1;">chat_bubble</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-on-surface transition-colors">checkroom</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-on-surface transition-colors">grid_view</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-on-surface transition-colors">ios_share</span>
+</div>
+</div>
+</body></html>
