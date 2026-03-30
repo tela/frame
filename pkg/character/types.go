@@ -92,6 +92,33 @@ type Era struct {
 	GynecoidStage   string   `json:"gynecoid_stage"`
 	WaistHipRatio   *float64 `json:"waist_hip_ratio"`
 
+	// Face shape
+	FaceShape       string `json:"face_shape"`        // round, oval, heart, square, oblong
+	BuccalFat       string `json:"buccal_fat"`        // full, moderate, slim, hollow
+	JawDefinition   string `json:"jaw_definition"`    // soft, moderate, defined, angular
+	BrowRidge       string `json:"brow_ridge"`        // subtle, moderate, prominent
+	NasolabialDepth string `json:"nasolabial_depth"`  // absent, faint, moderate, defined
+
+	// Skin texture
+	SkinTexture        string `json:"skin_texture"`          // smooth, clear, fine_lines, textured
+	SkinPoreVisibility string `json:"skin_pore_visibility"`  // absent, fine, visible
+	UnderEye           string `json:"under_eye"`             // smooth, faint_hollow, defined_hollow
+
+	// Body proportions
+	HeadBodyRatio    *float64 `json:"head_body_ratio"`
+	LegTorsoRatio    *float64 `json:"leg_torso_ratio"`
+	ShoulderHipRatio *float64 `json:"shoulder_hip_ratio"`
+
+	// Areola development
+	AreolaSize  string `json:"areola_size"`  // small, medium, large
+	AreolaColor string `json:"areola_color"` // light, medium, dark
+	AreolaShape string `json:"areola_shape"` // flat, puffy, raised, pronounced
+
+	// Labia development
+	LabiaMajora string `json:"labia_majora"` // flat, moderate, full
+	LabiaMinora string `json:"labia_minora"` // minimal, visible, protruding
+	LabiaColor  string `json:"labia_color"`  // light, medium, dark
+
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
 }

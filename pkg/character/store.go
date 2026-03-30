@@ -158,11 +158,21 @@ func (s *Store) CreateEra(e *Era) error {
 		`INSERT INTO eras (id, character_id, label, age_range, time_period, description, visual_description, prompt_prefix, pipeline_settings, sort_order,
 		 height_cm, weight_kg, build, breast_size, breast_tanner, hip_shape, pubic_hair_style, pubic_hair_tanner, hair_color, hair_length,
 		 gynecoid_stage, waist_hip_ratio,
+		 face_shape, buccal_fat, jaw_definition, brow_ridge, nasolabial_depth,
+		 skin_texture, skin_pore_visibility, under_eye,
+		 head_body_ratio, leg_torso_ratio, shoulder_hip_ratio,
+		 areola_size, areola_color, areola_shape,
+		 labia_majora, labia_minora, labia_color,
 		 created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		e.ID, e.CharacterID, e.Label, e.AgeRange, e.TimePeriod, e.Description, e.VisualDescription, e.PromptPrefix, e.PipelineSettings, e.SortOrder,
 		e.HeightCM, e.WeightKG, e.Build, e.BreastSize, e.BreastTanner, e.HipShape, e.PubicHairStyle, e.PubicHairTanner, e.HairColor, e.HairLength,
 		e.GynecoidStage, e.WaistHipRatio,
+		e.FaceShape, e.BuccalFat, e.JawDefinition, e.BrowRidge, e.NasolabialDepth,
+		e.SkinTexture, e.SkinPoreVisibility, e.UnderEye,
+		e.HeadBodyRatio, e.LegTorsoRatio, e.ShoulderHipRatio,
+		e.AreolaSize, e.AreolaColor, e.AreolaShape,
+		e.LabiaMajora, e.LabiaMinora, e.LabiaColor,
 		e.CreatedAt.UTC().Format(time.RFC3339), e.UpdatedAt.UTC().Format(time.RFC3339),
 	)
 	if err != nil {
@@ -179,11 +189,21 @@ func (s *Store) GetEra(id string) (*Era, error) {
 		`SELECT id, character_id, label, age_range, time_period, description, visual_description, prompt_prefix, pipeline_settings, sort_order,
 		 height_cm, weight_kg, build, breast_size, breast_tanner, hip_shape, pubic_hair_style, pubic_hair_tanner, hair_color, hair_length,
 		 gynecoid_stage, waist_hip_ratio,
+		 face_shape, buccal_fat, jaw_definition, brow_ridge, nasolabial_depth,
+		 skin_texture, skin_pore_visibility, under_eye,
+		 head_body_ratio, leg_torso_ratio, shoulder_hip_ratio,
+		 areola_size, areola_color, areola_shape,
+		 labia_majora, labia_minora, labia_color,
 		 created_at, updated_at
 		 FROM eras WHERE id = ?`, id,
 	).Scan(&e.ID, &e.CharacterID, &e.Label, &e.AgeRange, &e.TimePeriod, &e.Description, &e.VisualDescription, &e.PromptPrefix, &e.PipelineSettings, &e.SortOrder,
 		&e.HeightCM, &e.WeightKG, &e.Build, &e.BreastSize, &e.BreastTanner, &e.HipShape, &e.PubicHairStyle, &e.PubicHairTanner, &e.HairColor, &e.HairLength,
 		&e.GynecoidStage, &e.WaistHipRatio,
+		&e.FaceShape, &e.BuccalFat, &e.JawDefinition, &e.BrowRidge, &e.NasolabialDepth,
+		&e.SkinTexture, &e.SkinPoreVisibility, &e.UnderEye,
+		&e.HeadBodyRatio, &e.LegTorsoRatio, &e.ShoulderHipRatio,
+		&e.AreolaSize, &e.AreolaColor, &e.AreolaShape,
+		&e.LabiaMajora, &e.LabiaMinora, &e.LabiaColor,
 		&createdAt, &updatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -202,6 +222,11 @@ func (s *Store) ListEras(characterID string) ([]Era, error) {
 		`SELECT id, character_id, label, age_range, time_period, description, visual_description, prompt_prefix, pipeline_settings, sort_order,
 		 height_cm, weight_kg, build, breast_size, breast_tanner, hip_shape, pubic_hair_style, pubic_hair_tanner, hair_color, hair_length,
 		 gynecoid_stage, waist_hip_ratio,
+		 face_shape, buccal_fat, jaw_definition, brow_ridge, nasolabial_depth,
+		 skin_texture, skin_pore_visibility, under_eye,
+		 head_body_ratio, leg_torso_ratio, shoulder_hip_ratio,
+		 areola_size, areola_color, areola_shape,
+		 labia_majora, labia_minora, labia_color,
 		 created_at, updated_at
 		 FROM eras WHERE character_id = ? ORDER BY sort_order`, characterID,
 	)
@@ -217,6 +242,11 @@ func (s *Store) ListEras(characterID string) ([]Era, error) {
 		if err := rows.Scan(&e.ID, &e.CharacterID, &e.Label, &e.AgeRange, &e.TimePeriod, &e.Description, &e.VisualDescription, &e.PromptPrefix, &e.PipelineSettings, &e.SortOrder,
 			&e.HeightCM, &e.WeightKG, &e.Build, &e.BreastSize, &e.BreastTanner, &e.HipShape, &e.PubicHairStyle, &e.PubicHairTanner, &e.HairColor, &e.HairLength,
 			&e.GynecoidStage, &e.WaistHipRatio,
+			&e.FaceShape, &e.BuccalFat, &e.JawDefinition, &e.BrowRidge, &e.NasolabialDepth,
+			&e.SkinTexture, &e.SkinPoreVisibility, &e.UnderEye,
+			&e.HeadBodyRatio, &e.LegTorsoRatio, &e.ShoulderHipRatio,
+			&e.AreolaSize, &e.AreolaColor, &e.AreolaShape,
+			&e.LabiaMajora, &e.LabiaMinora, &e.LabiaColor,
 			&createdAt, &updatedAt); err != nil {
 			return nil, fmt.Errorf("scan era: %w", err)
 		}
@@ -235,6 +265,11 @@ func (s *Store) ListErasWithStats(characterID string) ([]EraWithStats, error) {
 		        e.height_cm, e.weight_kg, e.build, e.breast_size, e.breast_tanner,
 		        e.hip_shape, e.pubic_hair_style, e.pubic_hair_tanner, e.hair_color, e.hair_length,
 		        e.gynecoid_stage, e.waist_hip_ratio,
+		        e.face_shape, e.buccal_fat, e.jaw_definition, e.brow_ridge, e.nasolabial_depth,
+		        e.skin_texture, e.skin_pore_visibility, e.under_eye,
+		        e.head_body_ratio, e.leg_torso_ratio, e.shoulder_hip_ratio,
+		        e.areola_size, e.areola_color, e.areola_shape,
+		        e.labia_majora, e.labia_minora, e.labia_color,
 		        e.created_at, e.updated_at,
 		        COALESCE(ci.image_count, 0),
 		        COALESCE(ci.has_face_ref, 0)
@@ -264,6 +299,11 @@ func (s *Store) ListErasWithStats(characterID string) ([]EraWithStats, error) {
 			&es.HeightCM, &es.WeightKG, &es.Build, &es.BreastSize, &es.BreastTanner,
 			&es.HipShape, &es.PubicHairStyle, &es.PubicHairTanner, &es.HairColor, &es.HairLength,
 			&es.GynecoidStage, &es.WaistHipRatio,
+			&es.FaceShape, &es.BuccalFat, &es.JawDefinition, &es.BrowRidge, &es.NasolabialDepth,
+			&es.SkinTexture, &es.SkinPoreVisibility, &es.UnderEye,
+			&es.HeadBodyRatio, &es.LegTorsoRatio, &es.ShoulderHipRatio,
+			&es.AreolaSize, &es.AreolaColor, &es.AreolaShape,
+			&es.LabiaMajora, &es.LabiaMinora, &es.LabiaColor,
 			&createdAt, &updatedAt,
 			&es.ImageCount, &hasFaceRef,
 		); err != nil {
