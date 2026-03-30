@@ -369,6 +369,18 @@ func seedFromCSV(charStore *character.Store, path string) {
 		return &v
 	}
 
+	floatField := func(row []string, name string) *float64 {
+		s := field(row, name)
+		if s == "" {
+			return nil
+		}
+		v, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			return nil
+		}
+		return &v
+	}
+
 	// Group rows by character_name
 	type csvRow = []string
 	groups := map[string][]csvRow{}
@@ -402,6 +414,7 @@ func seedFromCSV(charStore *character.Store, path string) {
 			DisplayName:            field(first, "display_name"),
 			Status:                 character.Status(field(first, "status")),
 			Source:                 "frame",
+			Gender:                 field(first, "gender"),
 			Ethnicity:              field(first, "ethnicity"),
 			SkinTone:               field(first, "skin_tone"),
 			EyeColor:               field(first, "eye_color"),
@@ -441,6 +454,8 @@ func seedFromCSV(charStore *character.Store, path string) {
 				PubicHairTanner:   field(row, "era_pubic_hair_tanner"),
 				HairColor:         field(row, "era_hair_color"),
 				HairLength:        field(row, "era_hair_length"),
+				GynecoidStage:     field(row, "era_gynecoid_stage"),
+				WaistHipRatio:     floatField(row, "era_waist_hip_ratio"),
 				CreatedAt:         now,
 				UpdatedAt:         now,
 			}

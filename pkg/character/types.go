@@ -29,6 +29,8 @@ type Character struct {
 	FigCharacterURL string    `json:"fig_character_url,omitempty"`
 	Source          string    `json:"source"` // "frame" or "fig"
 
+	Gender               string `json:"gender"`
+
 	// Physical attributes (immutable across eras)
 	Ethnicity            string `json:"ethnicity"`
 	SkinTone             string `json:"skin_tone"`
@@ -85,8 +87,10 @@ type Era struct {
 	HipShape        string `json:"hip_shape"`
 	PubicHairStyle  string `json:"pubic_hair_style"`
 	PubicHairTanner string `json:"pubic_hair_tanner"`
-	HairColor       string `json:"hair_color"`
-	HairLength      string `json:"hair_length"`
+	HairColor       string   `json:"hair_color"`
+	HairLength      string   `json:"hair_length"`
+	GynecoidStage   string   `json:"gynecoid_stage"`
+	WaistHipRatio   *float64 `json:"waist_hip_ratio"`
 
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
