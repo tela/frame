@@ -18,6 +18,7 @@ import (
 	"github.com/tela/frame/pkg/poseset"
 	"github.com/tela/frame/pkg/preprocess"
 	"github.com/tela/frame/pkg/shoot"
+	"github.com/tela/frame/pkg/stylist"
 	"github.com/tela/frame/pkg/tag"
 	"github.com/tela/frame/pkg/template"
 )
@@ -38,6 +39,7 @@ type API struct {
 	Loras       *lora.Store
 	PoseSet     *poseset.Store
 	Garments    *garment.Store
+	Stylist     *stylist.SessionStore
 	Bifrost     *bifrost.Client // nil if Bifrost not configured
 	Fig         *fig.Client    // nil if Fig not configured
 	RootPath    string          // drive root for file serving
@@ -179,6 +181,14 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/loras", a.createLora)
 	mux.HandleFunc("PATCH /api/v1/loras/{id}", a.updateLora)
 	mux.HandleFunc("DELETE /api/v1/loras/{id}", a.deleteLora)
+
+	// Stylist
+	mux.HandleFunc("GET /api/v1/stylist/sessions", a.listStylistSessions)
+	mux.HandleFunc("GET /api/v1/stylist/sessions/active", a.getActiveStylistSession)
+	mux.HandleFunc("POST /api/v1/stylist/sessions", a.startStylistSession)
+	mux.HandleFunc("GET /api/v1/stylist/sessions/{id}", a.getStylistSession)
+	mux.HandleFunc("PATCH /api/v1/stylist/sessions/{id}", a.endStylistSession)
+	mux.HandleFunc("POST /api/v1/stylist/sessions/{id}/messages", a.sendStylistMessage)
 
 	// Wardrobe
 	mux.HandleFunc("GET /api/v1/wardrobe", a.listGarments)
