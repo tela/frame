@@ -156,6 +156,71 @@ func cmdSmoke() {
 		r.check(fmt.Sprintf("list %s", mtype), code == 200, fmt.Sprintf("status %d", code))
 	}
 
+	// 13b. Wardrobe (Garment catalog)
+	fmt.Println("\nWardrobe Catalog")
+	body, code = smokeGet("/api/v1/wardrobe?status=all")
+	r.check("list garments", code == 200, fmt.Sprintf("status %d", code))
+	var garments []any
+	json.Unmarshal(body, &garments)
+	r.check("has garments", len(garments) > 0, "no garments — run 'frame seed' first")
+
+	body, code = smokeGet("/api/v1/wardrobe/facets?status=all")
+	r.check("garment facets", code == 200, fmt.Sprintf("status %d", code))
+	var garmentFacets map[string]any
+	json.Unmarshal(body, &garmentFacets)
+	r.check("facets has category", garmentFacets["category"] != nil, "missing category facet")
+
+	// Filter by category
+	body, code = smokeGet("/api/v1/wardrobe?category=dress&status=all")
+	r.check("filter by category", code == 200, fmt.Sprintf("status %d", code))
+	var dresses []any
+	json.Unmarshal(body, &dresses)
+	r.check("dress filter returns results", len(dresses) > 0, "no dresses found")
+
+	// Get single garment detail
+	if len(garments) > 0 {
+		gMap := garments[0].(map[string]any)
+		gID := gMap["id"].(string)
+		body, code = smokeGet("/api/v1/wardrobe/" + gID)
+		r.check("get garment detail", code == 200, fmt.Sprintf("status %d", code))
+
+		body, code = smokeGet("/api/v1/wardrobe/" + gID + "/affinity")
+		r.check("garment affinity", code == 200, fmt.Sprintf("status %d", code))
+	}
+
+	// 13c. Hair Catalog
+	fmt.Println("\nHair Catalog")
+	body, code = smokeGet("/api/v1/hair?status=all")
+	r.check("list hairstyles", code == 200, fmt.Sprintf("status %d", code))
+	var hairstyles []any
+	json.Unmarshal(body, &hairstyles)
+	r.check("has hairstyles", len(hairstyles) > 0, "no hairstyles — run 'frame seed' first")
+
+	body, code = smokeGet("/api/v1/hair/facets?status=all")
+	r.check("hairstyle facets", code == 200, fmt.Sprintf("status %d", code))
+	var hairFacets map[string]any
+	json.Unmarshal(body, &hairFacets)
+	r.check("facets has length", hairFacets["length"] != nil, "missing length facet")
+
+	// Filter by texture
+	body, code = smokeGet("/api/v1/hair?texture=wavy&status=all")
+	r.check("filter by texture", code == 200, fmt.Sprintf("status %d", code))
+
+	if len(hairstyles) > 0 {
+		hMap := hairstyles[0].(map[string]any)
+		hID := hMap["id"].(string)
+		body, code = smokeGet("/api/v1/hair/" + hID)
+		r.check("get hairstyle detail", code == 200, fmt.Sprintf("status %d", code))
+	}
+
+	// 13d. Stylist
+	fmt.Println("\nStylist")
+	_, code = smokeGet("/api/v1/stylist/sessions")
+	r.check("list stylist sessions", code == 200, fmt.Sprintf("status %d", code))
+
+	_, code = smokeGet("/api/v1/stylist/sessions/active")
+	r.check("active stylist session", code == 200, fmt.Sprintf("status %d", code))
+
 	// 14. Datasets
 	fmt.Println("\nDatasets")
 	_, code = smokeGet("/api/v1/datasets")
