@@ -111,6 +111,7 @@ func cmdSeed() {
 
 	now := time.Now().UTC()
 	nowStr := now.Format("2006-01-02T15:04:05Z")
+	charOffset := byte(0) // ensures unique pixel data per character
 
 	for _, sc := range characters {
 		charID := id.New()
@@ -152,8 +153,9 @@ func cmdSeed() {
 		}
 
 		// Ingest test images for the first era (5 per character)
+		charOffset += 70 // shift colors so each character has unique hashes
 		for j := 0; j < 5; j++ {
-			png := makeSeedPNG(byte(j*40+10), byte(j*30+20), byte(j*20+30))
+			png := makeSeedPNG(byte(j*40+10)+charOffset, byte(j*30+20)+charOffset, byte(j*20+30)+charOffset)
 			eraPtr := &firstEraID
 			result, err := ingester.Ingest(&image.IngestRequest{
 				Filename:      fmt.Sprintf("seed_%s_%d.png", sc.displayName, j),
