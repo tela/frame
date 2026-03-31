@@ -252,6 +252,7 @@ export function useUpdateCharacterImage() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'images'] })
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId] })
+      qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'eras'] })
     },
   })
 }
@@ -380,6 +381,15 @@ export interface GenerateResponse {
 export interface BifrostStatus {
   available: boolean
   reason?: string
+  models?: Array<{
+    id: string
+    name: string
+    modalities: string[]
+    tasks: string[]
+    tiers: string[]
+    nsfw_safe: boolean
+    content_policy?: Record<string, string>
+  }>
   providers?: Array<{
     name: string
     tiers: string[]
@@ -634,6 +644,7 @@ export function useBulkUpdateCharacterImages() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'images'] })
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId] })
+      qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'eras'] })
     },
   })
 }

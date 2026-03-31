@@ -602,6 +602,15 @@ function EraCard({ characterId, era }: { characterId: string; era: EraWithStats 
             {[era.age_range, era.time_period].filter(Boolean).join(' · ')}
           </p>
         )}
+        <Link
+          to="/characters/$characterId/eras/$eraId/refs"
+          params={{ characterId, eraId: era.id }}
+          onClick={(e) => e.stopPropagation()}
+          className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-muted hover:text-accent transition-colors"
+        >
+          <span className="material-symbols-outlined text-[14px]">collections</span>
+          Build References
+        </Link>
       </div>
     </Link>
   )

@@ -223,6 +223,14 @@ export function EraWorkspace() {
           <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
           Studio
         </Link>
+        <Link
+          to="/characters/$characterId/eras/$eraId/refs"
+          params={{ characterId, eraId }}
+          className="text-ui text-[13px] text-muted hover:text-primary transition-colors flex items-center gap-2"
+        >
+          <span className="material-symbols-outlined text-[18px]">collections</span>
+          Ref Builder
+        </Link>
         {/* Shoot filter dropdown */}
         <div className="ml-auto flex items-center gap-4">
           <select
