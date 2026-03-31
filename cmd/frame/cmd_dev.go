@@ -9,11 +9,20 @@ import (
 	"syscall"
 )
 
+const (
+	devPort = "7890"
+	devRoot = ".dev"
+)
+
 func cmdDev() {
 	fmt.Println("Starting Frame dev environment...")
+	fmt.Printf("  port: %s  root: %s\n", devPort, devRoot)
 
-	// Start the Go server in background
-	serverCmd := exec.Command(os.Args[0], "serve")
+	// Ensure .dev directory exists
+	os.MkdirAll(devRoot, 0755)
+
+	// Start the Go server in background with explicit dev port and root
+	serverCmd := exec.Command(os.Args[0], "serve", "--port", devPort, "--root", devRoot)
 	serverCmd.Stdout = os.Stdout
 	serverCmd.Stderr = os.Stderr
 	if err := serverCmd.Start(); err != nil {
