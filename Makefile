@@ -30,8 +30,12 @@ ui:
 # === Development ===
 
 dev:
-	@mkdir -p /tmp/frame-dev
-	go build $(LDFLAGS) -o $(BINARY) $(CMD) && ./$(BINARY) --root /tmp/frame-dev --port 7890
+	@mkdir -p .dev
+	go build $(LDFLAGS) -o $(BINARY) $(CMD) && ./$(BINARY) --root .dev --port 7890
+
+dev-seed:
+	@mkdir -p .dev
+	go run $(CMD) seed --root .dev
 
 dev-ui:
 	cd ui && pnpm run dev

@@ -44,9 +44,16 @@ type seedEra struct {
 func cmdSeed() {
 	fs := flag.NewFlagSet("seed", flag.ExitOnError)
 	fileFlag := fs.String("file", "", "CSV file path for character/era seed data")
+	// Accept --root so it can be passed through to config.Load.
+	// The FlagSet must know about it to avoid erroring on unrecognized flags.
+	rootFlag := fs.String("root", "", "Drive root directory")
 	fs.Parse(os.Args[1:])
-	// Clear parsed seed flags so config.Load()'s flag.Parse doesn't see them.
-	os.Args = os.Args[:1]
+	// Re-inject --root for config.Load's flag.Parse if provided.
+	if *rootFlag != "" {
+		os.Args = []string{os.Args[0], "--root", *rootFlag}
+	} else {
+		os.Args = os.Args[:1]
+	}
 
 	cfg, err := config.Load()
 	if err != nil {
