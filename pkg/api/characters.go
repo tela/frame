@@ -13,10 +13,18 @@ import (
 )
 
 type createCharacterRequest struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	DisplayName string `json:"display_name"`
-	Status      string `json:"status"`
+	ID                     string `json:"id"`
+	Name                   string `json:"name"`
+	DisplayName            string `json:"display_name"`
+	Status                 string `json:"status"`
+	Gender                 string `json:"gender"`
+	Ethnicity              string `json:"ethnicity"`
+	SkinTone               string `json:"skin_tone"`
+	EyeColor               string `json:"eye_color"`
+	EyeShape               string `json:"eye_shape"`
+	NaturalHairColor       string `json:"natural_hair_color"`
+	NaturalHairTexture     string `json:"natural_hair_texture"`
+	DistinguishingFeatures string `json:"distinguishing_features"`
 }
 
 func (a *API) createCharacter(w http.ResponseWriter, r *http.Request) {
@@ -41,12 +49,20 @@ func (a *API) createCharacter(w http.ResponseWriter, r *http.Request) {
 
 	now := time.Now().UTC()
 	c := &character.Character{
-		ID:          req.ID,
-		Name:        req.Name,
-		DisplayName: req.DisplayName,
-		Status:      status,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:                     req.ID,
+		Name:                   req.Name,
+		DisplayName:            req.DisplayName,
+		Status:                 status,
+		Gender:                 req.Gender,
+		Ethnicity:              req.Ethnicity,
+		SkinTone:               req.SkinTone,
+		EyeColor:               req.EyeColor,
+		EyeShape:               req.EyeShape,
+		NaturalHairColor:       req.NaturalHairColor,
+		NaturalHairTexture:     req.NaturalHairTexture,
+		DistinguishingFeatures: req.DistinguishingFeatures,
+		CreatedAt:              now,
+		UpdatedAt:              now,
 	}
 	c.FolderName = c.Slug()
 
