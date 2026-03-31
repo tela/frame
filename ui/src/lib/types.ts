@@ -136,6 +136,7 @@ export interface TagNamespace {
   family_id: string
   name: string
   description: string
+  ref_types: string | null
   sort_order: number
   created_at: string
 }

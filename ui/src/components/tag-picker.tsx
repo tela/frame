@@ -7,9 +7,10 @@ interface TagPickerProps {
   onClose: () => void
   imageIds: string[]
   existingTags?: Array<{ namespace: string; value: string }>
+  refType?: string | null
 }
 
-export function TagPicker({ open, onClose, imageIds, existingTags = [] }: TagPickerProps) {
+export function TagPicker({ open, onClose, imageIds, existingTags = [], refType }: TagPickerProps) {
   const { data: families } = useTagFamilies()
   const bulkTag = useBulkTag()
 
@@ -19,7 +20,7 @@ export function TagPicker({ open, onClose, imageIds, existingTags = [] }: TagPic
   const [selected, setSelected] = useState<Map<string, Set<string>>>(new Map()) // namespace → Set<value>
 
   const activeFamilyId = activeFamily || families?.[0]?.id || ''
-  const { data: taxonomy } = useFamilyTaxonomy(activeFamilyId)
+  const { data: taxonomy } = useFamilyTaxonomy(activeFamilyId, refType)
 
   // Initialize selected from existing tags
   useEffect(() => {

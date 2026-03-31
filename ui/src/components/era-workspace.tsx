@@ -416,6 +416,11 @@ export function EraWorkspace() {
         open={showTagPicker}
         onClose={() => setShowTagPicker(false)}
         imageIds={Array.from(selectedImages)}
+        refType={(() => {
+          const selectedCIs = (eraImages ?? []).filter((ci) => selectedImages.has(ci.image_id))
+          const types = new Set(selectedCIs.map((ci) => ci.ref_type).filter(Boolean))
+          return types.size === 1 ? [...types][0] : undefined
+        })()}
       />
     </Dropzone>
   )

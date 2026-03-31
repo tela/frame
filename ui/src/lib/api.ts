@@ -516,10 +516,11 @@ export function useTags(familyId?: string) {
   })
 }
 
-export function useFamilyTaxonomy(familyId: string) {
+export function useFamilyTaxonomy(familyId: string, refType?: string | null) {
+  const params = refType ? `?ref_type=${refType}` : ''
   return useQuery({
-    queryKey: ['tag-families', familyId, 'taxonomy'],
-    queryFn: () => fetchJSON<FamilyTaxonomy>(`/api/v1/tag-families/${familyId}/taxonomy`),
+    queryKey: ['tag-families', familyId, 'taxonomy', refType ?? 'all'],
+    queryFn: () => fetchJSON<FamilyTaxonomy>(`/api/v1/tag-families/${familyId}/taxonomy${params}`),
     enabled: !!familyId,
   })
 }
