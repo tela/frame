@@ -60,6 +60,7 @@ export function NewCharacterDialog({ open, onClose }: Props) {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [displayName, setDisplayName] = useState('')
+  const [displayNameOverride, setDisplayNameOverride] = useState(false)
   const [files, setFiles] = useState<File[]>([])
   const [gender, setGender] = useState('')
   const [ethnicity, setEthnicity] = useState('')
@@ -70,6 +71,8 @@ export function NewCharacterDialog({ open, onClose }: Props) {
   const [creating, setCreating] = useState(false)
 
   const fullName = `${firstName.trim()} ${lastName.trim()}`.trim()
+  const autoDisplayName = firstName.trim() + (lastName.trim() ? ` ${lastName.trim()[0]}.` : '')
+  const effectiveDisplayName = displayNameOverride ? displayName : autoDisplayName
 
   const handleNext = () => {
     if (!firstName.trim()) {
@@ -89,7 +92,7 @@ export function NewCharacterDialog({ open, onClose }: Props) {
     try {
       const character = await createCharacter.mutateAsync({
         name: fullName,
-        display_name: displayName.trim() || firstName.trim(),
+        display_name: effectiveDisplayName,
         status: 'prospect',
         gender: gender.toLowerCase(),
         ethnicity,
@@ -125,6 +128,7 @@ export function NewCharacterDialog({ open, onClose }: Props) {
     setFirstName('')
     setLastName('')
     setDisplayName('')
+    setDisplayNameOverride(false)
     setFiles([])
     setGender('')
     setEthnicity('')
@@ -246,10 +250,11 @@ export function NewCharacterDialog({ open, onClose }: Props) {
                       Display Name
                     </label>
                     <input
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
+                      value={displayNameOverride ? displayName : autoDisplayName}
+                      onChange={(e) => { setDisplayName(e.target.value); setDisplayNameOverride(true) }}
+                      onBlur={() => { if (displayName.trim() === '' || displayName === autoDisplayName) setDisplayNameOverride(false) }}
                       className="w-full bg-surface-low border-none p-4 text-sm focus:ring-1 focus:ring-on-surface transition-all placeholder:text-primary-dim/40"
-                      placeholder={firstName || 'e.g. Celeste'}
+                      placeholder="e.g. Celeste"
                     />
                   </div>
                 </div>
@@ -257,7 +262,7 @@ export function NewCharacterDialog({ open, onClose }: Props) {
                 {fullName && (
                   <p className="text-[12px] text-muted">
                     Full name: <span className="text-on-surface font-medium">{fullName}</span>
-                    {displayName.trim() ? ` · Display: ${displayName.trim()}` : ` · Display: ${firstName.trim()}`}
+                    {' · Display: '}<span className="text-on-surface font-medium">{effectiveDisplayName}</span>
                   </p>
                 )}
 
