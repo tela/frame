@@ -22,17 +22,16 @@ const LAST_NAMES = [
   'Sato', 'Thornberry', 'Whitmore', 'Yi', 'Zoltan', 'Okafor', 'Chen', 'Moreau',
 ]
 
-const SKIN_TONES = [
-  { value: 'fair', color: '#F6E3D4' },
-  { value: 'light', color: '#E8C0A0' },
-  { value: 'medium', color: '#C69076' },
-  { value: 'tan', color: '#A06840' },
-  { value: 'brown', color: '#8D5524' },
-  { value: 'dark brown', color: '#6B3A1F' },
-  { value: 'deep', color: '#4B2C20' },
-]
-
 const EYE_COLORS = ['Amber', 'Blue', 'Brown', 'Gray', 'Green', 'Hazel', 'Dark Brown', 'Black']
+
+const ETHNICITIES = [
+  'East Asian', 'Southeast Asian', 'South Asian', 'Central Asian',
+  'Middle Eastern', 'North African', 'West African', 'East African', 'Southern African',
+  'Northern European', 'Southern European', 'Eastern European', 'Western European',
+  'Indigenous American', 'Latin American', 'Caribbean',
+  'Pacific Islander', 'Aboriginal Australian',
+  'Mixed / Multiracial',
+]
 
 const HAIR_TEXTURES = [
   { value: 'straight', label: 'Straight (Type 1)' },
@@ -64,7 +63,6 @@ export function NewCharacterDialog({ open, onClose }: Props) {
   const [files, setFiles] = useState<File[]>([])
   const [gender, setGender] = useState('')
   const [ethnicity, setEthnicity] = useState('')
-  const [skinTone, setSkinTone] = useState('')
   const [eyeColor, setEyeColor] = useState('')
   const [hairTexture, setHairTexture] = useState('')
   const [nameError, setNameError] = useState('')
@@ -96,7 +94,6 @@ export function NewCharacterDialog({ open, onClose }: Props) {
         status: 'prospect',
         gender: gender.toLowerCase(),
         ethnicity,
-        skin_tone: skinTone,
         eye_color: eyeColor.toLowerCase(),
         natural_hair_texture: hairTexture,
       })
@@ -132,7 +129,6 @@ export function NewCharacterDialog({ open, onClose }: Props) {
     setFiles([])
     setGender('')
     setEthnicity('')
-    setSkinTone('')
     setEyeColor('')
     setHairTexture('')
     setNameError('')
@@ -358,34 +354,20 @@ export function NewCharacterDialog({ open, onClose }: Props) {
                     <label className="font-label text-[0.6875rem] uppercase tracking-widest text-primary-dim ml-1">
                       Ancestral Origin
                     </label>
-                    <input
-                      value={ethnicity}
-                      onChange={(e) => setEthnicity(e.target.value)}
-                      className="w-full bg-surface-low border-none p-4 text-sm focus:ring-1 focus:ring-on-surface transition-all placeholder:text-primary-dim/40"
-                      placeholder="Specify Ethnicity"
-                    />
-                  </div>
-
-                  {/* Skin Tone */}
-                  <div className="flex flex-col gap-2 md:col-span-2">
-                    <label className="font-label text-[0.6875rem] uppercase tracking-widest text-primary-dim ml-1">
-                      Skin Tone Spectrum
-                    </label>
-                    <div className="flex gap-3 flex-wrap p-2">
-                      {SKIN_TONES.map((tone) => (
-                        <button
-                          key={tone.value}
-                          type="button"
-                          onClick={() => setSkinTone(tone.value)}
-                          className={`w-10 h-10 rounded-full border transition-transform hover:scale-110 ${
-                            skinTone === tone.value
-                              ? 'ring-2 ring-on-surface ring-offset-2 border-on-surface scale-110'
-                              : 'border-outline-variant/20'
-                          }`}
-                          style={{ backgroundColor: tone.color }}
-                          title={tone.value}
-                        />
-                      ))}
+                    <div className="relative">
+                      <select
+                        value={ethnicity}
+                        onChange={(e) => setEthnicity(e.target.value)}
+                        className="w-full bg-surface-low border-none p-4 text-sm focus:ring-1 focus:ring-on-surface transition-all appearance-none cursor-pointer"
+                      >
+                        <option value="">Select Ethnicity</option>
+                        {ETHNICITIES.map((e) => (
+                          <option key={e} value={e}>{e}</option>
+                        ))}
+                      </select>
+                      <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-primary-dim">
+                        expand_more
+                      </span>
                     </div>
                   </div>
 
