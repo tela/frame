@@ -71,6 +71,8 @@ type ProviderInfo struct {
 const (
 	RefTypeFace     = "face_ref"
 	RefTypeBody     = "body_ref"
+	RefTypeBreasts  = "breasts_ref"
+	RefTypeVagina   = "vagina_ref"
 	RefTypeGarment  = "garment_ref"
 	RefTypePose     = "pose_ref"
 	RefTypeLocation = "location_ref"

@@ -45,6 +45,19 @@ type Image struct {
 	IngestedAt       time.Time `json:"ingested_at"`
 }
 
+// RefType categorizes a reference image by anatomical region.
+type RefType string
+
+const (
+	RefFace    RefType = "face"
+	RefBody    RefType = "body"
+	RefBreasts RefType = "breasts"
+	RefVagina  RefType = "vagina"
+)
+
+// ValidRefTypes is the ordered list of valid ref_type values.
+var ValidRefTypes = []RefType{RefFace, RefBody, RefBreasts, RefVagina}
+
 // CharacterImage links an image to a character with metadata.
 type CharacterImage struct {
 	ImageID      string       `json:"image_id"`
@@ -53,8 +66,7 @@ type CharacterImage struct {
 	SetType      SetType      `json:"set_type"`
 	TriageStatus TriageStatus `json:"triage_status"`
 	Rating       *int         `json:"rating,omitempty"`
-	IsFaceRef    bool         `json:"is_face_ref"`
-	IsBodyRef    bool         `json:"is_body_ref"`
+	RefType      *RefType     `json:"ref_type"`
 	RefScore     *float64     `json:"ref_score,omitempty"`
 	RefRank      *int         `json:"ref_rank,omitempty"`
 	Caption      *string      `json:"caption,omitempty"`

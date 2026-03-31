@@ -169,14 +169,14 @@ func cmdSeed() {
 			// Mark first two as face refs, third as body ref
 			if j == 0 || j == 1 {
 				imgStore.UpdateCharacterImage(result.ImageID, charID, &image.CharacterImageUpdate{
-					IsFaceRef:    boolp(true),
+					RefType:      strp("face"),
 					RefRank:      intp(j + 1),
 					SetType:      setTypePtr(image.SetReference),
 					TriageStatus: triagePtr(image.TriageApproved),
 				})
 			} else if j == 2 {
 				imgStore.UpdateCharacterImage(result.ImageID, charID, &image.CharacterImageUpdate{
-					IsBodyRef:    boolp(true),
+					RefType:      strp("body"),
 					RefRank:      intp(1),
 					SetType:      setTypePtr(image.SetReference),
 					TriageStatus: triagePtr(image.TriageApproved),
@@ -545,7 +545,7 @@ func writePNGChunk(buf *bytes.Buffer, chunkType string, data []byte) {
 	buf.Write(crcBytes[:])
 }
 
-func boolp(b bool) *bool             { return &b }
+func strp(s string) *string          { return &s }
 func intp(i int) *int                { return &i }
 func setTypePtr(s image.SetType) *image.SetType       { return &s }
 func triagePtr(s image.TriageStatus) *image.TriageStatus { return &s }

@@ -71,29 +71,25 @@ func (a *API) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	// Build reference images from the era's reference package
 	var refs []bifrost.ReferenceImage
 	if req.IncludeRefs && req.EraID != "" {
-		faceRefs, _ := a.Images.ListFaceRefs(req.CharacterID, req.EraID)
-		for _, fr := range faceRefs {
-			img, err := a.Images.Get(fr.ImageID)
-			if err != nil || img == nil {
-				continue
-			}
-			refs = append(refs, bifrost.ReferenceImage{
-				URL:   fmt.Sprintf("http://localhost:%d/api/v1/images/%s", a.Port, fr.ImageID),
-				Type:  bifrost.RefTypeFace,
-				Label: fmt.Sprintf("face ref rank %d", fr.RefRank),
-			})
+		refTypeMap := map[image.RefType]string{
+			image.RefFace:    bifrost.RefTypeFace,
+			image.RefBody:    bifrost.RefTypeBody,
+			image.RefBreasts: bifrost.RefTypeBreasts,
+			image.RefVagina:  bifrost.RefTypeVagina,
 		}
-		bodyRefs, _ := a.Images.ListBodyRefs(req.CharacterID, req.EraID)
-		for _, br := range bodyRefs {
-			img, err := a.Images.Get(br.ImageID)
-			if err != nil || img == nil {
-				continue
+		for _, rt := range image.ValidRefTypes {
+			rtRefs, _ := a.Images.ListRefsByType(req.CharacterID, req.EraID, rt)
+			bifrostType := refTypeMap[rt]
+			for _, ref := range rtRefs {
+				if img, _ := a.Images.Get(ref.ImageID); img == nil {
+					continue
+				}
+				refs = append(refs, bifrost.ReferenceImage{
+					URL:   fmt.Sprintf("http://localhost:%d/api/v1/images/%s", a.Port, ref.ImageID),
+					Type:  bifrostType,
+					Label: fmt.Sprintf("%s ref rank %d", rt, ref.RefRank),
+				})
 			}
-			refs = append(refs, bifrost.ReferenceImage{
-				URL:   fmt.Sprintf("http://localhost:%d/api/v1/images/%s", a.Port, br.ImageID),
-				Type:  bifrost.RefTypeBody,
-				Label: fmt.Sprintf("body ref rank %d", br.RefRank),
-			})
 		}
 	}
 

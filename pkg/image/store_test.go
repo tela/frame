@@ -130,7 +130,7 @@ func TestListFaceAndBodyRefs(t *testing.T) {
 	store.CreateCharacterImage(&image.CharacterImage{
 		ImageID: faceImgID, CharacterID: charID, EraID: &eraID,
 		SetType: image.SetReference, TriageStatus: image.TriageApproved,
-		IsFaceRef: true, RefScore: &score, RefRank: &rank,
+		RefType: refTypePtr(image.RefFace), RefScore: &score, RefRank: &rank,
 		CreatedAt: time.Now().UTC(),
 	})
 
@@ -140,7 +140,7 @@ func TestListFaceAndBodyRefs(t *testing.T) {
 	store.CreateCharacterImage(&image.CharacterImage{
 		ImageID: bodyImgID, CharacterID: charID, EraID: &eraID,
 		SetType: image.SetReference, TriageStatus: image.TriageApproved,
-		IsBodyRef: true, RefScore: &score, RefRank: &rank,
+		RefType: refTypePtr(image.RefBody), RefScore: &score, RefRank: &rank,
 		CreatedAt: time.Now().UTC(),
 	})
 
@@ -225,18 +225,18 @@ func TestUpdateCharacterImage(t *testing.T) {
 	}
 
 	// Promote to face ref
-	isFaceRef := true
+	faceType := "face"
 	score := 92.5
 	rank := 1
 	store.UpdateCharacterImage(imgID, charID, &image.CharacterImageUpdate{
-		IsFaceRef: &isFaceRef,
-		RefScore:  &score,
-		RefRank:   &rank,
+		RefType:  &faceType,
+		RefScore: &score,
+		RefRank:  &rank,
 	})
 
 	ci, _ = store.GetCharacterImage(imgID)
-	if !ci.IsFaceRef {
-		t.Error("expected is_face_ref=true")
+	if ci.RefType == nil || *ci.RefType != image.RefFace {
+		t.Errorf("ref_type = %v, want face", ci.RefType)
 	}
 	if ci.RefScore == nil || *ci.RefScore != 92.5 {
 		t.Errorf("ref_score = %v, want 92.5", ci.RefScore)
@@ -300,3 +300,5 @@ func TestListPendingByCharacter(t *testing.T) {
 		t.Errorf("got %d pending, want 2", len(pending))
 	}
 }
+
+func refTypePtr(rt image.RefType) *image.RefType { return &rt }

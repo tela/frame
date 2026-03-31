@@ -3,18 +3,22 @@ package api
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/tela/frame/pkg/image"
 )
 
 type referencePackageResponse struct {
-	CharacterID      string         `json:"character_id"`
-	EraID            string         `json:"era_id"`
-	CharacterName    string         `json:"character_name"`
-	EraLabel         string         `json:"era_label"`
-	VisualDescription string        `json:"visual_description"`
-	PromptPrefix     string         `json:"prompt_prefix"`
-	FaceRefs         []refImage     `json:"face_refs"`
-	BodyRefs         []refImage     `json:"body_refs"`
-	PipelineSettings string         `json:"pipeline_settings"`
+	CharacterID       string     `json:"character_id"`
+	EraID             string     `json:"era_id"`
+	CharacterName     string     `json:"character_name"`
+	EraLabel          string     `json:"era_label"`
+	VisualDescription string     `json:"visual_description"`
+	PromptPrefix      string     `json:"prompt_prefix"`
+	FaceRefs          []refImage `json:"face_refs"`
+	BodyRefs          []refImage `json:"body_refs"`
+	BreastsRefs       []refImage `json:"breasts_refs"`
+	VaginaRefs        []refImage `json:"vagina_refs"`
+	PipelineSettings  string     `json:"pipeline_settings"`
 }
 
 type refImage struct {
@@ -22,6 +26,19 @@ type refImage struct {
 	ImageURL string   `json:"image_url"`
 	Score    *float64 `json:"score,omitempty"`
 	Rank     *int     `json:"rank,omitempty"`
+}
+
+func toRefImages(cis []image.CharacterImage) []refImage {
+	out := make([]refImage, 0, len(cis))
+	for _, ci := range cis {
+		out = append(out, refImage{
+			ImageID:  ci.ImageID,
+			ImageURL: fmt.Sprintf("/api/v1/images/%s", ci.ImageID),
+			Score:    ci.RefScore,
+			Rank:     ci.RefRank,
+		})
+	}
+	return out
 }
 
 func (a *API) getReferencePackage(w http.ResponseWriter, r *http.Request) {
@@ -48,18 +65,6 @@ func (a *API) getReferencePackage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	faceRefs, err := a.Images.ListFaceRefs(charID, eraID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	bodyRefs, err := a.Images.ListBodyRefs(charID, eraID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
 	resp := referencePackageResponse{
 		CharacterID:       charID,
 		EraID:             eraID,
@@ -70,28 +75,23 @@ func (a *API) getReferencePackage(w http.ResponseWriter, r *http.Request) {
 		PipelineSettings:  era.PipelineSettings,
 	}
 
-	for _, ref := range faceRefs {
-		resp.FaceRefs = append(resp.FaceRefs, refImage{
-			ImageID:  ref.ImageID,
-			ImageURL: fmt.Sprintf("/api/v1/images/%s", ref.ImageID),
-			Score:    ref.RefScore,
-			Rank:     ref.RefRank,
-		})
-	}
-	if resp.FaceRefs == nil {
-		resp.FaceRefs = []refImage{}
-	}
-
-	for _, ref := range bodyRefs {
-		resp.BodyRefs = append(resp.BodyRefs, refImage{
-			ImageID:  ref.ImageID,
-			ImageURL: fmt.Sprintf("/api/v1/images/%s", ref.ImageID),
-			Score:    ref.RefScore,
-			Rank:     ref.RefRank,
-		})
-	}
-	if resp.BodyRefs == nil {
-		resp.BodyRefs = []refImage{}
+	for _, rt := range image.ValidRefTypes {
+		refs, err := a.Images.ListRefsByType(charID, eraID, rt)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		images := toRefImages(refs)
+		switch rt {
+		case image.RefFace:
+			resp.FaceRefs = images
+		case image.RefBody:
+			resp.BodyRefs = images
+		case image.RefBreasts:
+			resp.BreastsRefs = images
+		case image.RefVagina:
+			resp.VaginaRefs = images
+		}
 	}
 
 	writeJSON(w, http.StatusOK, resp)
