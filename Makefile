@@ -30,8 +30,12 @@ ui:
 # === Development ===
 
 dev:
-	@mkdir -p /tmp/frame-dev
-	go build $(LDFLAGS) -o $(BINARY) $(CMD) && ./$(BINARY) --root /tmp/frame-dev --port 7890
+	@mkdir -p .dev
+	go build $(LDFLAGS) -o $(BINARY) $(CMD) && ./$(BINARY) --root .dev --port 7890
+
+dev-seed:
+	@mkdir -p .dev
+	go run $(CMD) seed --root .dev
 
 dev-ui:
 	cd ui && pnpm run dev
@@ -67,9 +71,15 @@ deploy: _check-drive build
 	@mkdir -p "$(DRIVE)/models/ipadapter"
 	@mkdir -p "$(DRIVE)/models/voice"
 	@mkdir -p "$(DRIVE)/models/llm"
+	@mkdir -p "$(DRIVE)/frame/seed"
+	@cp -r seed/ "$(DRIVE)/frame/seed/" 2>/dev/null || true
+	@# Ensure production port is 7891 (fix any old 7890 configs)
+	@if [ -f "$(DRIVE)/frame/frame.toml" ]; then \
+		sed -i '' 's/^port = 7890/port = 7891/' "$(DRIVE)/frame/frame.toml" 2>/dev/null || true; \
+	fi
 	@if [ ! -f "$(DRIVE)/frame/frame.toml" ]; then \
 		echo '# Frame configuration' > "$(DRIVE)/frame/frame.toml"; \
-		echo 'port = 7890' >> "$(DRIVE)/frame/frame.toml"; \
+		echo 'port = 7891' >> "$(DRIVE)/frame/frame.toml"; \
 		echo '' >> "$(DRIVE)/frame/frame.toml"; \
 		echo '# Bifrost integration (image generation)' >> "$(DRIVE)/frame/frame.toml"; \
 		echo 'bifrost_url = "http://localhost:9090"' >> "$(DRIVE)/frame/frame.toml"; \
@@ -79,14 +89,17 @@ deploy: _check-drive build
 		echo "Created $(DRIVE)/frame/frame.toml"; \
 	fi
 	@echo ""
+	@echo "Seeding production database..."
+	@cd "$(DRIVE)/frame" && "$(DRIVE)/bin/frame" seed
+	@echo ""
 	@echo "=== Deploy complete ==="
 	@echo "Binary:  $(DRIVE)/bin/frame ($(VERSION))"
-	@echo "Config:  $(DRIVE)/frame/frame.toml"
-	@echo "DB:      $(DRIVE)/frame/frame.db (created on first run)"
+	@echo "Config:  $(DRIVE)/frame/frame.toml (port 7891)"
+	@echo "DB:      $(DRIVE)/frame/frame.db"
 	@echo "Assets:  $(DRIVE)/assets/"
 	@echo ""
-	@echo "To start:  cd $(DRIVE)/frame && ../bin/frame"
-	@echo "To stop:   frame stop"
+	@echo "To start:  frame up"
+	@echo "To stop:   frame down"
 
 _check-drive:
 	@if [ ! -d "$(DRIVE)" ]; then \

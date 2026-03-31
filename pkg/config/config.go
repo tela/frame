@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 )
@@ -46,6 +47,13 @@ func Load() (*Config, error) {
 	root, err := resolveRoot(*rootFlag)
 	if err != nil {
 		return nil, fmt.Errorf("resolve drive root: %w", err)
+	}
+
+	// Safety guard: dev builds must not access the production drive.
+	// The production binary lives at /Volumes/FRAME/bin/frame; dev builds
+	// run from the repo via "go run" or a local ./frame binary.
+	if isDevBuild() && strings.HasPrefix(root, "/Volumes/") {
+		return nil, fmt.Errorf("refusing to start: dev build resolved root to %s — use --root to point at .dev/ or another local directory", root)
 	}
 
 	cfg := &Config{
@@ -144,4 +152,19 @@ func resolveRoot(explicit string) (string, error) {
 func hasConfigFile(dir string) bool {
 	_, err := os.Stat(filepath.Join(dir, ConfigFileName))
 	return err == nil
+}
+
+// isDevBuild returns true when the binary was NOT installed to the production
+// drive. A production binary lives at /Volumes/FRAME/bin/frame; anything else
+// (go run, ./frame in the repo, /tmp builds) is considered a dev build.
+func isDevBuild() bool {
+	exe, err := os.Executable()
+	if err != nil {
+		return true // assume dev if we can't tell
+	}
+	resolved, err := filepath.EvalSymlinks(exe)
+	if err != nil {
+		resolved = exe
+	}
+	return !strings.HasPrefix(resolved, "/Volumes/")
 }

@@ -7,6 +7,9 @@ frame-bin-*
 # Build output
 /dist/
 
+# Dev environment (local dev database + assets)
+.dev/
+
 # Database
 *.db
 *.db-journal
