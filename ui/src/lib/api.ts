@@ -93,7 +93,19 @@ export function useCharacter(id: string) {
 export function useCreateCharacter() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (body: { name: string; display_name?: string; status?: string }) =>
+    mutationFn: (body: {
+      name: string
+      display_name?: string
+      status?: string
+      gender?: string
+      ethnicity?: string
+      skin_tone?: string
+      eye_color?: string
+      eye_shape?: string
+      natural_hair_color?: string
+      natural_hair_texture?: string
+      distinguishing_features?: string
+    }) =>
       postJSON<Character>('/api/v1/characters', {
         ...body,
         status: body.status || 'prospect',

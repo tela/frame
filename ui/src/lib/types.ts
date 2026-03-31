@@ -10,6 +10,14 @@ export interface Character {
   fig_published: boolean
   fig_character_url: string
   source: string
+  gender: string
+  ethnicity: string
+  skin_tone: string
+  eye_color: string
+  eye_shape: string
+  natural_hair_color: string
+  natural_hair_texture: string
+  distinguishing_features: string
   created_at: string
   updated_at: string
 }
