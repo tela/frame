@@ -243,8 +243,7 @@ export function useUpdateCharacterImage() {
       set_type?: string
       triage_status?: string
       rating?: number
-      is_face_ref?: boolean
-      is_body_ref?: boolean
+      ref_type?: string | null
       ref_score?: number
       ref_rank?: number
       era_id?: string
@@ -624,8 +623,7 @@ export function useBulkUpdateCharacterImages() {
         set_type?: string
         triage_status?: string
         rating?: number
-        is_face_ref?: boolean
-        is_body_ref?: boolean
+        ref_type?: string | null
         ref_rank?: number
         era_id?: string
       }
