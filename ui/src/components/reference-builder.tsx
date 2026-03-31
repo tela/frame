@@ -374,19 +374,10 @@ function PoolImageCard({ ci, isSelected, onCycleRef, onApprove, onToggleSelect }
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
         />
 
-        {/* Ref badge — always visible */}
+        {/* Ref badge — top-right, always visible */}
         {ci.ref_type && (
-          <div className="absolute top-3 left-3 px-2 py-0.5 bg-surface-lowest border border-on-surface text-[10px] font-bold z-10">
+          <div className="absolute top-2.5 right-2.5 px-2 py-0.5 bg-on-surface text-background text-[10px] font-bold tracking-wider uppercase z-10">
             {REF_LABELS[ci.ref_type]}
-          </div>
-        )}
-
-        {/* Selected checkmark */}
-        {hasRef && (
-          <div className="absolute top-3 right-3 bg-on-surface text-background rounded-full p-1 shadow-lg z-10">
-            <span className="material-symbols-outlined text-sm leading-none" style={{ fontVariationSettings: "'FILL' 1" }}>
-              check_circle
-            </span>
           </div>
         )}
 
@@ -394,7 +385,7 @@ function PoolImageCard({ ci, isSelected, onCycleRef, onApprove, onToggleSelect }
         {isPending && (
           <button
             onClick={(e) => { e.stopPropagation(); onApprove() }}
-            className="absolute bottom-3 right-3 bg-green-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow-lg z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute bottom-2.5 right-2.5 bg-green-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow-lg z-10 opacity-0 group-hover:opacity-100 transition-opacity"
             title="Approve"
           >
             <span className="material-symbols-outlined text-[16px]">check</span>
@@ -402,7 +393,7 @@ function PoolImageCard({ ci, isSelected, onCycleRef, onApprove, onToggleSelect }
         )}
       </div>
 
-      {/* Selection checkbox */}
+      {/* Selection checkbox — top-left, hover-only */}
       <button
         onClick={(e) => { e.stopPropagation(); onToggleSelect() }}
         className={`absolute top-2 left-2 z-20 w-6 h-6 rounded-sm flex items-center justify-center border transition-all ${
