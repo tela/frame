@@ -234,18 +234,35 @@ func (s *Store) DeleteTag(namespace, value string) (int64, error) {
 // ListNamespaces returns all namespaces for a family.
 func (s *Store) ListNamespaces(familyID string) ([]Namespace, error) {
 	rows, err := s.db.Query(
-		`SELECT id, family_id, name, description, sort_order, created_at
+		`SELECT id, family_id, name, description, ref_types, sort_order, created_at
 		 FROM tag_namespaces WHERE family_id = ? ORDER BY sort_order`, familyID)
 	if err != nil {
 		return nil, fmt.Errorf("list namespaces: %w", err)
 	}
-	defer rows.Close()
+	return scanNamespaces(rows)
+}
 
+// ListNamespacesForRefType returns namespaces for a family filtered by ref_type.
+// Returns namespaces where ref_types is NULL (universal) or contains the given ref_type.
+func (s *Store) ListNamespacesForRefType(familyID, refType string) ([]Namespace, error) {
+	rows, err := s.db.Query(
+		`SELECT id, family_id, name, description, ref_types, sort_order, created_at
+		 FROM tag_namespaces
+		 WHERE family_id = ? AND (ref_types IS NULL OR ',' || ref_types || ',' LIKE '%,' || ? || ',%')
+		 ORDER BY sort_order`, familyID, refType)
+	if err != nil {
+		return nil, fmt.Errorf("list namespaces for ref type: %w", err)
+	}
+	return scanNamespaces(rows)
+}
+
+func scanNamespaces(rows *sql.Rows) ([]Namespace, error) {
+	defer rows.Close()
 	var namespaces []Namespace
 	for rows.Next() {
 		var ns Namespace
 		var createdAt string
-		if err := rows.Scan(&ns.ID, &ns.FamilyID, &ns.Name, &ns.Description, &ns.SortOrder, &createdAt); err != nil {
+		if err := rows.Scan(&ns.ID, &ns.FamilyID, &ns.Name, &ns.Description, &ns.RefTypes, &ns.SortOrder, &createdAt); err != nil {
 			return nil, fmt.Errorf("scan namespace: %w", err)
 		}
 		ns.CreatedAt = parseTime(createdAt)
@@ -312,13 +329,19 @@ func (s *Store) DeleteAllowedValue(id string) error {
 }
 
 // GetFamilyTaxonomy returns the complete taxonomy tree for a family.
-func (s *Store) GetFamilyTaxonomy(familyID string) (*FamilyTaxonomy, error) {
+// If refType is non-empty, only namespaces matching that ref_type (or universal) are included.
+func (s *Store) GetFamilyTaxonomy(familyID string, refType ...string) (*FamilyTaxonomy, error) {
 	family, err := s.GetFamily(familyID)
 	if err != nil || family == nil {
 		return nil, err
 	}
 
-	namespaces, err := s.ListNamespaces(familyID)
+	var namespaces []Namespace
+	if len(refType) > 0 && refType[0] != "" {
+		namespaces, err = s.ListNamespacesForRefType(familyID, refType[0])
+	} else {
+		namespaces, err = s.ListNamespaces(familyID)
+	}
 	if err != nil {
 		return nil, err
 	}
