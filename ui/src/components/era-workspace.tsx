@@ -473,22 +473,17 @@ function EraImageCard({ ci, isSelected, onToggleSelect, onUpdate, shootName }: {
       <div className="absolute inset-0 bg-on-surface/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-4 text-background">
         {/* Top: quick actions */}
         <div className="flex justify-end gap-1">
-          <button
-            onClick={() => onUpdate('is_face_ref', !ci.is_face_ref)}
-            className={`px-2 py-1 text-[9px] uppercase font-bold tracking-wider rounded-sm transition-colors ${
-              ci.is_face_ref ? 'bg-accent text-white' : 'bg-background/20 hover:bg-accent/60'
-            }`}
-          >
-            Face
-          </button>
-          <button
-            onClick={() => onUpdate('is_body_ref', !ci.is_body_ref)}
-            className={`px-2 py-1 text-[9px] uppercase font-bold tracking-wider rounded-sm transition-colors ${
-              ci.is_body_ref ? 'bg-accent text-white' : 'bg-background/20 hover:bg-accent/60'
-            }`}
-          >
-            Body
-          </button>
+          {(['face', 'body', 'breasts', 'vagina'] as const).map((rt) => (
+            <button
+              key={rt}
+              onClick={() => onUpdate('ref_type', ci.ref_type === rt ? '' : rt)}
+              className={`px-2 py-1 text-[9px] uppercase font-bold tracking-wider rounded-sm transition-colors ${
+                ci.ref_type === rt ? 'bg-accent text-white' : 'bg-background/20 hover:bg-accent/60'
+              }`}
+            >
+              {rt === 'breasts' ? 'Br' : rt === 'vagina' ? 'V' : rt.charAt(0).toUpperCase()}
+            </button>
+          ))}
         </div>
 
         {/* Bottom: rating + badges */}

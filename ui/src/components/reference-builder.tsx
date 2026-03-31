@@ -18,9 +18,16 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { CharacterImage } from '@/lib/types'
+import type { CharacterImage, RefType } from '@/lib/types'
 
 type RefFilter = 'approved' | 'all'
+
+const REF_TYPES: RefType[] = ['face', 'body', 'breasts', 'vagina']
+const REF_CYCLE: (RefType | null)[] = [null, 'face', 'body', 'breasts', 'vagina']
+const REF_LABELS: Record<RefType, string> = { face: 'F', body: 'B', breasts: 'Br', vagina: 'V' }
+const REF_PACKAGE_KEYS: Record<RefType, 'face_refs' | 'body_refs' | 'breasts_refs' | 'vagina_refs'> = {
+  face: 'face_refs', body: 'body_refs', breasts: 'breasts_refs', vagina: 'vagina_refs',
+}
 
 export function ReferenceBuilder() {
   const { characterId, eraId } = useParams({ from: '/characters/$characterId/eras/$eraId/refs' })
@@ -44,30 +51,27 @@ export function ReferenceBuilder() {
   }, [allImages, filter])
 
   const totalCount = allImages?.length ?? 0
-  const faceRefCount = refPackage?.face_refs.length ?? 0
-  const bodyRefCount = refPackage?.body_refs.length ?? 0
+  const refCounts = {
+    face: refPackage?.face_refs.length ?? 0,
+    body: refPackage?.body_refs.length ?? 0,
+    breasts: refPackage?.breasts_refs.length ?? 0,
+    vagina: refPackage?.vagina_refs.length ?? 0,
+  }
 
-  // Click-to-cycle: none -> face_ref -> body_ref -> none
+  // Click-to-cycle: null -> face -> body -> breasts -> vagina -> null
   const cycleRef = useCallback((ci: CharacterImage) => {
-    if (!ci.is_face_ref && !ci.is_body_ref) {
-      updateImage.mutate({ characterId, imageId: ci.image_id, is_face_ref: true, is_body_ref: false })
-    } else if (ci.is_face_ref) {
-      updateImage.mutate({ characterId, imageId: ci.image_id, is_face_ref: false, is_body_ref: true })
-    } else {
-      updateImage.mutate({ characterId, imageId: ci.image_id, is_face_ref: false, is_body_ref: false })
-    }
+    const currentIdx = REF_CYCLE.indexOf(ci.ref_type)
+    const nextIdx = (currentIdx + 1) % REF_CYCLE.length
+    const next = REF_CYCLE[nextIdx]
+    updateImage.mutate({ characterId, imageId: ci.image_id, ref_type: next ?? '' })
   }, [characterId, updateImage])
 
   const approveImage = useCallback((imageId: string) => {
     updateImage.mutate({ characterId, imageId, triage_status: 'approved' })
   }, [characterId, updateImage])
 
-  const removeRef = useCallback((imageId: string, type: 'face' | 'body') => {
-    if (type === 'face') {
-      updateImage.mutate({ characterId, imageId, is_face_ref: false })
-    } else {
-      updateImage.mutate({ characterId, imageId, is_body_ref: false })
-    }
+  const removeRef = useCallback((imageId: string) => {
+    updateImage.mutate({ characterId, imageId, ref_type: '' })
   }, [characterId, updateImage])
 
   const toggleSelect = useCallback((imageId: string) => {
@@ -88,20 +92,11 @@ export function ReferenceBuilder() {
     setSelectedImages(new Set())
   }, [selectedImages, characterId, bulkUpdate])
 
-  const handleBulkFaceRef = useCallback(() => {
+  const handleBulkSetRef = useCallback((refType: RefType) => {
     bulkUpdate.mutate({
       characterId,
       imageIds: Array.from(selectedImages),
-      update: { is_face_ref: true, is_body_ref: false },
-    })
-    setSelectedImages(new Set())
-  }, [selectedImages, characterId, bulkUpdate])
-
-  const handleBulkBodyRef = useCallback(() => {
-    bulkUpdate.mutate({
-      characterId,
-      imageIds: Array.from(selectedImages),
-      update: { is_face_ref: false, is_body_ref: true },
+      update: { ref_type: refType },
     })
     setSelectedImages(new Set())
   }, [selectedImages, characterId, bulkUpdate])
@@ -112,29 +107,17 @@ export function ReferenceBuilder() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
-  const handleFaceReorder = useCallback((event: DragEndEvent) => {
+  const handleReorder = useCallback((refType: RefType, event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id || !refPackage) return
 
-    const oldIndex = refPackage.face_refs.findIndex((r) => r.image_id === active.id)
-    const newIndex = refPackage.face_refs.findIndex((r) => r.image_id === over.id)
+    const key = REF_PACKAGE_KEYS[refType]
+    const refs = refPackage[key]
+    const oldIndex = refs.findIndex((r) => r.image_id === active.id)
+    const newIndex = refs.findIndex((r) => r.image_id === over.id)
     if (oldIndex === -1 || newIndex === -1) return
 
-    const reordered = arrayMove(refPackage.face_refs, oldIndex, newIndex)
-    reordered.forEach((ref, i) => {
-      updateImage.mutate({ characterId, imageId: ref.image_id, ref_rank: i + 1 })
-    })
-  }, [refPackage, characterId, updateImage])
-
-  const handleBodyReorder = useCallback((event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id || !refPackage) return
-
-    const oldIndex = refPackage.body_refs.findIndex((r) => r.image_id === active.id)
-    const newIndex = refPackage.body_refs.findIndex((r) => r.image_id === over.id)
-    if (oldIndex === -1 || newIndex === -1) return
-
-    const reordered = arrayMove(refPackage.body_refs, oldIndex, newIndex)
+    const reordered = arrayMove(refs, oldIndex, newIndex)
     reordered.forEach((ref, i) => {
       updateImage.mutate({ characterId, imageId: ref.image_id, ref_rank: i + 1 })
     })
@@ -168,7 +151,7 @@ export function ReferenceBuilder() {
           </div>
         </div>
         <span className="text-ui text-[11px] tracking-[0.15em] text-muted">
-          {faceRefCount} face · {bodyRefCount} body · {totalCount} total
+          {REF_TYPES.map((rt) => `${refCounts[rt]} ${rt}`).join(' · ')} · {totalCount} total
         </span>
       </header>
 
@@ -233,69 +216,44 @@ export function ReferenceBuilder() {
         {/* Right Panel: Reference Set & Test */}
         <div className="w-[40%] bg-surface flex flex-col overflow-y-auto">
           <div className="p-10 space-y-12">
-            {/* Face Refs */}
-            <div>
-              <div className="flex justify-between items-baseline mb-4">
-                <h3 className="font-display text-xl tracking-display">Face Refs</h3>
-                <span className="text-[10px] font-bold tracking-widest uppercase opacity-40">
-                  {String(faceRefCount).padStart(2, '0')} selected
-                </span>
-              </div>
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleFaceReorder}>
-                <SortableContext
-                  items={(refPackage?.face_refs ?? []).map((r) => r.image_id)}
-                  strategy={horizontalListSortingStrategy}
-                >
-                  <div className="flex gap-3 flex-wrap">
-                    {(refPackage?.face_refs ?? []).map((ref) => (
-                      <SortableRefThumb
-                        key={ref.image_id}
-                        imageId={ref.image_id}
-                        type="face"
-                        onRemove={() => removeRef(ref.image_id, 'face')}
-                      />
-                    ))}
-                    {faceRefCount === 0 && (
-                      <div className="w-14 h-14 rounded-full bg-surface-low flex items-center justify-center border border-outline-variant/20">
-                        <span className="material-symbols-outlined text-sm opacity-40">add</span>
-                      </div>
-                    )}
+            {/* Ref strips for each type */}
+            {REF_TYPES.map((rt) => {
+              const key = REF_PACKAGE_KEYS[rt]
+              const refs = refPackage?.[key] ?? []
+              const count = refs.length
+              return (
+                <div key={rt}>
+                  <div className="flex justify-between items-baseline mb-4">
+                    <h3 className="font-display text-xl tracking-display capitalize">{rt} Refs</h3>
+                    <span className="text-[10px] font-bold tracking-widest uppercase opacity-40">
+                      {String(count).padStart(2, '0')} selected
+                    </span>
                   </div>
-                </SortableContext>
-              </DndContext>
-            </div>
-
-            {/* Body Refs */}
-            <div>
-              <div className="flex justify-between items-baseline mb-4">
-                <h3 className="font-display text-xl tracking-display">Body Refs</h3>
-                <span className="text-[10px] font-bold tracking-widest uppercase opacity-40">
-                  {String(bodyRefCount).padStart(2, '0')} selected
-                </span>
-              </div>
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleBodyReorder}>
-                <SortableContext
-                  items={(refPackage?.body_refs ?? []).map((r) => r.image_id)}
-                  strategy={horizontalListSortingStrategy}
-                >
-                  <div className="flex gap-3 flex-wrap">
-                    {(refPackage?.body_refs ?? []).map((ref) => (
-                      <SortableRefThumb
-                        key={ref.image_id}
-                        imageId={ref.image_id}
-                        type="body"
-                        onRemove={() => removeRef(ref.image_id, 'body')}
-                      />
-                    ))}
-                    {bodyRefCount === 0 && (
-                      <div className="w-14 h-14 bg-surface-low flex items-center justify-center border border-outline-variant/20">
-                        <span className="material-symbols-outlined text-sm opacity-40">add</span>
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleReorder(rt, e)}>
+                    <SortableContext
+                      items={refs.map((r) => r.image_id)}
+                      strategy={horizontalListSortingStrategy}
+                    >
+                      <div className="flex gap-3 flex-wrap">
+                        {refs.map((ref) => (
+                          <SortableRefThumb
+                            key={ref.image_id}
+                            imageId={ref.image_id}
+                            type={rt}
+                            onRemove={() => removeRef(ref.image_id)}
+                          />
+                        ))}
+                        {count === 0 && (
+                          <div className={`w-14 h-14 ${rt === 'face' ? 'rounded-full' : ''} bg-surface-low flex items-center justify-center border border-outline-variant/20`}>
+                            <span className="material-symbols-outlined text-sm opacity-40">add</span>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            </div>
+                    </SortableContext>
+                  </DndContext>
+                </div>
+              )
+            })}
 
             {/* Test Result */}
             <div className="space-y-6">
@@ -364,18 +322,15 @@ export function ReferenceBuilder() {
           >
             Approve
           </button>
-          <button
-            onClick={handleBulkFaceRef}
-            className="text-[11px] uppercase font-bold tracking-[0.1em] text-background/80 hover:text-background transition-colors"
-          >
-            Face Ref
-          </button>
-          <button
-            onClick={handleBulkBodyRef}
-            className="text-[11px] uppercase font-bold tracking-[0.1em] text-background/80 hover:text-background transition-colors"
-          >
-            Body Ref
-          </button>
+          {REF_TYPES.map((rt) => (
+            <button
+              key={rt}
+              onClick={() => handleBulkSetRef(rt)}
+              className="text-[11px] uppercase font-bold tracking-[0.1em] text-background/80 hover:text-background transition-colors capitalize"
+            >
+              {rt}
+            </button>
+          ))}
           <div className="w-px h-5 bg-background/20" />
           <button
             onClick={() => setSelectedImages(new Set())}
@@ -399,7 +354,7 @@ function PoolImageCard({ ci, isSelected, onCycleRef, onApprove, onToggleSelect }
   onToggleSelect: () => void
 }) {
   const isPending = ci.triage_status === 'pending'
-  const hasRef = ci.is_face_ref || ci.is_body_ref
+  const hasRef = ci.ref_type !== null && ci.ref_type !== undefined
 
   return (
     <div className="relative group cursor-pointer">
@@ -420,14 +375,9 @@ function PoolImageCard({ ci, isSelected, onCycleRef, onApprove, onToggleSelect }
         />
 
         {/* Ref badge — always visible */}
-        {ci.is_face_ref && (
+        {ci.ref_type && (
           <div className="absolute top-3 left-3 px-2 py-0.5 bg-surface-lowest border border-on-surface text-[10px] font-bold z-10">
-            F
-          </div>
-        )}
-        {ci.is_body_ref && (
-          <div className="absolute top-3 left-3 px-2 py-0.5 bg-surface-lowest border border-on-surface text-[10px] font-bold z-10">
-            B
+            {REF_LABELS[ci.ref_type]}
           </div>
         )}
 
@@ -476,7 +426,7 @@ function PoolImageCard({ ci, isSelected, onCycleRef, onApprove, onToggleSelect }
 
 function SortableRefThumb({ imageId, type, onRemove }: {
   imageId: string
-  type: 'face' | 'body'
+  type: RefType
   onRemove: () => void
 }) {
   const {
