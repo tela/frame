@@ -268,13 +268,13 @@ func TestJourney_CurateEra(t *testing.T) {
 	// Promote best to face ref (assign to era first)
 	s.patchJSON(
 		fmt.Sprintf("/api/v1/characters/%s/images/%s", charID, imageIDs[4]),
-		map[string]any{"is_face_ref": true, "ref_score": 95.0, "ref_rank": 1, "set_type": "reference", "era_id": eraID},
+		map[string]any{"ref_type": "face", "ref_score": 95.0, "ref_rank": 1, "set_type": "reference", "era_id": eraID},
 	)
 
 	// Promote another to body ref
 	s.patchJSON(
 		fmt.Sprintf("/api/v1/characters/%s/images/%s", charID, imageIDs[3]),
-		map[string]any{"is_body_ref": true, "set_type": "reference", "era_id": eraID},
+		map[string]any{"ref_type": "body", "set_type": "reference", "era_id": eraID},
 	)
 
 	// Verify reference package
@@ -568,7 +568,7 @@ func TestJourney_AuditTrail(t *testing.T) {
 	// Promote to face ref (audit event)
 	s.patchJSON(
 		fmt.Sprintf("/api/v1/characters/%s/images/%s", charID, imgID),
-		map[string]any{"is_face_ref": true},
+		map[string]any{"ref_type": "face"},
 	)
 
 	// Query audit for this image

@@ -73,7 +73,7 @@ func TestJourney_FullPipeline(t *testing.T) {
 	// 7. Bulk mark first 2 as face ref
 	code, _ = s.putJSON(fmt.Sprintf("/api/v1/characters/%s/images/bulk", charID), map[string]any{
 		"image_ids": shootImgs[:2],
-		"update":    map[string]any{"is_face_ref": true, "ref_rank": 1},
+		"update":    map[string]any{"ref_type": "face", "ref_rank": 1},
 	})
 	if code != 200 {
 		t.Fatalf("bulk face ref: %d", code)
@@ -82,7 +82,7 @@ func TestJourney_FullPipeline(t *testing.T) {
 	// 8. Mark third as body ref
 	code, _ = s.putJSON(fmt.Sprintf("/api/v1/characters/%s/images/bulk", charID), map[string]any{
 		"image_ids": shootImgs[2:3],
-		"update":    map[string]any{"is_body_ref": true, "ref_rank": 1},
+		"update":    map[string]any{"ref_type": "body", "ref_rank": 1},
 	})
 	if code != 200 {
 		t.Fatalf("bulk body ref: %d", code)
