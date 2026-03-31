@@ -13,13 +13,15 @@ import (
 // Client talks to a Bifrost instance for image generation.
 type Client struct {
 	baseURL    string
+	clientName string
 	httpClient *http.Client
 }
 
 // NewClient creates a Bifrost client pointing at the given base URL.
 func NewClient(baseURL string) *Client {
 	return &Client{
-		baseURL: baseURL,
+		baseURL:    baseURL,
+		clientName: "frame",
 		httpClient: &http.Client{
 			Timeout: 5 * time.Minute, // generation can take a while
 		},
@@ -57,6 +59,7 @@ func (c *Client) GenerateImage(req *ImageGenRequest) (*ImageGenResponse, error) 
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("X-Bifrost-Client", c.clientName)
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
