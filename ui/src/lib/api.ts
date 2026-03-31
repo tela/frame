@@ -243,8 +243,7 @@ export function useUpdateCharacterImage() {
       set_type?: string
       triage_status?: string
       rating?: number
-      is_face_ref?: boolean
-      is_body_ref?: boolean
+      ref_type?: string | null
       ref_score?: number
       ref_rank?: number
       era_id?: string
@@ -252,6 +251,7 @@ export function useUpdateCharacterImage() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'images'] })
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId] })
+      qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'eras'] })
     },
   })
 }
@@ -380,6 +380,15 @@ export interface GenerateResponse {
 export interface BifrostStatus {
   available: boolean
   reason?: string
+  models?: Array<{
+    id: string
+    name: string
+    modalities: string[]
+    tasks: string[]
+    tiers: string[]
+    nsfw_safe: boolean
+    content_policy?: Record<string, string>
+  }>
   providers?: Array<{
     name: string
     tiers: string[]
@@ -507,10 +516,11 @@ export function useTags(familyId?: string) {
   })
 }
 
-export function useFamilyTaxonomy(familyId: string) {
+export function useFamilyTaxonomy(familyId: string, refType?: string | null) {
+  const params = refType ? `?ref_type=${refType}` : ''
   return useQuery({
-    queryKey: ['tag-families', familyId, 'taxonomy'],
-    queryFn: () => fetchJSON<FamilyTaxonomy>(`/api/v1/tag-families/${familyId}/taxonomy`),
+    queryKey: ['tag-families', familyId, 'taxonomy', refType ?? 'all'],
+    queryFn: () => fetchJSON<FamilyTaxonomy>(`/api/v1/tag-families/${familyId}/taxonomy${params}`),
     enabled: !!familyId,
   })
 }
@@ -614,8 +624,7 @@ export function useBulkUpdateCharacterImages() {
         set_type?: string
         triage_status?: string
         rating?: number
-        is_face_ref?: boolean
-        is_body_ref?: boolean
+        ref_type?: string | null
         ref_rank?: number
         era_id?: string
       }
@@ -634,6 +643,7 @@ export function useBulkUpdateCharacterImages() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'images'] })
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId] })
+      qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'eras'] })
     },
   })
 }

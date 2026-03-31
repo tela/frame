@@ -111,6 +111,7 @@ func cmdSeed() {
 
 	now := time.Now().UTC()
 	nowStr := now.Format("2006-01-02T15:04:05Z")
+	charOffset := byte(0) // ensures unique pixel data per character
 
 	for _, sc := range characters {
 		charID := id.New()
@@ -152,8 +153,9 @@ func cmdSeed() {
 		}
 
 		// Ingest test images for the first era (5 per character)
+		charOffset += 70 // shift colors so each character has unique hashes
 		for j := 0; j < 5; j++ {
-			png := makeSeedPNG(byte(j*40+10), byte(j*30+20), byte(j*20+30))
+			png := makeSeedPNG(byte(j*40+10)+charOffset, byte(j*30+20)+charOffset, byte(j*20+30)+charOffset)
 			eraPtr := &firstEraID
 			result, err := ingester.Ingest(&image.IngestRequest{
 				Filename:      fmt.Sprintf("seed_%s_%d.png", sc.displayName, j),
@@ -169,14 +171,14 @@ func cmdSeed() {
 			// Mark first two as face refs, third as body ref
 			if j == 0 || j == 1 {
 				imgStore.UpdateCharacterImage(result.ImageID, charID, &image.CharacterImageUpdate{
-					IsFaceRef:    boolp(true),
+					RefType:      strp("face"),
 					RefRank:      intp(j + 1),
 					SetType:      setTypePtr(image.SetReference),
 					TriageStatus: triagePtr(image.TriageApproved),
 				})
 			} else if j == 2 {
 				imgStore.UpdateCharacterImage(result.ImageID, charID, &image.CharacterImageUpdate{
-					IsBodyRef:    boolp(true),
+					RefType:      strp("body"),
 					RefRank:      intp(1),
 					SetType:      setTypePtr(image.SetReference),
 					TriageStatus: triagePtr(image.TriageApproved),
@@ -545,7 +547,7 @@ func writePNGChunk(buf *bytes.Buffer, chunkType string, data []byte) {
 	buf.Write(crcBytes[:])
 }
 
-func boolp(b bool) *bool             { return &b }
+func strp(s string) *string          { return &s }
 func intp(i int) *int                { return &i }
 func setTypePtr(s image.SetType) *image.SetType       { return &s }
 func triagePtr(s image.TriageStatus) *image.TriageStatus { return &s }

@@ -30,8 +30,7 @@ type SearchResult struct {
 	SetType       *SetType     `json:"set_type,omitempty"`
 	TriageStatus  *TriageStatus `json:"triage_status,omitempty"`
 	Rating        *int         `json:"rating,omitempty"`
-	IsFaceRef     bool         `json:"is_face_ref"`
-	IsBodyRef     bool         `json:"is_body_ref"`
+	RefType       *RefType     `json:"ref_type"`
 }
 
 // SearchResults wraps results with total count for pagination.
@@ -57,7 +56,7 @@ func (s *Store) Search(params *SearchParams) (*SearchResults, error) {
 
 	baseQuery := `
 		SELECT i.id, i.hash, i.original_filename, i.format, i.width, i.height, i.file_size, i.source, i.ingested_at,
-		       ci.character_id, c.name, ci.era_id, e.label, ci.set_type, ci.triage_status, ci.rating, ci.is_face_ref, ci.is_body_ref
+		       ci.character_id, c.name, ci.era_id, e.label, ci.set_type, ci.triage_status, ci.rating, ci.ref_type
 		FROM images i
 		LEFT JOIN character_images ci ON ci.image_id = i.id
 		LEFT JOIN characters c ON c.id = ci.character_id
@@ -157,14 +156,14 @@ func (s *Store) Search(params *SearchParams) (*SearchResults, error) {
 	for rows.Next() {
 		var r SearchResult
 		var ingestedAt string
-		var isFaceRef, isBodyRef sql.NullInt64
 		var charID, charName, eraID, eraLabel sql.NullString
 		var setType, triageStatus sql.NullString
 		var rating sql.NullInt64
+		var refType sql.NullString
 
 		if err := rows.Scan(
 			&r.ID, &r.Hash, &r.OriginalFilename, &r.Format, &r.Width, &r.Height, &r.FileSize, &r.Source, &ingestedAt,
-			&charID, &charName, &eraID, &eraLabel, &setType, &triageStatus, &rating, &isFaceRef, &isBodyRef,
+			&charID, &charName, &eraID, &eraLabel, &setType, &triageStatus, &rating, &refType,
 		); err != nil {
 			return nil, fmt.Errorf("scan search result: %w", err)
 		}
@@ -193,8 +192,10 @@ func (s *Store) Search(params *SearchParams) (*SearchResults, error) {
 			v := int(rating.Int64)
 			r.Rating = &v
 		}
-		r.IsFaceRef = isFaceRef.Valid && isFaceRef.Int64 != 0
-		r.IsBodyRef = isBodyRef.Valid && isBodyRef.Int64 != 0
+		if refType.Valid {
+			rt := RefType(refType.String)
+			r.RefType = &rt
+		}
 
 		results = append(results, r)
 	}

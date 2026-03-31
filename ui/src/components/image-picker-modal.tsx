@@ -129,15 +129,12 @@ function ImagePickerCard({ ci, isSelected, onToggle }: {
         </div>
       )}
 
-      {/* Ref badges */}
-      <div className="absolute bottom-1 left-1 flex gap-0.5">
-        {ci.is_face_ref && (
-          <span className="bg-on-surface/70 text-background text-[8px] px-1 rounded-sm">F</span>
-        )}
-        {ci.is_body_ref && (
-          <span className="bg-on-surface/70 text-background text-[8px] px-1 rounded-sm">B</span>
-        )}
-      </div>
+      {/* Ref badge */}
+      {ci.ref_type && (
+        <div className="absolute bottom-1 left-1">
+          <span className="bg-on-surface/70 text-background text-[8px] px-1 rounded-sm uppercase">{ci.ref_type}</span>
+        </div>
+      )}
     </button>
   )
 }

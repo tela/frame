@@ -223,6 +223,14 @@ export function EraWorkspace() {
           <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
           Studio
         </Link>
+        <Link
+          to="/characters/$characterId/eras/$eraId/refs"
+          params={{ characterId, eraId }}
+          className="text-ui text-[13px] text-muted hover:text-primary transition-colors flex items-center gap-2"
+        >
+          <span className="material-symbols-outlined text-[18px]">collections</span>
+          Ref Builder
+        </Link>
         {/* Shoot filter dropdown */}
         <div className="ml-auto flex items-center gap-4">
           <select
@@ -408,6 +416,11 @@ export function EraWorkspace() {
         open={showTagPicker}
         onClose={() => setShowTagPicker(false)}
         imageIds={Array.from(selectedImages)}
+        refType={(() => {
+          const selectedCIs = (eraImages ?? []).filter((ci) => selectedImages.has(ci.image_id))
+          const types = new Set(selectedCIs.map((ci) => ci.ref_type).filter(Boolean))
+          return types.size === 1 ? [...types][0] : undefined
+        })()}
       />
     </Dropzone>
   )
@@ -465,22 +478,17 @@ function EraImageCard({ ci, isSelected, onToggleSelect, onUpdate, shootName }: {
       <div className="absolute inset-0 bg-on-surface/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-4 text-background">
         {/* Top: quick actions */}
         <div className="flex justify-end gap-1">
-          <button
-            onClick={() => onUpdate('is_face_ref', !ci.is_face_ref)}
-            className={`px-2 py-1 text-[9px] uppercase font-bold tracking-wider rounded-sm transition-colors ${
-              ci.is_face_ref ? 'bg-accent text-white' : 'bg-background/20 hover:bg-accent/60'
-            }`}
-          >
-            Face
-          </button>
-          <button
-            onClick={() => onUpdate('is_body_ref', !ci.is_body_ref)}
-            className={`px-2 py-1 text-[9px] uppercase font-bold tracking-wider rounded-sm transition-colors ${
-              ci.is_body_ref ? 'bg-accent text-white' : 'bg-background/20 hover:bg-accent/60'
-            }`}
-          >
-            Body
-          </button>
+          {(['face', 'body', 'breasts', 'vagina'] as const).map((rt) => (
+            <button
+              key={rt}
+              onClick={() => onUpdate('ref_type', ci.ref_type === rt ? '' : rt)}
+              className={`px-2 py-1 text-[9px] uppercase font-bold tracking-wider rounded-sm transition-colors ${
+                ci.ref_type === rt ? 'bg-accent text-white' : 'bg-background/20 hover:bg-accent/60'
+              }`}
+            >
+              {rt === 'breasts' ? 'Br' : rt === 'vagina' ? 'V' : rt.charAt(0).toUpperCase()}
+            </button>
+          ))}
         </div>
 
         {/* Bottom: rating + badges */}

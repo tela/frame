@@ -17,7 +17,7 @@ func TestBulkUpdateCharacterImages(t *testing.T) {
 	// Bulk mark as face_ref
 	code, body := s.putJSON(fmt.Sprintf("/api/v1/characters/%s/images/bulk", charID), map[string]any{
 		"image_ids": []string{img1, img2},
-		"update":    map[string]any{"is_face_ref": true, "ref_rank": 1},
+		"update":    map[string]any{"ref_type": "face", "ref_rank": 1},
 	})
 	if code != 200 {
 		t.Fatalf("bulk update: status %d, body: %s", code, body)

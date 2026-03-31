@@ -21,6 +21,7 @@ import { ImagePreprocessor } from '@/components/image-preprocessor'
 import { ImageDetail } from '@/components/image-detail'
 import { Wardrobe } from '@/components/wardrobe'
 import { HairCatalog } from '@/components/hair-catalog'
+import { ReferenceBuilder } from '@/components/reference-builder'
 
 // Root
 const rootRoute = createRootRoute({
@@ -69,6 +70,12 @@ const studioRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/characters/$characterId/eras/$eraId/studio',
   component: Studio,
+})
+
+const refsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/characters/$characterId/eras/$eraId/refs',
+  component: ReferenceBuilder,
 })
 
 // Media
@@ -155,6 +162,7 @@ const routeTree = rootRoute.addChildren([
   eraWorkspaceRoute,
   triageRoute,
   studioRoute,
+  refsRoute,
   mediaRoute,
   wardrobeRoute,
   hairRoute,

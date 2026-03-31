@@ -213,6 +213,7 @@ export function TriageQueue() {
           open={showTagOverlay}
           onClose={() => setShowTagOverlay(false)}
           imageIds={[currentImage.image_id]}
+          refType={currentImage.ref_type}
         />
       )}
     </div>

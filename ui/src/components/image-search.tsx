@@ -199,8 +199,7 @@ function SearchResultCard({ result }: { result: SearchResult }) {
             {result.set_type && (
               <span className="text-[8px] uppercase tracking-wider bg-background/20 px-1.5 py-0.5">{result.set_type}</span>
             )}
-            {result.is_face_ref && <span className="text-[8px] uppercase bg-accent/80 px-1.5 py-0.5">F</span>}
-            {result.is_body_ref && <span className="text-[8px] uppercase bg-accent/80 px-1.5 py-0.5">B</span>}
+            {result.ref_type && <span className="text-[8px] uppercase bg-accent/80 px-1.5 py-0.5">{result.ref_type}</span>}
           </div>
           {result.rating != null && result.rating > 0 && (
             <div className="flex gap-0.5">

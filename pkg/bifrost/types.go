@@ -13,7 +13,7 @@ type ImageGenRequest struct {
 	LoraAdapter      string           `json:"lora_adapter,omitempty"`
 	LoraStrength     float64          `json:"lora_strength,omitempty"`
 	DenoiseStrength  float64          `json:"denoise_strength,omitempty"`  // for img2img (0.0-1.0)
-	WorkflowTemplate string          `json:"workflow_template,omitempty"` // e.g., txt2img, img2img, sdxl_character_gen
+	WorkflowTemplate string          `json:"workflow,omitempty"` // e.g., txt2img, img2img, multi_ref
 	Meta             RequestMeta     `json:"meta"`
 }
 
@@ -71,6 +71,8 @@ type ProviderInfo struct {
 const (
 	RefTypeFace     = "face_ref"
 	RefTypeBody     = "body_ref"
+	RefTypeBreasts  = "breasts_ref"
+	RefTypeVagina   = "vagina_ref"
 	RefTypeGarment  = "garment_ref"
 	RefTypePose     = "pose_ref"
 	RefTypeLocation = "location_ref"

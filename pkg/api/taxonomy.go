@@ -11,7 +11,8 @@ import (
 
 func (a *API) getFamilyTaxonomy(w http.ResponseWriter, r *http.Request) {
 	familyID := r.PathValue("id")
-	taxonomy, err := a.Tags.GetFamilyTaxonomy(familyID)
+	refType := r.URL.Query().Get("ref_type")
+	taxonomy, err := a.Tags.GetFamilyTaxonomy(familyID, refType)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return

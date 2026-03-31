@@ -37,6 +37,7 @@ type Namespace struct {
 	FamilyID    string    `json:"family_id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
+	RefTypes    *string   `json:"ref_types"` // comma-separated ref types, or null for universal
 	SortOrder   int       `json:"sort_order"`
 	CreatedAt   time.Time `json:"created_at"`
 }

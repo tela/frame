@@ -49,11 +49,8 @@ func (a *API) updateCharacterImage(w http.ResponseWriter, r *http.Request) {
 		}
 		a.Audit.LogFieldChange("image", imageID, "set_type_changed", "set_type", oldVal, string(*update.SetType), ctx)
 	}
-	if update.IsFaceRef != nil && *update.IsFaceRef && a.Audit != nil {
-		a.Audit.LogSimple("image", imageID, "face_ref_promoted")
-	}
-	if update.IsBodyRef != nil && *update.IsBodyRef && a.Audit != nil {
-		a.Audit.LogSimple("image", imageID, "body_ref_promoted")
+	if update.RefType != nil && *update.RefType != "" && a.Audit != nil {
+		a.Audit.LogSimple("image", imageID, *update.RefType+"_ref_promoted")
 	}
 	if update.Caption != nil && a.Audit != nil {
 		a.Audit.LogSimple("image", imageID, "caption_changed")
@@ -91,10 +88,8 @@ func (a *API) bulkUpdateCharacterImages(w http.ResponseWriter, r *http.Request) 
 
 	if a.Audit != nil {
 		action := "bulk_updated"
-		if req.Update.IsFaceRef != nil && *req.Update.IsFaceRef {
-			action = "bulk_face_ref"
-		} else if req.Update.IsBodyRef != nil && *req.Update.IsBodyRef {
-			action = "bulk_body_ref"
+		if req.Update.RefType != nil && *req.Update.RefType != "" {
+			action = "bulk_" + *req.Update.RefType + "_ref"
 		} else if req.Update.SetType != nil {
 			action = "bulk_set_type_" + string(*req.Update.SetType)
 		} else if req.Update.TriageStatus != nil {

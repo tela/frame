@@ -76,6 +76,8 @@ export interface Image {
   ingested_at: string
 }
 
+export type RefType = 'face' | 'body' | 'breasts' | 'vagina'
+
 export interface CharacterImage {
   image_id: string
   character_id: string
@@ -83,8 +85,7 @@ export interface CharacterImage {
   set_type: SetType
   triage_status: TriageStatus
   rating: number | null
-  is_face_ref: boolean
-  is_body_ref: boolean
+  ref_type: RefType | null
   ref_score: number | null
   ref_rank: number | null
   caption: string | null
@@ -99,8 +100,7 @@ export interface SearchResult extends Image {
   set_type?: SetType
   triage_status?: TriageStatus
   rating?: number
-  is_face_ref: boolean
-  is_body_ref: boolean
+  ref_type?: RefType | null
 }
 
 export interface SearchResults {
@@ -136,6 +136,7 @@ export interface TagNamespace {
   family_id: string
   name: string
   description: string
+  ref_types: string | null
   sort_order: number
   created_at: string
 }
@@ -385,5 +386,7 @@ export interface ReferencePackage {
   prompt_prefix: string
   face_refs: RefImage[]
   body_refs: RefImage[]
+  breasts_refs: RefImage[]
+  vagina_refs: RefImage[]
   pipeline_settings: string
 }
