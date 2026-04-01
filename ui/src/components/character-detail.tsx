@@ -405,7 +405,7 @@ function ProspectImageCard({ ci, characterId, onToggleFavorite, isFavorited }: {
   ci: CharacterImage; characterId: string; onToggleFavorite: () => void; isFavorited: boolean
 }) {
   return (
-    <div className="group relative overflow-hidden border border-border-subtle hover:border-primary transition-colors">
+    <div className="group relative overflow-hidden border border-border-subtle">
       <div className="aspect-square bg-surface-low overflow-hidden">
         <img
           src={thumbUrl(ci.image_id)}
@@ -415,19 +415,21 @@ function ProspectImageCard({ ci, characterId, onToggleFavorite, isFavorited }: {
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
         />
       </div>
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-on-surface/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-start justify-between p-3">
+      {/* Action buttons — appear on hover, no overlay */}
+      <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={(e) => { e.stopPropagation(); onToggleFavorite() }}
-          className="material-symbols-outlined text-[20px] text-white hover:text-accent transition-colors"
+          className="material-symbols-outlined text-[20px] text-on-surface/70 hover:text-accent transition-colors drop-shadow-sm"
           style={{ fontVariationSettings: isFavorited ? "'FILL' 1" : "'FILL' 0" }}
         >
           favorite
         </button>
+      </div>
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <Link
           to="/characters/$characterId/eras/$eraId/studio"
           params={{ characterId, eraId: 'default' }}
-          className="bg-background/80 text-on-surface p-1.5 rounded-sm hover:bg-background text-[10px] uppercase tracking-wider flex items-center gap-1"
+          className="bg-background/90 text-on-surface p-1.5 rounded-sm text-[10px] uppercase tracking-wider flex items-center gap-1"
         >
           <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
           Remix
