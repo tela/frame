@@ -518,7 +518,7 @@ export function Studio() {
         <div className="p-8 border-t border-border-subtle bg-surface/50">
           <button
             onClick={handleGenerate}
-            disabled={!bifrostAvailable || !prompt.trim() || generate.isPending}
+            disabled={!bifrostAvailable || !prompt.trim() || generate.isPending || (needsSource && !sourceImageId) || (needsRefs && !includeEraRefs && selectedRefs.length === 0)}
             className="w-full bg-accent text-white py-4 font-medium tracking-ui hover:bg-accent/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
