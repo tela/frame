@@ -300,7 +300,7 @@ export function Studio() {
                   <img src={thumbUrl(sourceImageId)} alt="" className="w-full h-full object-cover" />
                   <button
                     onClick={() => setSourceImageId('')}
-                    className="absolute inset-0 bg-on-surface/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                    className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                   >
                     <span className="material-symbols-outlined text-white text-[14px]">close</span>
                   </button>
@@ -354,7 +354,7 @@ export function Studio() {
                       <img src={thumbUrl(refId)} alt="" className="w-full h-full object-cover" />
                       <button
                         onClick={() => setSelectedRefs((prev) => prev.filter((id) => id !== refId))}
-                        className="absolute inset-0 bg-on-surface/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                        className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                       >
                         <span className="material-symbols-outlined text-white text-[14px]">close</span>
                       </button>
@@ -565,7 +565,7 @@ export function Studio() {
                         className="w-full h-full object-cover"
                         src={img.url}
                       />
-                      <div className="absolute inset-0 bg-on-surface/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-4">
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-4">
                         <div className="flex justify-end gap-2">
                           <button className="bg-background/90 text-primary p-1.5 hover:text-accent transition-colors" title="Reject">
                             <span className="material-symbols-outlined text-[18px]">close</span>

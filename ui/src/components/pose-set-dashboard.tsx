@@ -229,7 +229,7 @@ function PoseCell({
       )}
       {/* Hover actions */}
       {status === 'generated' && (
-        <div className="absolute inset-0 bg-on-surface/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
           <button
             onClick={(e) => { e.preventDefault(); onReject?.() }}
             className="bg-background/90 text-on-surface p-2 hover:text-accent transition-colors"
@@ -247,7 +247,7 @@ function PoseCell({
         </div>
       )}
       {status === 'accepted' && (
-        <div className="absolute inset-0 bg-on-surface/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
           <Link
             to="/characters/$characterId/eras/$eraId/studio"
             params={{ characterId, eraId }}
