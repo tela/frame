@@ -180,14 +180,14 @@ function SearchResultCard({ result }: { result: SearchResult }) {
         <img
           src={thumbUrl(result.id)}
           alt={result.original_filename}
-          className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-300"
+          className="w-full h-full object-cover"
           loading="lazy"
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
         />
       </div>
 
       {/* Overlay on hover */}
-      <div className="absolute inset-0 bg-on-surface/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3 text-background">
+      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3 text-background">
         <div className="space-y-1">
           {result.character_name && (
             <p className="text-[10px] uppercase tracking-widest">{result.character_name}</p>

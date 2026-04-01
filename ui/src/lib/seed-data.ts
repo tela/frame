@@ -2,7 +2,7 @@ import type { Character, CharacterWithEras, MediaItem } from './types'
 
 const now = new Date().toISOString()
 
-const base = { folder_name: '', fig_published: false, fig_character_url: '', source: 'frame' }
+const base = { folder_name: '', fig_published: false, fig_character_url: '', source: 'frame', gender: '', ethnicity: '', skin_tone: '', eye_color: '', eye_shape: '', natural_hair_color: '', natural_hair_texture: '', distinguishing_features: '' }
 
 const figBase = { ...base, fig_published: true, fig_character_url: 'http://localhost:7700/casting/cast/seed-luke', source: 'frame' }
 

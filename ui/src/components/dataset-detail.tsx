@@ -90,7 +90,7 @@ export function DatasetDetail() {
                 </div>
 
                 {/* Overlay */}
-                <div className="absolute inset-0 bg-on-surface/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
                   <div className="flex justify-between items-end">
                     <div>
                       {img.caption && (

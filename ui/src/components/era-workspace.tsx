@@ -475,7 +475,7 @@ function EraImageCard({ ci, isSelected, onToggleSelect, onUpdate, shootName }: {
       </div>
 
       {/* Hover overlay */}
-      <div className="absolute inset-0 bg-on-surface/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-4 text-background">
+      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-4 text-background">
         {/* Top: quick actions */}
         <div className="flex justify-end gap-1">
           {(['face', 'body', 'breasts', 'vagina'] as const).map((rt) => (

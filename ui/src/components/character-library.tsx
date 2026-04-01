@@ -123,28 +123,28 @@ function CharacterCard({ character }: { character: Character }) {
       params={{ characterId: character.id }}
       className="group cursor-pointer flex flex-col gap-4"
     >
-      <div className="w-full aspect-[3/4] bg-surface overflow-hidden rounded relative">
+      <div className="w-full aspect-[3/4] bg-surface-low overflow-hidden rounded relative">
         <img
           alt={`Portrait of ${character.display_name || character.name}`}
-          className="w-full h-full object-cover transition-[filter] duration-300 grayscale group-hover:grayscale-0"
+          className="w-full h-full object-cover"
           src={avatarUrl(character.id)}
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = 'none'
           }}
         />
-        {/* Hover Overlay with status */}
-        <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-        <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex justify-between items-end">
-          <span className="bg-background/90 backdrop-blur-sm text-primary text-[10px] uppercase font-medium tracking-[0.1em] px-2 py-1 rounded-sm">
+        <div className="absolute bottom-3 left-3">
+          <span className="bg-background/90 text-primary text-[10px] uppercase font-medium tracking-[0.1em] px-2 py-1 rounded-sm">
             {character.status}
           </span>
-          {character.fig_published && (
-            <span className="w-2 h-2 rounded-full bg-green-500" title="Published to Fig" />
-          )}
         </div>
+        {character.fig_published && (
+          <div className="absolute bottom-3 right-3">
+            <span className="w-2 h-2 rounded-full bg-green-500" title="Published to Fig" />
+          </div>
+        )}
       </div>
       <div>
-        <h3 className="font-display text-[18px] tracking-display font-medium text-primary group-hover:text-muted transition-colors">
+        <h3 className="font-display text-[18px] tracking-display font-medium text-primary">
           {character.display_name || character.name}
         </h3>
       </div>

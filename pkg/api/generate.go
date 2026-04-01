@@ -4,10 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/tela/frame/pkg/bifrost"
 	"github.com/tela/frame/pkg/id"
 	"github.com/tela/frame/pkg/image"
+)
+
+const (
+	providerFlux     = "runpod-serverless-flux"
+	providerLocalSDXL = "local-sdxl"
 )
 
 type generateRequest struct {
@@ -129,11 +135,17 @@ func (a *API) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	}
 	contentRating := req.ContentRating
 	if contentRating == "" {
-		contentRating = bifrost.ContentNSFW
+		contentRating = bifrost.ContentSFW
 	}
 	tier := req.Tier
 	if tier == "" {
-		tier = bifrost.TierComplex
+		tier = bifrost.TierCheap
+	}
+
+	// Route to the right provider based on workflow and content rating.
+	providerName := req.ProviderName
+	if providerName == "" {
+		providerName = inferProvider(req.Workflow, contentRating)
 	}
 
 	// Generate images (one at a time since Bifrost returns one per request)
@@ -154,7 +166,7 @@ func (a *API) handleGenerate(w http.ResponseWriter, r *http.Request) {
 			Meta: bifrost.RequestMeta{
 				Tier:          tier,
 				ContentRating: contentRating,
-				ProviderName:  req.ProviderName,
+				ProviderName:  providerName,
 			},
 		}
 
@@ -183,12 +195,19 @@ func (a *API) handleGenerate(w http.ResponseWriter, r *http.Request) {
 			eraID = &req.EraID
 		}
 
+		// Resolve character slug for disk path consistency
+		charSlug := req.CharacterID
+		if char, _ := a.Characters.Get(req.CharacterID); char != nil && char.FolderName != "" {
+			charSlug = char.FolderName
+		}
+
 		ingestReq := &image.IngestRequest{
-			Filename:    fmt.Sprintf("generated_%s_%d.%s", jobID, i, format),
-			Data:        imgData,
-			Source:      image.SourceComfyUI,
-			CharacterID: req.CharacterID,
-			EraID:       eraID,
+			Filename:      fmt.Sprintf("generated_%s_%d.%s", jobID, i, format),
+			Data:          imgData,
+			Source:        image.SourceComfyUI,
+			CharacterID:   req.CharacterID,
+			CharacterSlug: charSlug,
+			EraID:         eraID,
 		}
 
 		result, err := a.Ingester.Ingest(ingestReq)
@@ -209,6 +228,19 @@ func (a *API) handleGenerate(w http.ResponseWriter, r *http.Request) {
 		JobID:  jobID,
 		Images: results,
 	})
+}
+
+// inferProvider selects the bifrost provider based on workflow and content rating.
+// SDXL workflows always route to local-sdxl. Plain SFW prompts use fast Flux on RunPod.
+// Everything else falls back to local-sdxl.
+func inferProvider(workflow, contentRating string) string {
+	if strings.HasPrefix(workflow, "sdxl_") {
+		return providerLocalSDXL
+	}
+	if workflow == "" && contentRating == bifrost.ContentSFW {
+		return providerFlux
+	}
+	return providerLocalSDXL
 }
 
 // handleBifrostStatus returns Bifrost's availability and provider info.

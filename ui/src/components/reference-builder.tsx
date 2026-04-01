@@ -365,9 +365,7 @@ function PoolImageCard({ ci, isSelected, onCycleRef, onApprove, onToggleSelect }
         onClick={onCycleRef}
       >
         <img
-          className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
-            isPending ? 'grayscale' : ''
-          }`}
+          className={`w-full h-full object-cover ${isPending ? 'grayscale' : ''}`}
           src={thumbUrl(ci.image_id)}
           alt={ci.caption ?? `Image ${ci.image_id}`}
           loading="lazy"
@@ -455,7 +453,7 @@ function SortableRefThumb({ imageId, type, onRemove }: {
       <button
         onClick={(e) => { e.stopPropagation(); onRemove() }}
         onPointerDown={(e) => e.stopPropagation()}
-        className="absolute inset-0 bg-on-surface/60 flex items-center justify-center opacity-0 group-hover/ref:opacity-100 transition-opacity"
+        className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover/ref:opacity-100 transition-opacity"
       >
         <span className="material-symbols-outlined text-background text-[16px]">close</span>
       </button>
