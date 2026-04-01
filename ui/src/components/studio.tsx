@@ -4,7 +4,7 @@ import type { LoRA } from '@/lib/api'
 import { useState } from 'react'
 import { ImagePickerModal } from '@/components/image-picker-modal'
 
-type Workflow = 'txt2img' | 'multi_ref' | 'img2img' | 'pose_transfer' | 'upscale'
+type Workflow = 'text-to-image' | 'sdxl_text2img' | 'sdxl_character_gen' | 'sdxl_multi_ref' | 'sdxl_clothing_swap' | 'sdxl_pose_transfer' | 'sdxl_img2img' | 'sdxl_quality_postprocess' | 'kontext'
 type Tier = 'cheap' | 'complex' | 'frontier'
 type ContentRating = 'sfw' | 'nsfw'
 
@@ -50,11 +50,15 @@ const TEMPLATES: PromptTemplate[] = [
 ]
 
 const WORKFLOWS: { value: Workflow; label: string; description: string }[] = [
-  { value: 'txt2img', label: 'Text to Image', description: 'Generate from prompt only' },
-  { value: 'multi_ref', label: 'Multi-Reference', description: 'Use face + body reference images' },
-  { value: 'img2img', label: 'Image Refinement', description: 'Refine an existing image' },
-  { value: 'pose_transfer', label: 'Pose Transfer', description: 'Apply a pose to character' },
-  { value: 'upscale', label: 'Quality Upscale', description: 'Enhance resolution' },
+  { value: 'text-to-image', label: 'Flux Text-to-Image', description: 'Fast SFW headshots via Flux (~3s)' },
+  { value: 'sdxl_text2img', label: 'SDXL Text-to-Image', description: 'SFW/NSFW from prompt (~45s)' },
+  { value: 'sdxl_character_gen', label: 'Character Gen (single ref)', description: 'Consistent character from one reference (~108s)' },
+  { value: 'sdxl_multi_ref', label: 'Character Gen (multi ref)', description: 'Consistent character from multiple refs (~94s)' },
+  { value: 'sdxl_clothing_swap', label: 'Clothing Swap', description: 'Undress or swap clothing (~213s)' },
+  { value: 'sdxl_pose_transfer', label: 'Pose Transfer', description: 'Apply pose to character (~114s)' },
+  { value: 'sdxl_img2img', label: 'Image Refinement', description: 'Refine an existing image (~63s)' },
+  { value: 'sdxl_quality_postprocess', label: 'Quality Upscale', description: 'Upscale + enhance detail (~648s)' },
+  { value: 'kontext', label: 'Flux Kontext', description: 'Prompt-based image editing (~3s)' },
 ]
 
 const TIERS: { value: Tier; label: string }[] = [
@@ -90,9 +94,9 @@ export function Studio() {
   const [template, setTemplate] = useState('')
   const [prompt, setPrompt] = useState('')
   const [negativePrompt, setNegativePrompt] = useState('')
-  const [workflow, setWorkflow] = useState<Workflow>('txt2img')
-  const [tier, setTier] = useState<Tier>('complex')
-  const [contentRating, setContentRating] = useState<ContentRating>('nsfw')
+  const [workflow, setWorkflow] = useState<Workflow>('text-to-image')
+  const [tier, setTier] = useState<Tier>('cheap')
+  const [contentRating, setContentRating] = useState<ContentRating>('sfw')
   const [dimensions, setDimensions] = useState(0) // index into DIMENSIONS
   const [batchSize, setBatchSize] = useState(1)
   const [steps, setSteps] = useState(30)
@@ -112,6 +116,8 @@ export function Studio() {
   const bifrostAvailable = bifrostStatus?.available ?? false
   const dim = DIMENSIONS[dimensions]
   const activeLora = (loras ?? []).find((l: LoRA) => l.id === selectedLora)
+  const needsSource = ['sdxl_img2img', 'sdxl_quality_postprocess', 'sdxl_clothing_swap', 'sdxl_pose_transfer', 'kontext'].includes(workflow)
+  const needsRefs = ['sdxl_multi_ref', 'sdxl_character_gen'].includes(workflow)
 
   const handleGenerate = () => {
     if (!prompt.trim()) return
@@ -132,7 +138,8 @@ export function Studio() {
         era_id: eraId,
         prompt: prompt,
         negative_prompt: negativePrompt || undefined,
-        include_refs: includeEraRefs && (workflow === 'multi_ref' || workflow === 'txt2img'),
+        workflow: workflow,
+        include_refs: includeEraRefs && (workflow === 'sdxl_multi_ref' || workflow === 'sdxl_character_gen'),
         ref_image_ids: selectedRefs.length > 0 ? selectedRefs : undefined,
         batch_size: batchSize,
         width: dim.w,
@@ -141,8 +148,8 @@ export function Studio() {
         content_rating: contentRating,
         lora_adapter: activeLora?.filename || undefined,
         lora_strength: activeLora ? loraStrength : undefined,
-        source_image_id: (workflow === 'img2img' || workflow === 'upscale') ? sourceImageId || undefined : undefined,
-        denoise_strength: workflow === 'img2img' ? denoiseStrength : undefined,
+        source_image_id: needsSource ? sourceImageId || undefined : undefined,
+        denoise_strength: workflow === 'sdxl_img2img' ? denoiseStrength : undefined,
       },
       {
         onSuccess: (data) => {
@@ -292,7 +299,7 @@ export function Studio() {
           </div>
 
           {/* Source Image (for img2img/upscale) */}
-          {(workflow === 'img2img' || workflow === 'upscale') && (
+          {needsSource && (
             <div className="flex flex-col gap-2">
               <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Source Image</label>
               {sourceImageId ? (
@@ -314,7 +321,7 @@ export function Studio() {
                   Select source image
                 </button>
               )}
-              {workflow === 'img2img' && (
+              {workflow === 'sdxl_img2img' && (
                 <div className="flex flex-col gap-1">
                   <div className="flex justify-between text-[11px] text-muted">
                     <span>Denoise Strength</span>
@@ -335,7 +342,7 @@ export function Studio() {
           )}
 
           {/* Reference Images (for multi_ref / txt2img) */}
-          {(workflow === 'multi_ref' || workflow === 'txt2img') && (
+          {needsRefs && (
             <div className="flex flex-col gap-2">
               <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">References</label>
               <label className="flex items-center gap-2 text-sm cursor-pointer">
