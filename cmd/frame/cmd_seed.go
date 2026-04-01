@@ -496,8 +496,12 @@ func seedFromCSV(charStore *character.Store, path string) {
 	fmt.Println("\nSeed complete.")
 }
 
-// makeSeedPNG generates a valid 4x4 PNG with unique color data.
+// makeSeedPNG generates a valid 4x4 PNG with unique neutral grey data.
+// Each image gets a slightly different grey level to avoid hash collisions.
 func makeSeedPNG(r, g, b byte) []byte {
+	// Use average of r,g,b to create a neutral grey — no color tint
+	grey := byte((int(r) + int(g) + int(b)) / 3)
+
 	var buf bytes.Buffer
 	buf.Write([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}) // PNG signature
 
@@ -514,7 +518,8 @@ func makeSeedPNG(r, g, b byte) []byte {
 	for y := 0; y < 4; y++ {
 		raw.WriteByte(0) // filter: none
 		for x := 0; x < 4; x++ {
-			raw.Write([]byte{r + byte(x*10), g + byte(y*10), b + byte(x+y)})
+			g := grey + byte(x+y) // slight variation for uniqueness
+			raw.Write([]byte{g, g, g})
 		}
 	}
 	var compressed bytes.Buffer
