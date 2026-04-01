@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useCreateCharacter, useIngestImage } from '@/lib/api'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 
 interface Props {
   open: boolean
@@ -143,7 +144,8 @@ export function NewCharacterDialog({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) { resetForm(); onClose() } }}>
-      <DialogContent className="bg-surface-lowest border-none shadow-[0_20px_40px_rgba(47,51,51,0.04)] max-w-4xl p-0 gap-0 overflow-hidden">
+      <DialogContent className="bg-surface-lowest border-none shadow-[0_20px_40px_rgba(47,51,51,0.04)] max-w-4xl p-0 gap-0 overflow-hidden" aria-describedby={undefined}>
+        <VisuallyHidden><DialogTitle>Create New Character</DialogTitle></VisuallyHidden>
         <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[560px]">
           {/* Left Column: Visual Context */}
           <div className="lg:col-span-5 relative hidden lg:block bg-surface-low border-r border-outline-variant/10">

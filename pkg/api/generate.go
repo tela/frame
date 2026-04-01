@@ -129,11 +129,11 @@ func (a *API) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	}
 	contentRating := req.ContentRating
 	if contentRating == "" {
-		contentRating = bifrost.ContentNSFW
+		contentRating = bifrost.ContentSFW
 	}
 	tier := req.Tier
 	if tier == "" {
-		tier = bifrost.TierComplex
+		tier = bifrost.TierCheap
 	}
 
 	// Generate images (one at a time since Bifrost returns one per request)
