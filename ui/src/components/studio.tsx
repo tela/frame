@@ -562,10 +562,10 @@ export function Studio() {
                     <>
                       <img
                         alt="Generated image"
-                        className="w-full h-full object-cover grayscale transition-all duration-500 group-hover:grayscale-0 group-hover:scale-[1.02]"
+                        className="w-full h-full object-cover"
                         src={img.url}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-4">
+                      <div className="absolute inset-0 bg-on-surface/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-4">
                         <div className="flex justify-end gap-2">
                           <button className="bg-background/90 text-primary p-1.5 hover:text-accent transition-colors" title="Reject">
                             <span className="material-symbols-outlined text-[18px]">close</span>

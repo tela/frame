@@ -579,7 +579,7 @@ function EraCard({ characterId, era }: { characterId: string; era: EraWithStats 
       className="flex flex-col gap-3 min-w-[280px] md:min-w-[400px] group snap-start outline-none"
     >
       <div className="aspect-video w-full bg-surface rounded-sm border border-border-subtle overflow-hidden relative transition-all duration-300 group-hover:border-primary">
-        <div className="absolute inset-0 bg-gradient-to-tr from-stone-200 to-stone-100 opacity-80 group-hover:scale-105 transition-transform duration-700 ease-out" />
+        <div className="absolute inset-0 bg-surface-low" />
         <div className="absolute inset-0 ring-1 ring-inset ring-black/5" />
         {/* Reference package status */}
         {era.reference_package_ready && (

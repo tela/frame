@@ -365,9 +365,7 @@ function PoolImageCard({ ci, isSelected, onCycleRef, onApprove, onToggleSelect }
         onClick={onCycleRef}
       >
         <img
-          className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
-            isPending ? 'grayscale' : ''
-          }`}
+          className={`w-full h-full object-cover ${isPending ? 'grayscale' : ''}`}
           src={thumbUrl(ci.image_id)}
           alt={ci.caption ?? `Image ${ci.image_id}`}
           loading="lazy"
