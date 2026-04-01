@@ -11,38 +11,53 @@ import (
 	"github.com/tela/frame/pkg/image"
 )
 
+// Bifrost provider names.
 const (
-	providerFlux     = "runpod-serverless-flux"
-	providerLocalSDXL = "local-sdxl"
+	providerFlux    = "runpod-serverless-flux"
+	providerKontext = "runpod-serverless-kontext"
+	providerSDXL    = "local-sdxl"
+)
+
+// Workflow constants matching Bifrost's workflow templates.
+const (
+	WorkflowTextToImage      = "text-to-image"          // Flux SFW headshots (~3s)
+	WorkflowSDXLText2Img     = "sdxl_text2img"          // SDXL text-to-image (~45s)
+	WorkflowSDXLCharacterGen = "sdxl_character_gen"     // Single-ref character gen (~108s)
+	WorkflowSDXLMultiRef     = "sdxl_multi_ref"         // Multi-ref character gen (~94s)
+	WorkflowSDXLClothingSwap = "sdxl_clothing_swap"     // Undress/clothing swap (~213s)
+	WorkflowSDXLPoseTransfer = "sdxl_pose_transfer"     // Pose control (~114s)
+	WorkflowSDXLImg2Img      = "sdxl_img2img"           // Refinement (~63s)
+	WorkflowSDXLPostprocess  = "sdxl_quality_postprocess" // Upscale + detail (~648s)
+	WorkflowKontext          = "kontext"                // Flux Kontext editing (~3s)
 )
 
 type generateRequest struct {
-	CharacterID    string   `json:"character_id"`
-	EraID          string   `json:"era_id"`
-	Prompt         string   `json:"prompt"`
-	NegativePrompt string   `json:"negative_prompt,omitempty"`
-	StylePrompt    string   `json:"style_prompt,omitempty"`
-	Width          int      `json:"width,omitempty"`
-	Height         int      `json:"height,omitempty"`
-	Steps          int      `json:"steps,omitempty"`
-	BatchSize      int      `json:"batch_size,omitempty"`
-	Seed           int      `json:"seed,omitempty"`
-	LoraAdapter    string   `json:"lora_adapter,omitempty"`
-	LoraStrength   float64  `json:"lora_strength,omitempty"`
-	ContentRating  string   `json:"content_rating,omitempty"`
-	Tier           string   `json:"tier,omitempty"`          // cheap, complex, frontier (default: complex)
-	Workflow       string   `json:"workflow,omitempty"`       // txt2img, img2img, multi_ref, pose_transfer, upscale
-	ProviderName   string   `json:"provider_name,omitempty"`
-	IncludeRefs    bool     `json:"include_refs"`
-	RefImageIDs    []string `json:"ref_image_ids,omitempty"`
-	SourceImageID  string   `json:"source_image_id,omitempty"` // for img2img/refinement
-	DenoiseStrength float64 `json:"denoise_strength,omitempty"` // for img2img (0.0-1.0)
-	PoseID         string   `json:"pose_id,omitempty"`         // standard pose tracking
-	OutfitID       string   `json:"outfit_id,omitempty"`       // standard outfit tracking
+	CharacterID     string   `json:"character_id"`
+	EraID           string   `json:"era_id"`
+	Prompt          string   `json:"prompt"`
+	NegativePrompt  string   `json:"negative_prompt,omitempty"`
+	StylePrompt     string   `json:"style_prompt,omitempty"`
+	Width           int      `json:"width,omitempty"`
+	Height          int      `json:"height,omitempty"`
+	Steps           int      `json:"steps,omitempty"`
+	BatchSize       int      `json:"batch_size,omitempty"`
+	Seed            int      `json:"seed,omitempty"`
+	LoraAdapter     string   `json:"lora_adapter,omitempty"`
+	LoraStrength    float64  `json:"lora_strength,omitempty"`
+	ContentRating   string   `json:"content_rating,omitempty"`
+	Tier            string   `json:"tier,omitempty"`
+	Workflow        string   `json:"workflow,omitempty"`
+	ProviderName    string   `json:"provider_name,omitempty"`
+	IncludeRefs     bool     `json:"include_refs"`
+	RefImageIDs     []string `json:"ref_image_ids,omitempty"`
+	SourceImageID   string   `json:"source_image_id,omitempty"`
+	DenoiseStrength float64  `json:"denoise_strength,omitempty"`
+	PoseID          string   `json:"pose_id,omitempty"`
+	OutfitID        string   `json:"outfit_id,omitempty"`
 }
 
 type generateResponse struct {
-	JobID  string              `json:"job_id"`
+	JobID  string                `json:"job_id"`
 	Images []generateImageResult `json:"images"`
 }
 
@@ -71,6 +86,17 @@ func (a *API) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.CharacterID == "" {
 		writeError(w, http.StatusBadRequest, "character_id is required")
+		return
+	}
+
+	// Workflows that require a source image
+	requiresSource := req.Workflow == WorkflowSDXLImg2Img ||
+		req.Workflow == WorkflowSDXLPostprocess ||
+		req.Workflow == WorkflowSDXLClothingSwap ||
+		req.Workflow == WorkflowSDXLPoseTransfer ||
+		req.Workflow == WorkflowKontext
+	if requiresSource && req.SourceImageID == "" {
+		writeError(w, http.StatusBadRequest, "source_image_id is required for "+req.Workflow)
 		return
 	}
 
@@ -107,12 +133,12 @@ func (a *API) handleGenerate(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	// Source image for img2img/refinement workflows
+	// Source image for img2img, refinement, clothing swap, pose transfer, kontext
 	if req.SourceImageID != "" {
 		refs = append(refs, bifrost.ReferenceImage{
 			URL:   fmt.Sprintf("http://localhost:%d/api/v1/images/%s", a.Port, req.SourceImageID),
 			Type:  "input_image",
-			Label: "source image for refinement",
+			Label: "source image",
 		})
 	}
 
@@ -137,16 +163,9 @@ func (a *API) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	if contentRating == "" {
 		contentRating = bifrost.ContentSFW
 	}
-	tier := req.Tier
-	if tier == "" {
-		tier = bifrost.TierCheap
-	}
 
-	// Route to the right provider based on workflow and content rating.
-	providerName := req.ProviderName
-	if providerName == "" {
-		providerName = inferProvider(req.Workflow, contentRating)
-	}
+	// Route to the right provider and tier based on workflow
+	providerName, tier := inferRouting(req.Workflow, contentRating, req.ProviderName, req.Tier)
 
 	// Generate images (one at a time since Bifrost returns one per request)
 	jobID := id.New()
@@ -230,17 +249,45 @@ func (a *API) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// inferProvider selects the bifrost provider based on workflow and content rating.
-// SDXL workflows always route to local-sdxl. Plain SFW prompts use fast Flux on RunPod.
-// Everything else falls back to local-sdxl.
-func inferProvider(workflow, contentRating string) string {
-	if strings.HasPrefix(workflow, "sdxl_") {
-		return providerLocalSDXL
+// inferRouting selects the Bifrost provider and tier based on workflow.
+//
+//	Workflow                  → Provider                   Tier
+//	text-to-image             → runpod-serverless-flux     fast
+//	kontext                   → runpod-serverless-kontext  complex
+//	sdxl_*                    → local-sdxl                 cheap
+//	(empty, SFW)              → runpod-serverless-flux     fast
+//	(empty, NSFW or fallback) → local-sdxl                 cheap
+func inferRouting(workflow, contentRating, explicitProvider, explicitTier string) (provider, tier string) {
+	provider = explicitProvider
+	tier = explicitTier
+
+	if provider == "" {
+		switch {
+		case workflow == WorkflowTextToImage:
+			provider = providerFlux
+		case workflow == WorkflowKontext:
+			provider = providerKontext
+		case strings.HasPrefix(workflow, "sdxl_"):
+			provider = providerSDXL
+		case workflow == "" && contentRating == bifrost.ContentSFW:
+			provider = providerFlux
+		default:
+			provider = providerSDXL
+		}
 	}
-	if workflow == "" && contentRating == bifrost.ContentSFW {
-		return providerFlux
+
+	if tier == "" {
+		switch provider {
+		case providerFlux:
+			tier = bifrost.TierFast
+		case providerKontext:
+			tier = bifrost.TierComplex
+		default:
+			tier = bifrost.TierCheap
+		}
 	}
-	return providerLocalSDXL
+
+	return provider, tier
 }
 
 // handleBifrostStatus returns Bifrost's availability and provider info.
