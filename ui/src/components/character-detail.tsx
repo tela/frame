@@ -578,9 +578,7 @@ function EraCard({ characterId, era }: { characterId: string; era: EraWithStats 
       params={{ characterId, eraId: era.id }}
       className="flex flex-col gap-3 min-w-[280px] md:min-w-[400px] group snap-start outline-none"
     >
-      <div className="aspect-video w-full bg-surface rounded-sm border border-border-subtle overflow-hidden relative transition-all duration-300 group-hover:border-primary">
-        <div className="absolute inset-0 bg-surface-low" />
-        <div className="absolute inset-0 ring-1 ring-inset ring-black/5" />
+      <div className="aspect-video w-full bg-surface-low rounded-sm border border-border-subtle overflow-hidden relative">
         {/* Reference package status */}
         {era.reference_package_ready && (
           <div className="absolute top-3 right-3">
@@ -592,7 +590,7 @@ function EraCard({ characterId, era }: { characterId: string; era: EraWithStats 
       </div>
       <div className="px-1">
         <div className="flex justify-between items-baseline">
-          <h3 className="text-[18px] font-display tracking-display text-primary group-hover:text-accent transition-colors">
+          <h3 className="text-[18px] font-display tracking-display text-primary">
             {era.label}
           </h3>
           <span className="text-[12px] font-body tabular-nums text-muted">{era.image_count} Assets</span>
