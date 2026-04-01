@@ -180,7 +180,7 @@ function SearchResultCard({ result }: { result: SearchResult }) {
         <img
           src={thumbUrl(result.id)}
           alt={result.original_filename}
-          className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-300"
+          className="w-full h-full object-cover"
           loading="lazy"
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
         />

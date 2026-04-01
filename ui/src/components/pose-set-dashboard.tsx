@@ -216,8 +216,8 @@ function PoseCell({
       <img
         src={thumbUrl(imageId)}
         alt=""
-        className={`w-full h-full object-cover transition-all duration-300 ${
-          status === 'generated' ? 'grayscale brightness-95 opacity-80 group-hover:grayscale-0' : 'grayscale brightness-95 group-hover:grayscale-0'
+        className={`w-full h-full object-cover ${
+          status === 'generated' ? 'opacity-80' : ''
         }`}
       />
       {/* Status dot */}

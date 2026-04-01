@@ -126,7 +126,7 @@ function CharacterCard({ character }: { character: Character }) {
       <div className="w-full aspect-[3/4] bg-surface overflow-hidden rounded relative">
         <img
           alt={`Portrait of ${character.display_name || character.name}`}
-          className="w-full h-full object-cover transition-[filter] duration-300 grayscale group-hover:grayscale-0"
+          className="w-full h-full object-cover"
           src={avatarUrl(character.id)}
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = 'none'
