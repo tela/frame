@@ -29,11 +29,13 @@ export function ImportModal({ open, onClose, characterId, characterName, eras, d
   // Step state
   const [step, setStep] = useState<Step>('browse')
 
-  // Browse state
-  const [browsePath, setBrowsePath] = useState('')
+  // Browse state — empty string means "use server default"
+  const [browsePath, setBrowsePath] = useState('__default__')
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set())
   const [selectedDirs, setSelectedDirs] = useState<SelectedDir[]>([])
+  const [editingPath, setEditingPath] = useState(false)
+  const [pathInput, setPathInput] = useState('')
 
   // Context state
   const [eraId, setEraId] = useState(defaultEraId || '')
@@ -46,7 +48,7 @@ export function ImportModal({ open, onClose, characterId, characterName, eras, d
   const [importResult, setImportResult] = useState<{ imported: number; skipped: number; failed: number; total: number } | null>(null)
   const [isImporting, setIsImporting] = useState(false)
 
-  const { data: browseData } = useBrowse(browsePath)
+  const { data: browseData } = useBrowse(browsePath === '__default__' ? '' : browsePath)
 
   const totalSelected = selectedFiles.size
 
@@ -164,8 +166,9 @@ export function ImportModal({ open, onClose, characterId, characterName, eras, d
 
   const resetAndClose = () => {
     setStep('browse')
-    setBrowsePath('')
+    setBrowsePath('__default__')
     setExpandedDirs(new Set())
+    setEditingPath(false)
     setSelectedFiles(new Set())
     setSelectedDirs([])
     setEraId(defaultEraId || '')
@@ -206,42 +209,118 @@ export function ImportModal({ open, onClose, characterId, characterName, eras, d
               {/* Left: Directory Browser */}
               <section className="w-5/12 bg-surface-low border-r border-outline-variant/10 flex flex-col">
                 <div className="p-6 border-b border-outline-variant/5">
-                  <div className="flex items-center gap-2 text-muted font-label text-[11px] tracking-wider uppercase mb-4">
-                    <span className="material-symbols-outlined text-sm">database</span>
-                    {browseData?.path || 'Select directory'}
-                  </div>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-muted text-sm">search</span>
-                    <input
-                      value={browsePath}
-                      onChange={(e) => setBrowsePath(e.target.value)}
-                      className="w-full bg-surface-lowest border-none text-[13px] py-2 pl-10 focus:ring-1 focus:ring-on-surface transition-all"
-                      placeholder="Enter path or paste directory..."
-                    />
-                  </div>
+                  {/* Path breadcrumb — click to edit */}
+                  {editingPath ? (
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-muted text-sm">search</span>
+                      <input
+                        value={pathInput}
+                        onChange={(e) => setPathInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') { setBrowsePath(pathInput || '__default__'); setEditingPath(false) }
+                          if (e.key === 'Escape') setEditingPath(false)
+                        }}
+                        onBlur={() => { if (pathInput) setBrowsePath(pathInput); setEditingPath(false) }}
+                        className="w-full bg-surface-lowest border-none text-[13px] py-2 pl-10 focus:ring-1 focus:ring-on-surface transition-all"
+                        placeholder="Paste or type a directory path..."
+                        autoFocus
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 mb-2">
+                      {/* Up button */}
+                      {browseData?.path && (
+                        <button
+                          onClick={() => {
+                            const parent = browseData.path.split('/').slice(0, -1).join('/')
+                            if (parent) setBrowsePath(parent)
+                          }}
+                          className="material-symbols-outlined text-muted hover:text-on-surface text-sm transition-colors"
+                          title="Go up"
+                        >
+                          arrow_upward
+                        </button>
+                      )}
+                      <button
+                        onClick={() => { setPathInput(browseData?.path || ''); setEditingPath(true) }}
+                        className="flex-1 text-left flex items-center gap-2 text-muted font-label text-[11px] tracking-wider uppercase hover:text-on-surface transition-colors truncate"
+                        title="Click to edit path"
+                      >
+                        <span className="material-symbols-outlined text-sm">folder</span>
+                        <span className="truncate">{browseData?.path || 'Loading...'}</span>
+                      </button>
+                      <span
+                        onClick={() => { setPathInput(browseData?.path || ''); setEditingPath(true) }}
+                        className="material-symbols-outlined text-muted hover:text-on-surface text-sm cursor-pointer transition-colors"
+                        title="Edit path"
+                      >
+                        edit
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex-grow overflow-y-auto p-4" style={{ scrollbarWidth: 'none' }}>
-                  {browseData?.entries && (
+                  {browseData?.entries ? (
                     <ul className="space-y-1">
-                      {browseData.entries.map((entry) => (
-                        <BrowseNode
-                          key={entry.name}
-                          entry={entry}
-                          parentPath={browseData.path}
-                          expanded={expandedDirs}
-                          selectedFiles={selectedFiles}
-                          onToggleDir={toggleDir}
-                          onSelectAll={selectAllInDir}
-                          onToggleFile={toggleFile}
-                        />
-                      ))}
+                      {/* Directories — click to navigate into */}
+                      {browseData.entries.filter(e => e.is_dir).map((entry) => {
+                        const dirPath = `${browseData.path}/${entry.name}`
+                        const isSelected = selectedDirs.some(d => d.path === dirPath)
+                        return (
+                          <li key={entry.name} className="flex items-center justify-between p-2 hover:bg-surface-high cursor-pointer transition-colors group">
+                            <div
+                              className="flex items-center gap-2 flex-1"
+                              onClick={() => setBrowsePath(dirPath)}
+                            >
+                              <span className="material-symbols-outlined text-muted group-hover:text-on-surface transition-colors">folder</span>
+                              <span className="font-label text-sm text-primary-dim group-hover:text-on-surface">{entry.name}/</span>
+                              {entry.children_count != null && entry.children_count > 0 && (
+                                <span className="text-[10px] text-muted font-label">({entry.children_count})</span>
+                              )}
+                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); selectAllInDir(dirPath, entry.name, entry.children_count || 0) }}
+                              className={`text-[10px] font-label uppercase tracking-wider px-2 py-1 transition-colors ${
+                                isSelected ? 'text-on-surface bg-primary-container/30' : 'text-muted hover:text-on-surface'
+                              }`}
+                              title={isSelected ? 'Deselect all' : 'Select all images'}
+                            >
+                              {isSelected ? 'Selected' : 'Select All'}
+                            </button>
+                          </li>
+                        )
+                      })}
+                      {/* Files — click to toggle selection */}
+                      {browseData.entries.filter(e => !e.is_dir).map((entry) => {
+                        const filePath = `${browseData.path}/${entry.name}`
+                        const isSelected = selectedFiles.has(filePath)
+                        return (
+                          <li
+                            key={entry.name}
+                            className={`flex items-center justify-between p-2 cursor-pointer transition-colors ${
+                              isSelected ? 'bg-primary-container/20' : 'hover:bg-surface-high'
+                            }`}
+                            onClick={() => toggleFile(filePath)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-6 h-8 bg-surface-variant overflow-hidden flex items-center justify-center">
+                                <span className="material-symbols-outlined text-muted text-[14px]">image</span>
+                              </div>
+                              <span className={`font-label text-[12px] ${isSelected ? 'text-on-surface' : 'text-primary-dim'}`}>
+                                {entry.name}
+                              </span>
+                            </div>
+                            {isSelected && (
+                              <span className="material-symbols-outlined text-primary text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                                check_circle
+                              </span>
+                            )}
+                          </li>
+                        )
+                      })}
                     </ul>
-                  )}
-                  {!browseData && browsePath && (
+                  ) : (
                     <p className="text-muted text-sm p-4">Loading...</p>
-                  )}
-                  {!browsePath && (
-                    <p className="text-muted text-sm p-4">Enter a directory path above to browse files.</p>
                   )}
                 </div>
               </section>
@@ -500,118 +579,5 @@ export function ImportModal({ open, onClose, characterId, characterName, eras, d
         </footer>
       </DialogContent>
     </Dialog>
-  )
-}
-
-// Directory tree node component
-function BrowseNode({ entry, parentPath, expanded, selectedFiles, onToggleDir, onSelectAll, onToggleFile }: {
-  entry: BrowseEntry
-  parentPath: string
-  expanded: Set<string>
-  selectedFiles: Set<string>
-  onToggleDir: (path: string) => void
-  onSelectAll: (path: string, name: string, count: number) => void
-  onToggleFile: (path: string) => void
-}) {
-  const fullPath = `${parentPath}/${entry.name}`
-
-  if (entry.is_dir) {
-    const isExpanded = expanded.has(fullPath)
-    return (
-      <li>
-        <div
-          className="flex items-center justify-between p-2 hover:bg-surface-high cursor-pointer transition-colors group"
-          onClick={() => { onToggleDir(fullPath); onSelectAll(fullPath, entry.name, entry.children_count || 0) }}
-        >
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-muted group-hover:text-on-surface transition-colors">
-              {isExpanded ? 'folder_open' : 'folder'}
-            </span>
-            <span className="font-label text-sm text-primary-dim">{entry.name}/</span>
-          </div>
-          {entry.children_count != null && entry.children_count > 0 && (
-            <span className="text-[10px] text-muted font-label">({entry.children_count})</span>
-          )}
-        </div>
-        {isExpanded && (
-          <DirContents
-            path={fullPath}
-            selectedFiles={selectedFiles}
-            onToggleFile={onToggleFile}
-          />
-        )}
-      </li>
-    )
-  }
-
-  // File node
-  const isSelected = selectedFiles.has(fullPath)
-  return (
-    <li
-      className={`flex items-center justify-between p-2 cursor-pointer transition-colors ${
-        isSelected ? 'bg-primary-container/20' : 'hover:bg-surface-high'
-      }`}
-      onClick={() => onToggleFile(fullPath)}
-    >
-      <div className="flex items-center gap-3">
-        <div className="w-6 h-8 bg-surface-variant overflow-hidden flex items-center justify-center">
-          <span className="material-symbols-outlined text-muted text-[14px]">image</span>
-        </div>
-        <span className={`font-label text-[12px] ${isSelected ? 'text-on-surface' : 'text-primary-dim'}`}>
-          {entry.name}
-        </span>
-      </div>
-      {isSelected && (
-        <span className="material-symbols-outlined text-primary text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-          check_circle
-        </span>
-      )}
-    </li>
-  )
-}
-
-// Fetches and renders directory contents when expanded
-function DirContents({ path, selectedFiles, onToggleFile }: {
-  path: string
-  selectedFiles: Set<string>
-  onToggleFile: (path: string) => void
-}) {
-  const { data } = useBrowse(path)
-
-  if (!data) return <div className="ml-6 pl-2 py-2 text-muted text-xs">Loading...</div>
-
-  const files = data.entries.filter(e => !e.is_dir)
-  if (files.length === 0) return <div className="ml-6 pl-2 py-2 text-muted text-xs">No images</div>
-
-  return (
-    <ul className="ml-6 mt-1 space-y-1 border-l border-outline-variant/20 pl-2">
-      {files.map((file) => {
-        const filePath = `${path}/${file.name}`
-        const isSelected = selectedFiles.has(filePath)
-        return (
-          <li
-            key={file.name}
-            className={`flex items-center justify-between p-2 cursor-pointer transition-colors ${
-              isSelected ? 'bg-primary-container/20' : 'hover:bg-surface-high'
-            }`}
-            onClick={() => onToggleFile(filePath)}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-8 bg-surface-variant overflow-hidden flex items-center justify-center">
-                <span className="material-symbols-outlined text-muted text-[14px]">image</span>
-              </div>
-              <span className={`font-label text-[12px] ${isSelected ? 'text-on-surface' : 'text-primary-dim'}`}>
-                {file.name}
-              </span>
-            </div>
-            {isSelected && (
-              <span className="material-symbols-outlined text-primary text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                check_circle
-              </span>
-            )}
-          </li>
-        )
-      })}
-    </ul>
   )
 }

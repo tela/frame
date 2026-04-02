@@ -736,8 +736,7 @@ export interface BrowseResponse {
 export function useBrowse(path: string) {
   return useQuery({
     queryKey: ['browse', path],
-    queryFn: () => fetchJSON<BrowseResponse>(`/api/v1/browse?path=${encodeURIComponent(path)}`),
-    enabled: !!path,
+    queryFn: () => fetchJSON<BrowseResponse>(`/api/v1/browse${path ? `?path=${encodeURIComponent(path)}` : ''}`),
   })
 }
 
