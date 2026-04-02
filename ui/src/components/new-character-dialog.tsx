@@ -81,11 +81,13 @@ const HAIR_COLORS = [
 const GENDERS = ['Female', 'Male', 'Non-Binary', 'Fluid'] as const
 
 const ERA_PRESETS = [
-  { label: 'Standard', ageRange: '18-20' },
+  { label: 'Late Teen', ageRange: '18-20' },
   { label: 'Young Adult', ageRange: '21-25' },
   { label: 'Prime', ageRange: '26-32' },
   { label: 'Mature', ageRange: '33-40' },
-  { label: 'Teen', ageRange: '18' },
+  { label: 'Mid-Life', ageRange: '41-50' },
+  { label: 'Silver', ageRange: '51-65' },
+  { label: 'Elder', ageRange: '66+' },
 ] as const
 
 function randomFrom(arr: string[], used?: Set<string>): string {
@@ -497,7 +499,7 @@ export function NewCharacterDialog({ open, onClose }: Props) {
                   <label className="text-[10px] font-bold uppercase tracking-widest text-primary-dim">
                     Initial Era
                   </label>
-                  <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                  <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
                     {ERA_PRESETS.map((era, i) => (
                       <button
                         key={era.label}

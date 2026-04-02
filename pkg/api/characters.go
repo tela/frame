@@ -76,7 +76,7 @@ func (a *API) createCharacter(w http.ResponseWriter, r *http.Request) {
 	// Auto-create initial era
 	eraLabel := req.EraLabel
 	if eraLabel == "" {
-		eraLabel = "Standard"
+		eraLabel = "Late Teen"
 	}
 	eraAgeRange := req.EraAgeRange
 	if eraAgeRange == "" {
