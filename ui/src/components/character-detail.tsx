@@ -1,5 +1,5 @@
 import { Link, useParams, useNavigate } from '@tanstack/react-router'
-import { useCharacter, useDatasets, useCharacterImages, useFavorites, useToggleFavorite, useIngestImage, useCreateEra, useFigStatus, usePublishToFig, useShoots, useCreateShoot, useShootImages, avatarUrl, thumbUrl } from '@/lib/api'
+import { useCharacter, useDatasets, useCharacterImages, useFavorites, useToggleFavorite, useIngestImage, useDeleteCharacterImage, useUpdateCharacter, useCreateEra, useFigStatus, usePublishToFig, useShoots, useCreateShoot, useShootImages, avatarUrl, thumbUrl } from '@/lib/api'
 import { useState } from 'react'
 import { Dropzone } from '@/components/dropzone'
 import { PoseSetDashboard } from '@/components/pose-set-dashboard'
@@ -48,62 +48,7 @@ export function CharacterDetail() {
         </div>
 
         {/* Character Hero */}
-        <div className="flex flex-col md:flex-row gap-12 mt-4 mb-16 items-end">
-          <div className="flex-1">
-            <h1 className="text-primary tracking-display text-[48px] md:text-[64px] font-normal font-display leading-[1.1] text-left pb-6 border-b border-border-subtle">
-              {character.name}
-            </h1>
-            {/* Fig status + ID */}
-            <div className="flex items-center gap-4 mt-3 mb-4">
-              <span className="text-[10px] uppercase tracking-[0.15em] bg-surface-high text-on-surface px-2 py-0.5">{character.status}</span>
-              {character.fig_published ? (
-                <>
-                  <span className="flex items-center gap-1.5 text-[11px] text-muted">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    Published to Fig
-                  </span>
-                  {character.fig_character_url && (
-                    <a href={character.fig_character_url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-primary hover:text-accent flex items-center gap-1">
-                      Open in Fig <span className="material-symbols-outlined text-[12px]">open_in_new</span>
-                    </a>
-                  )}
-                </>
-              ) : figStatus?.available ? (
-                <button
-                  onClick={() => publishToFig.mutate(character.id)}
-                  disabled={publishToFig.isPending}
-                  className="text-[11px] uppercase font-bold tracking-[0.1em] border border-border-subtle px-3 py-1 hover:border-on-surface hover:bg-surface transition-colors disabled:opacity-50 flex items-center gap-1.5"
-                >
-                  <span className="material-symbols-outlined text-[14px]">publish</span>
-                  {publishToFig.isPending ? 'Publishing...' : 'Publish to Fig'}
-                </button>
-              ) : null}
-              <span className="text-[10px] text-muted tabular-nums ml-auto">ID: {character.id}</span>
-            </div>
-            {/* Vitals Panel */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-8">
-              <div className="flex flex-col gap-1">
-                <span className="text-muted text-[11px] uppercase tracking-ui font-medium">Eras</span>
-                <span className="text-primary text-[14px] font-body tabular-nums">{character.eras.length}</span>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-muted text-[11px] uppercase tracking-ui font-medium">Total Images</span>
-                <span className="text-primary text-[14px] font-body tabular-nums">
-                  {character.eras.reduce((sum, e) => sum + e.image_count, 0)}
-                </span>
-              </div>
-            </div>
-          </div>
-          {/* Portrait */}
-          <div className="w-32 h-40 bg-surface rounded-sm border border-border-subtle flex-shrink-0 hidden md:block overflow-hidden relative">
-            <img
-              src={avatarUrl(character.id)}
-              alt={character.display_name || character.name}
-              className="w-full h-full object-cover"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-            />
-          </div>
-        </div>
+        <CharacterHero character={character} figStatus={figStatus} publishToFig={publishToFig} />
 
         {/* Eras Section — show for cast and development */}
         {(character.status === 'cast' || character.status === 'development') && (
@@ -185,7 +130,7 @@ export function CharacterDetail() {
 
         {/* Lookbook view — prospect always, development always */}
         {(character.status === 'prospect' || character.status === 'development') && (
-          <ProspectView characterId={character.id} status={character.status} />
+          <ProspectView characterId={character.id} status={character.status} defaultEraId={character.eras[0]?.id} />
         )}
 
 
@@ -296,15 +241,18 @@ export function CharacterDetail() {
 
 type ProspectTab = 'lookbook' | 'scrapbook'
 
-function ProspectView({ characterId, status }: {
-  characterId: string; status: string
+function ProspectView({ characterId, status, defaultEraId }: {
+  characterId: string; status: string; defaultEraId?: string
 }) {
   const [activeTab, setActiveTab] = useState<ProspectTab>('lookbook')
   const { data: allImages } = useCharacterImages(characterId)
   const { data: favorites } = useFavorites(characterId)
   const toggleFavorite = useToggleFavorite()
+  const deleteImage = useDeleteCharacterImage()
   const ingestImage = useIngestImage()
+  const updateCharacter = useUpdateCharacter()
   const [uploadStatus, setUploadStatus] = useState<string | null>(null)
+  const [showDevelopConfirm, setShowDevelopConfirm] = useState(false)
 
   const images = activeTab === 'lookbook' ? (favorites ?? []) : (allImages ?? [])
 
@@ -313,7 +261,7 @@ function ProspectView({ characterId, status }: {
     let completed = 0
     for (const file of files) {
       ingestImage.mutate(
-        { characterId, file, source: 'manual' },
+        { characterId, eraId: defaultEraId, file, source: 'manual' },
         {
           onSettled: () => {
             completed++
@@ -326,6 +274,17 @@ function ProspectView({ characterId, status }: {
     }
   }
 
+  const handleDevelop = () => {
+    updateCharacter.mutate(
+      { id: characterId, status: 'development' },
+      { onSuccess: () => setShowDevelopConfirm(false) }
+    )
+  }
+
+  const handleDelete = (imageId: string) => {
+    deleteImage.mutate({ characterId, imageId })
+  }
+
   return (
     <Dropzone onFiles={handleDrop} accept=".png,.jpg,.jpeg,.webp" className="relative">
       {uploadStatus && (
@@ -334,38 +293,41 @@ function ProspectView({ characterId, status }: {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex items-center gap-6 mb-8 border-b border-border-subtle">
-        {(['lookbook', 'scrapbook'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`pb-3 text-[13px] uppercase tracking-[0.1em] font-medium border-b-2 transition-colors capitalize ${
-              activeTab === tab ? 'text-primary border-primary' : 'text-muted border-transparent hover:text-primary'
-            }`}
-          >
-            {tab} {tab === 'lookbook' ? `(${(favorites ?? []).length})` : `(${(allImages ?? []).length})`}
-          </button>
-        ))}
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex gap-3">
+      {/* Tabs + Actions */}
+      <div className="flex flex-col md:flex-row justify-between items-end gap-8 mb-12">
+        <div className="flex gap-12 border-b border-border-subtle w-full md:w-auto">
+          {(['lookbook', 'scrapbook'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`pb-4 text-xs font-bold uppercase tracking-widest transition-all capitalize ${
+                activeTab === tab
+                  ? 'text-on-surface border-b-2 border-on-surface'
+                  : 'text-muted hover:text-on-surface'
+              }`}
+            >
+              {tab} ({tab === 'lookbook' ? (favorites ?? []).length : (allImages ?? []).length})
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-4 w-full md:w-auto">
+          {status === 'prospect' && (
+            <button
+              onClick={() => setShowDevelopConfirm(true)}
+              className="flex-1 md:flex-none flex items-center justify-center gap-3 px-8 py-3 outline outline-1 outline-border-subtle hover:bg-surface-low transition-colors text-on-surface"
+            >
+              <span className="text-[10px] font-bold uppercase tracking-widest">Develop Character</span>
+            </button>
+          )}
           <Link
             to="/characters/$characterId/eras/$eraId/studio"
-            params={{ characterId, eraId: 'default' }}
-            className="bg-on-surface text-background py-2 px-5 text-[11px] uppercase tracking-[0.1em] font-medium hover:opacity-90 flex items-center gap-2"
+            params={{ characterId, eraId: defaultEraId ?? 'default' }}
+            className="flex-1 md:flex-none flex items-center justify-center gap-3 px-8 py-3 bg-on-surface text-background hover:opacity-90 transition-opacity"
           >
-            <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
-            Generate
+            <span className="material-symbols-outlined text-lg">auto_awesome</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest">Generate</span>
           </Link>
         </div>
-        {status === 'prospect' && (
-          <button className="border border-primary text-primary py-2 px-5 text-[11px] uppercase tracking-[0.1em] font-medium hover:bg-primary hover:text-background transition-colors">
-            Develop Character
-          </button>
-        )}
       </div>
 
       {/* Image grid */}
@@ -381,59 +343,222 @@ function ProspectView({ characterId, status }: {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {images.map((ci) => (
             <ProspectImageCard
               key={ci.image_id}
               ci={ci}
               characterId={characterId}
+              defaultEraId={defaultEraId}
               onToggleFavorite={() => toggleFavorite.mutate({
                 characterId,
                 imageId: ci.image_id,
                 favorited: !((favorites ?? []).some(f => f.image_id === ci.image_id)),
               })}
               isFavorited={(favorites ?? []).some(f => f.image_id === ci.image_id)}
+              onDelete={() => handleDelete(ci.image_id)}
             />
           ))}
+          {/* Placeholder slot */}
+          <div className="aspect-square bg-surface-low/50 flex flex-col items-center justify-center p-8 border border-dashed border-border-subtle">
+            <span className="material-symbols-outlined text-4xl text-muted mb-4">add_photo_alternate</span>
+            <p className="text-muted text-[10px] font-bold uppercase tracking-widest text-center">New Concept Slot</p>
+          </div>
         </div>
       )}
+
+      {/* Develop Confirmation Dialog */}
+      <Dialog open={showDevelopConfirm} onOpenChange={setShowDevelopConfirm}>
+        <DialogContent className="bg-background border-border-subtle max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg">Move to Development?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted mt-2">
+            This will transition the character from prospect to active development.
+          </p>
+          <div className="flex justify-end gap-4 mt-6">
+            <button
+              onClick={() => setShowDevelopConfirm(false)}
+              className="text-[13px] text-muted hover:text-on-surface transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDevelop}
+              disabled={updateCharacter.isPending}
+              className="bg-on-surface text-background px-6 py-2 text-[13px] font-medium disabled:opacity-50"
+            >
+              {updateCharacter.isPending ? 'Updating...' : 'Confirm'}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dropzone>
   )
 }
 
-function ProspectImageCard({ ci, characterId, onToggleFavorite, isFavorited }: {
-  ci: CharacterImage; characterId: string; onToggleFavorite: () => void; isFavorited: boolean
+function ProspectImageCard({ ci, characterId, defaultEraId, onToggleFavorite, isFavorited, onDelete }: {
+  ci: CharacterImage; characterId: string; defaultEraId?: string; onToggleFavorite: () => void; isFavorited: boolean; onDelete: () => void
 }) {
   return (
-    <div className="group relative overflow-hidden border border-border-subtle">
-      <div className="aspect-square bg-surface-low overflow-hidden">
-        <img
-          src={thumbUrl(ci.image_id)}
-          alt=""
-          className="w-full h-full object-cover"
-          loading="lazy"
-          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-        />
+    <div className="group relative aspect-square bg-surface-low overflow-hidden">
+      <img
+        src={thumbUrl(ci.image_id)}
+        alt=""
+        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+        loading="lazy"
+        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+      />
+      {/* Hover overlay */}
+      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-4">
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleFavorite() }}
+            className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
+          >
+            <span
+              className={`material-symbols-outlined text-base ${isFavorited ? 'text-red-500' : 'text-on-surface'}`}
+              style={{ fontVariationSettings: isFavorited ? "'FILL' 1" : "'FILL' 0" }}
+            >
+              favorite
+            </span>
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete() }}
+            className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
+          >
+            <span className="material-symbols-outlined text-on-surface text-base">delete</span>
+          </button>
+        </div>
+        <div className="flex justify-center">
+          <Link
+            to="/characters/$characterId/eras/$eraId/studio"
+            params={{ characterId, eraId: defaultEraId ?? 'default' }}
+            className="px-6 py-2 bg-white/90 backdrop-blur-sm rounded-full text-on-surface text-[10px] font-bold uppercase tracking-widest hover:bg-white transition-colors"
+          >
+            Remix
+          </Link>
+        </div>
       </div>
-      {/* Action buttons — appear on hover, no overlay */}
-      <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={(e) => { e.stopPropagation(); onToggleFavorite() }}
-          className="material-symbols-outlined text-[20px] text-on-surface/70 hover:text-accent transition-colors drop-shadow-sm"
-          style={{ fontVariationSettings: isFavorited ? "'FILL' 1" : "'FILL' 0" }}
-        >
-          favorite
-        </button>
+    </div>
+  )
+}
+
+function CharacterHero({ character, figStatus, publishToFig }: {
+  character: { id: string; name: string; display_name: string; status: string; fig_published: boolean; fig_character_url: string; gender: string; ethnicity: string; eye_color: string; natural_hair_texture: string; natural_hair_color: string; eras: EraWithStats[] }
+  figStatus: { available: boolean } | undefined
+  publishToFig: { mutate: (id: string) => void; isPending: boolean }
+}) {
+  const [showDetails, setShowDetails] = useState(false)
+  const { data: allImages } = useCharacterImages(character.id)
+  const defaultEra = character.eras[0]
+  const hasFaceRef = defaultEra?.reference_package_ready
+
+  // Use allImages length for accurate count (era stats can miss images without era_id)
+  const totalImages = (allImages ?? []).length || character.eras.reduce((sum, e) => sum + e.image_count, 0)
+
+  return (
+    <div className="flex flex-col md:flex-row gap-12 mt-4 mb-20 items-start">
+      <div className="flex-1 max-w-2xl">
+        {/* Status + Era */}
+        <div className="flex items-center gap-4 mb-4">
+          <span className="bg-surface-low text-on-surface text-[10px] font-bold px-3 py-1 tracking-widest uppercase">{character.status}</span>
+          {defaultEra && (
+            <span className="text-muted text-[10px] font-medium uppercase tracking-widest">
+              Era Indicator: {defaultEra.label} · {defaultEra.age_range}
+            </span>
+          )}
+        </div>
+
+        {/* Character Name */}
+        <h1 className="font-display text-6xl md:text-8xl italic tracking-tight text-on-surface mb-6 leading-[0.9]">
+          {character.name}
+        </h1>
+
+        {/* ID + Physical Details toggle */}
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-4 mb-8">
+          <span className="text-muted text-[10px] font-medium uppercase tracking-widest tabular-nums">ID: {character.id}</span>
+          {/* Fig status */}
+          {character.fig_published && (
+            <>
+              <span className="flex items-center gap-1.5 text-[11px] text-muted">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                Published to Fig
+              </span>
+              {character.fig_character_url && (
+                <a href={character.fig_character_url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-primary hover:text-accent flex items-center gap-1">
+                  Open in Fig <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                </a>
+              )}
+            </>
+          )}
+          {!character.fig_published && figStatus?.available && (
+            <button
+              onClick={() => publishToFig.mutate(character.id)}
+              disabled={publishToFig.isPending}
+              className="text-[11px] uppercase font-bold tracking-[0.1em] border border-border-subtle px-3 py-1 hover:border-on-surface hover:bg-surface transition-colors disabled:opacity-50 flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-[14px]">publish</span>
+              {publishToFig.isPending ? 'Publishing...' : 'Publish to Fig'}
+            </button>
+          )}
+          <button
+            onClick={() => setShowDetails(v => !v)}
+            className="flex items-center gap-2 text-on-surface hover:opacity-70 transition-opacity"
+          >
+            <span className="material-symbols-outlined text-base">help_outline</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest">Physical Details</span>
+          </button>
+        </div>
+
+        {/* Physical Details Panel */}
+        {showDetails && (
+          <div className="bg-surface-low p-4 mb-8 grid grid-cols-2 gap-x-8 gap-y-2">
+            {[
+              ['Gender', character.gender],
+              ['Ethnicity', character.ethnicity],
+              ['Eye Color', character.eye_color],
+              ['Hair Texture', character.natural_hair_texture],
+              ['Hair Color', character.natural_hair_color],
+            ].map(([label, value]) => (
+              <div key={label} className="flex justify-between py-1">
+                <span className="text-muted text-[11px] uppercase tracking-wider">{label}</span>
+                <span className="text-on-surface text-[13px] capitalize">{value || '—'}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Vitals */}
+        <div className="grid grid-cols-3 gap-12 pt-8 border-t border-border-subtle">
+          <div>
+            <p className="text-muted text-[10px] font-medium uppercase tracking-widest mb-1">Eras</p>
+            <p className="font-display text-2xl italic">{character.eras.length}</p>
+          </div>
+          <div>
+            <p className="text-muted text-[10px] font-medium uppercase tracking-widest mb-1">Total Images</p>
+            <p className="font-display text-2xl italic">{totalImages}</p>
+          </div>
+          <div>
+            <p className="text-muted text-[10px] font-medium uppercase tracking-widest mb-1">Face Ref</p>
+            <div className="flex items-center gap-2">
+              {hasFaceRef && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+              <p className="font-display text-2xl italic">{hasFaceRef ? 'Locked' : 'None'}</p>
+            </div>
+          </div>
+        </div>
       </div>
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Link
-          to="/characters/$characterId/eras/$eraId/studio"
-          params={{ characterId, eraId: 'default' }}
-          className="bg-background/90 text-on-surface p-1.5 rounded-sm text-[10px] uppercase tracking-wider flex items-center gap-1"
-        >
-          <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
-          Remix
-        </Link>
+
+      {/* Portrait */}
+      <div className="relative group shrink-0 hidden md:block">
+        <div className="w-[160px] h-[200px] bg-surface-low overflow-hidden ring-1 ring-black/5">
+          <img
+            src={avatarUrl(character.id)}
+            alt={character.display_name || character.name}
+            className="w-full h-full object-cover"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+          />
+        </div>
       </div>
     </div>
   )
