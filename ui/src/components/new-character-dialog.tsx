@@ -11,13 +11,38 @@ interface Props {
 }
 
 const FEMALE_NAMES = [
-  'Celeste', 'Marlowe', 'Isolde', 'Vesper', 'Freya', 'Aurelie', 'Esme', 'Neve',
-  'Seraphina', 'Ingrid', 'Aria', 'Lyra', 'Petra', 'Wren', 'Lark', 'Maren', 'Elowen',
+  // Classic / European
+  'Celeste', 'Isolde', 'Vesper', 'Freya', 'Aurelie', 'Esme', 'Neve', 'Seraphina',
+  'Ingrid', 'Aria', 'Lyra', 'Petra', 'Elowen', 'Ophelia', 'Cressida', 'Evangeline',
+  'Genevieve', 'Isadora', 'Leontine', 'Margaux', 'Cosette', 'Vivienne', 'Odette',
+  'Sabine', 'Astrid', 'Elara', 'Dahlia', 'Coralie', 'Lucienne', 'Mirabelle',
+  'Theodora', 'Cassiopeia', 'Delphine', 'Fiora', 'Giselle', 'Helena', 'Juliette',
+  // Modern / Unisex-leaning
+  'Marlowe', 'Wren', 'Lark', 'Maren', 'Sutton', 'Briar', 'Sloane', 'Lennon',
+  'Rowan', 'Sable', 'Tatum', 'Blaise', 'Remi', 'Zoey', 'Harlow', 'Piper',
+  // East Asian
+  'Mei', 'Yuna', 'Sakura', 'Hana', 'Suki', 'Rin', 'Kaede', 'Aiko', 'Mina',
+  // South Asian
+  'Priya', 'Ananya', 'Kavya', 'Zara', 'Meera', 'Devi', 'Nisha', 'Saanvi',
+  // Latin / Mediterranean
+  'Valentina', 'Catalina', 'Paloma', 'Marisol', 'Solana', 'Ximena', 'Camila', 'Lúcia',
+  // African
+  'Amara', 'Zuri', 'Nia', 'Ayo', 'Imani', 'Kaya', 'Adaeze', 'Makena',
+  // Middle Eastern / North African
+  'Layla', 'Yasmin', 'Soraya', 'Farah', 'Nadira', 'Amira', 'Samira', 'Leila',
+  // Eastern European
+  'Katya', 'Milena', 'Anya', 'Dagny', 'Ilona', 'Mila', 'Sasha', 'Natasha',
+  // Nordic / Celtic
+  'Sigrid', 'Eira', 'Saoirse', 'Niamh', 'Brigid', 'Runa', 'Thora', 'Solveig',
 ]
 
 const MALE_NAMES = [
   'Elias', 'Soren', 'Caspian', 'Orion', 'Stellan', 'Dashiell', 'Theron', 'Lennox',
-  'Callum', 'Rhys', 'Felix', 'Hugo', 'Silas', 'Jasper', 'Kael',
+  'Callum', 'Rhys', 'Felix', 'Hugo', 'Silas', 'Jasper', 'Kael', 'Atticus',
+  'Bastian', 'Cassian', 'Dorian', 'Emeric', 'Finnian', 'Gideon', 'Hadrian',
+  'Idris', 'Julian', 'Kai', 'Leander', 'Milo', 'Nikolai', 'Oskar', 'Rafael',
+  'Severin', 'Tobias', 'Valor', 'Xavier', 'Yves', 'Zephyr', 'Ronan', 'Tarquin',
+  'Alaric', 'Dante', 'Lysander', 'Phineas', 'Theo', 'Arlo', 'Remy', 'Lucian',
 ]
 
 const ALL_FIRST_NAMES = [...FEMALE_NAMES, ...MALE_NAMES]
@@ -55,9 +80,29 @@ const HAIR_COLORS = [
 
 const GENDERS = ['Female', 'Male', 'Non-Binary', 'Fluid'] as const
 
-function randomFrom(arr: string[]): string {
+const ERA_PRESETS = [
+  { label: 'Standard', ageRange: '18-20' },
+  { label: 'Young Adult', ageRange: '21-25' },
+  { label: 'Prime', ageRange: '26-32' },
+  { label: 'Mature', ageRange: '33-40' },
+  { label: 'Teen', ageRange: '18' },
+] as const
+
+function randomFrom(arr: string[], used?: Set<string>): string {
+  if (used) {
+    const available = arr.filter(n => !used.has(n))
+    if (available.length === 0) {
+      used.clear()
+      return arr[Math.floor(Math.random() * arr.length)]
+    }
+    const pick = available[Math.floor(Math.random() * available.length)]
+    used.add(pick)
+    return pick
+  }
   return arr[Math.floor(Math.random() * arr.length)]
 }
+
+const usedFirstNames = new Set<string>()
 
 function firstNamesForGender(gender: string): string[] {
   if (gender === 'Female') return FEMALE_NAMES
@@ -86,9 +131,8 @@ export function NewCharacterDialog({ open, onClose }: Props) {
   const [lastName, setLastName] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [displayNameOverride, setDisplayNameOverride] = useState(false)
-  const [gender, setGender] = useState('')
-  const [eraLabel, setEraLabel] = useState('Standard')
-  const [eraAgeRange, setEraAgeRange] = useState('18-20')
+  const [gender, setGender] = useState('Female')
+  const [selectedEra, setSelectedEra] = useState(0)
   const [hasRefImages, setHasRefImages] = useState(false)
   const [files, setFiles] = useState<File[]>([])
   const [ethnicity, setEthnicity] = useState('')
@@ -139,6 +183,7 @@ export function NewCharacterDialog({ open, onClose }: Props) {
 
   const ensureCharacter = async (): Promise<Character> => {
     if (createdCharacter) return createdCharacter
+    const era = ERA_PRESETS[selectedEra]
     const c = await createCharacter.mutateAsync({
       name: fullName,
       display_name: effectiveDisplayName,
@@ -148,6 +193,8 @@ export function NewCharacterDialog({ open, onClose }: Props) {
       eye_color: eyeColor.toLowerCase(),
       natural_hair_texture: hairTexture,
       natural_hair_color: hairColor.toLowerCase(),
+      era_label: era.label,
+      era_age_range: era.ageRange,
     })
     setCreatedCharacter(c)
     return c
@@ -279,9 +326,9 @@ export function NewCharacterDialog({ open, onClose }: Props) {
     setLastName('')
     setDisplayName('')
     setDisplayNameOverride(false)
-    setGender('')
-    setEraLabel('Standard')
-    setEraAgeRange('18-20')
+    setGender('Female')
+    setSelectedEra(0)
+    usedFirstNames.clear()
     setHasRefImages(false)
     setFiles([])
     setEthnicity('')
@@ -379,7 +426,7 @@ export function NewCharacterDialog({ open, onClose }: Props) {
                       />
                       <button
                         type="button"
-                        onClick={() => setFirstName(randomFrom(firstNamesForGender(gender)))}
+                        onClick={() => setFirstName(randomFrom(firstNamesForGender(gender), usedFirstNames))}
                         className="absolute right-0 bottom-2 material-symbols-outlined text-muted/40 hover:text-primary text-[18px] transition-colors"
                         title="Generate random first name"
                       >
@@ -446,25 +493,26 @@ export function NewCharacterDialog({ open, onClose }: Props) {
                 </div>
 
                 {/* Era Assignment */}
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-primary-dim">
-                      Era Assignment
-                    </label>
-                    <div className="border-b border-outline-variant pb-2 flex justify-between items-center">
-                      <span className="text-sm">{eraLabel}</span>
-                      <span className="material-symbols-outlined text-[16px] text-muted">lock</span>
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-primary-dim">
-                      Age Range
-                    </label>
-                    <input
-                      value={eraAgeRange}
-                      onChange={(e) => setEraAgeRange(e.target.value)}
-                      className="w-full bg-transparent border-0 border-b border-outline-variant focus:ring-0 focus:border-on-surface p-0 pb-2 transition-all text-sm"
-                    />
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-primary-dim">
+                    Initial Era
+                  </label>
+                  <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                    {ERA_PRESETS.map((era, i) => (
+                      <button
+                        key={era.label}
+                        type="button"
+                        onClick={() => setSelectedEra(i)}
+                        className={`py-2.5 px-2 border text-center transition-colors ${
+                          selectedEra === i
+                            ? 'border-on-surface bg-on-surface text-background'
+                            : 'border-outline-variant text-on-surface hover:bg-surface-high'
+                        }`}
+                      >
+                        <div className="text-[11px] font-bold uppercase tracking-wider">{era.label}</div>
+                        <div className={`text-[10px] mt-0.5 ${selectedEra === i ? 'text-background/70' : 'text-muted'}`}>{era.ageRange}</div>
+                      </button>
+                    ))}
                   </div>
                 </div>
 

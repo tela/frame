@@ -25,6 +25,8 @@ type createCharacterRequest struct {
 	NaturalHairColor       string `json:"natural_hair_color"`
 	NaturalHairTexture     string `json:"natural_hair_texture"`
 	DistinguishingFeatures string `json:"distinguishing_features"`
+	EraLabel               string `json:"era_label"`
+	EraAgeRange            string `json:"era_age_range"`
 }
 
 func (a *API) createCharacter(w http.ResponseWriter, r *http.Request) {
@@ -71,12 +73,20 @@ func (a *API) createCharacter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Auto-create Standard era (age 20 baseline)
+	// Auto-create initial era
+	eraLabel := req.EraLabel
+	if eraLabel == "" {
+		eraLabel = "Standard"
+	}
+	eraAgeRange := req.EraAgeRange
+	if eraAgeRange == "" {
+		eraAgeRange = "18-20"
+	}
 	standardEra := &character.Era{
 		ID:               id.New(),
 		CharacterID:      c.ID,
-		Label:            "Standard",
-		AgeRange:         "18-20",
+		Label:            eraLabel,
+		AgeRange:         eraAgeRange,
 		TimePeriod:       "Present day",
 		Description:      "Baseline visual identity",
 		PipelineSettings: "{}",

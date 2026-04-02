@@ -105,6 +105,8 @@ export function useCreateCharacter() {
       natural_hair_color?: string
       natural_hair_texture?: string
       distinguishing_features?: string
+      era_label?: string
+      era_age_range?: string
     }) =>
       postJSON<Character>('/api/v1/characters', {
         ...body,
