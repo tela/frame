@@ -70,6 +70,9 @@ const studioRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/characters/$characterId/eras/$eraId/studio',
   component: Studio,
+  validateSearch: (search: Record<string, unknown>) => ({
+    source: (search.source as string) || undefined,
+  }),
 })
 
 const refsRoute = createRoute({
