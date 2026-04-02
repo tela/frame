@@ -5,6 +5,7 @@ import { Dropzone } from '@/components/dropzone'
 import { PoseSetDashboard } from '@/components/pose-set-dashboard'
 import { GoSeeLooks } from '@/components/go-see-looks'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ImportModal } from '@/components/import-modal'
 import type { EraWithStats, CharacterImage, Shoot } from '@/lib/types'
 
 export function CharacterDetail() {
@@ -130,7 +131,7 @@ export function CharacterDetail() {
 
         {/* Lookbook view — prospect always, development always */}
         {(character.status === 'prospect' || character.status === 'development') && (
-          <ProspectView characterId={character.id} status={character.status} defaultEraId={character.eras[0]?.id} />
+          <ProspectView characterId={character.id} characterName={character.display_name || character.name} status={character.status} defaultEraId={character.eras[0]?.id} eras={character.eras} />
         )}
 
 
@@ -241,8 +242,8 @@ export function CharacterDetail() {
 
 type ProspectTab = 'lookbook' | 'scrapbook'
 
-function ProspectView({ characterId, status, defaultEraId }: {
-  characterId: string; status: string; defaultEraId?: string
+function ProspectView({ characterId, characterName, status, defaultEraId, eras }: {
+  characterId: string; characterName: string; status: string; defaultEraId?: string; eras: EraWithStats[]
 }) {
   const [activeTab, setActiveTab] = useState<ProspectTab>('lookbook')
   const { data: allImages } = useCharacterImages(characterId)
@@ -251,6 +252,7 @@ function ProspectView({ characterId, status, defaultEraId }: {
   const deleteImage = useDeleteCharacterImage()
   const ingestImage = useIngestImage()
   const updateCharacter = useUpdateCharacter()
+  const [showImport, setShowImport] = useState(false)
   const [uploadStatus, setUploadStatus] = useState<string | null>(null)
   const [showDevelopConfirm, setShowDevelopConfirm] = useState(false)
 
@@ -327,8 +329,25 @@ function ProspectView({ characterId, status, defaultEraId }: {
             <span className="material-symbols-outlined text-lg">auto_awesome</span>
             <span className="text-[10px] font-bold uppercase tracking-widest">Generate</span>
           </Link>
+          <button
+            onClick={() => setShowImport(true)}
+            className="flex-1 md:flex-none flex items-center justify-center gap-3 px-8 py-3 outline outline-1 outline-border-subtle hover:bg-surface-low transition-colors text-on-surface"
+          >
+            <span className="material-symbols-outlined text-lg">file_upload</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest">Import</span>
+          </button>
         </div>
       </div>
+
+      {/* Import Modal */}
+      <ImportModal
+        open={showImport}
+        onClose={() => setShowImport(false)}
+        characterId={characterId}
+        characterName={characterName}
+        eras={eras}
+        defaultEraId={defaultEraId}
+      />
 
       {/* Image grid */}
       {images.length === 0 ? (
