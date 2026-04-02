@@ -338,6 +338,22 @@ func cmdSeed() {
 		}
 	}
 
+	// Create test import directories with sample images
+	importsDir := filepath.Join(cfg.Root, "imports")
+	for _, shootDir := range []string{"test-model/shoot-01", "test-model/shoot-02", "test-model/headshots"} {
+		dir := filepath.Join(importsDir, shootDir)
+		os.MkdirAll(dir, 0755)
+		for i := 0; i < 4; i++ {
+			imgPath := filepath.Join(dir, fmt.Sprintf("IMG_%04d.png", i+1))
+			if _, err := os.Stat(imgPath); err == nil {
+				continue // already exists
+			}
+			png := makeSeedPNG(byte(i*30+50), byte(i*20+60), byte(i*10+70))
+			os.WriteFile(imgPath, png, 0644)
+		}
+	}
+	fmt.Println("  import test dirs: imports/test-model/{shoot-01,shoot-02,headshots}")
+
 	fmt.Println("\nSeed complete.")
 }
 
