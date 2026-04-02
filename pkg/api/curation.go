@@ -65,6 +65,22 @@ func (a *API) updateCharacterImage(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, ci)
 }
 
+func (a *API) deleteCharacterImage(w http.ResponseWriter, r *http.Request) {
+	charID := r.PathValue("id")
+	imageID := r.PathValue("imageId")
+
+	if err := a.Images.DeleteCharacterImage(imageID, charID); err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	if a.Audit != nil {
+		a.Audit.Log("image", imageID, "deleted", nil, nil, nil, map[string]string{"character_id": charID})
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (a *API) bulkUpdateCharacterImages(w http.ResponseWriter, r *http.Request) {
 	charID := r.PathValue("id")
 	var req struct {

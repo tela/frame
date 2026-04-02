@@ -309,6 +309,18 @@ export function useIngestImage() {
   })
 }
 
+export function useDeleteCharacterImage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ characterId, imageId }: { characterId: string; imageId: string }) =>
+      fetch(`/api/v1/characters/${characterId}/images/${imageId}`, { method: 'DELETE' })
+        .then((r) => { if (!r.ok) throw new Error('delete failed'); return null }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['characters'] })
+    },
+  })
+}
+
 // ===== Media =====
 
 export function useMediaItems(type: MediaContentType) {
