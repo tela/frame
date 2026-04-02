@@ -105,6 +105,8 @@ export function useCreateCharacter() {
       natural_hair_color?: string
       natural_hair_texture?: string
       distinguishing_features?: string
+      era_label?: string
+      era_age_range?: string
     }) =>
       postJSON<Character>('/api/v1/characters', {
         ...body,
@@ -119,11 +121,28 @@ export function useCreateCharacter() {
 export function useUpdateCharacter() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, ...body }: { id: string; name?: string; display_name?: string; status?: string }) =>
+    mutationFn: ({ id, ...body }: {
+      id: string; name?: string; display_name?: string; status?: string;
+      gender?: string; ethnicity?: string; skin_tone?: string;
+      eye_color?: string; eye_shape?: string;
+      natural_hair_color?: string; natural_hair_texture?: string;
+      distinguishing_features?: string;
+    }) =>
       patchJSON<Character>(`/api/v1/characters/${id}`, body),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['characters'] })
       qc.invalidateQueries({ queryKey: ['characters', vars.id] })
+    },
+  })
+}
+
+export function useUpdateEra() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ eraId, ...fields }: { eraId: string; [key: string]: unknown }) =>
+      patchJSON<{ status: string }>(`/api/v1/eras/${eraId}`, fields),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['characters'] })
     },
   })
 }
@@ -303,6 +322,18 @@ export function useIngestImage() {
 
       return postFormData<IngestResult>(path, formData)
     },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['characters'] })
+    },
+  })
+}
+
+export function useDeleteCharacterImage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ characterId, imageId }: { characterId: string; imageId: string }) =>
+      fetch(`/api/v1/characters/${characterId}/images/${imageId}`, { method: 'DELETE' })
+        .then((r) => { if (!r.ok) throw new Error('delete failed'); return null }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['characters'] })
     },

@@ -42,6 +42,36 @@ export interface EraWithStats {
   prompt_prefix: string
   pipeline_settings: string
   sort_order: number
+  // Physical attributes (era-level)
+  height_cm?: number
+  weight_kg?: number
+  build: string
+  breast_size: string
+  breast_tanner: string
+  hip_shape: string
+  pubic_hair_style: string
+  pubic_hair_tanner: string
+  hair_color: string
+  hair_length: string
+  gynecoid_stage: string
+  waist_hip_ratio?: number
+  face_shape: string
+  buccal_fat: string
+  jaw_definition: string
+  brow_ridge: string
+  nasolabial_depth: string
+  skin_texture: string
+  skin_pore_visibility: string
+  under_eye: string
+  head_body_ratio?: number
+  leg_torso_ratio?: number
+  shoulder_hip_ratio?: number
+  areola_size: string
+  areola_color: string
+  areola_shape: string
+  labia_majora: string
+  labia_minora: string
+  labia_color: string
   created_at: string
   updated_at: string
   image_count: number

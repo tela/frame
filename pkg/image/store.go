@@ -330,6 +330,37 @@ func (s *Store) ListFavorites(characterID string) ([]CharacterImage, error) {
 	return scanCIRows(rows)
 }
 
+// DeleteCharacterImage removes a character_images association and the underlying image record.
+func (s *Store) DeleteCharacterImage(imageID, characterID string) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	res, err := tx.Exec(`DELETE FROM character_images WHERE image_id = ? AND character_id = ?`, imageID, characterID)
+	if err != nil {
+		return fmt.Errorf("delete character_image: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return fmt.Errorf("character image not found")
+	}
+
+	// Delete the image record if no other character references it.
+	var remaining int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM character_images WHERE image_id = ?`, imageID).Scan(&remaining); err != nil {
+		return fmt.Errorf("check remaining refs: %w", err)
+	}
+	if remaining == 0 {
+		if _, err := tx.Exec(`DELETE FROM images WHERE id = ?`, imageID); err != nil {
+			return fmt.Errorf("delete image: %w", err)
+		}
+	}
+
+	return tx.Commit()
+}
+
 func boolToInt(b bool) int {
 	if b {
 		return 1

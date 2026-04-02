@@ -59,11 +59,13 @@ func (a *API) Register(mux *http.ServeMux) {
 	// Eras
 	mux.HandleFunc("POST /api/v1/characters/{id}/eras", a.createEra)
 	mux.HandleFunc("GET /api/v1/characters/{id}/eras", a.listEras)
+	mux.HandleFunc("PATCH /api/v1/eras/{eraId}", a.updateEra)
 
 	// Character images
 	mux.HandleFunc("GET /api/v1/characters/{id}/images", a.listCharacterImages)
 	mux.HandleFunc("POST /api/v1/characters/{id}/images", a.ingestCharacterImage)
 	mux.HandleFunc("PATCH /api/v1/characters/{id}/images/{imageId}", a.updateCharacterImage)
+	mux.HandleFunc("DELETE /api/v1/characters/{id}/images/{imageId}", a.deleteCharacterImage)
 	mux.HandleFunc("PUT /api/v1/characters/{id}/images/bulk", a.bulkUpdateCharacterImages)
 	mux.HandleFunc("GET /api/v1/characters/{id}/images/pending", a.listPendingImages)
 	mux.HandleFunc("GET /api/v1/characters/{id}/avatar", a.getCharacterAvatar)
