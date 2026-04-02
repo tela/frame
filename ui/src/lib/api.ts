@@ -721,10 +721,30 @@ export function useCreateDatasetFromSearch() {
   })
 }
 
+export interface BrowseEntry {
+  name: string
+  is_dir: boolean
+  size?: number
+  children_count?: number
+}
+
+export interface BrowseResponse {
+  path: string
+  entries: BrowseEntry[]
+}
+
+export function useBrowse(path: string) {
+  return useQuery({
+    queryKey: ['browse', path],
+    queryFn: () => fetchJSON<BrowseResponse>(`/api/v1/browse?path=${encodeURIComponent(path)}`),
+    enabled: !!path,
+  })
+}
+
 export function useImportDirectory() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (body: { path: string; character_id?: string; era_id?: string; source?: string; tags?: string[] }) =>
+    mutationFn: (body: { path: string; character_id?: string; era_id?: string; shoot_id?: string; source?: string; tags?: string[] }) =>
       postJSON<{ imported: number; skipped: number; failed: number; total: number; errors?: string[] }>('/api/v1/import/directory', body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['characters'] })
