@@ -195,9 +195,7 @@ export function ImportModal({ open, onClose, characterId, characterName, eras, d
               {step === 'review' && 'Review & Import'}
             </h1>
           </div>
-          <button onClick={resetAndClose} className="w-10 h-10 flex items-center justify-center hover:bg-surface-low transition-colors">
-            <span className="material-symbols-outlined text-primary-dim">close</span>
-          </button>
+{/* Close button provided by DialogContent */}
         </header>
 
         {/* Content */}
