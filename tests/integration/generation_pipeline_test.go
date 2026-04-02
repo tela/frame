@@ -434,10 +434,10 @@ func TestAutoStandardEra(t *testing.T) {
 	if len(resp.Eras) != 1 {
 		t.Fatalf("expected 1 auto-created era, got %d", len(resp.Eras))
 	}
-	if resp.Eras[0].Label != "Standard" {
-		t.Errorf("era label: got %q, want Standard", resp.Eras[0].Label)
+	if resp.Eras[0].Label != "Late Teen" {
+		t.Errorf("era label: got %q, want Late Teen", resp.Eras[0].Label)
 	}
-	if resp.Eras[0].AgeRange != "20" {
-		t.Errorf("era age_range: got %q, want 20", resp.Eras[0].AgeRange)
+	if resp.Eras[0].AgeRange != "18-20" {
+		t.Errorf("era age_range: got %q, want 18-20", resp.Eras[0].AgeRange)
 	}
 }
