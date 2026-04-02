@@ -76,7 +76,7 @@ func (a *API) createCharacter(w http.ResponseWriter, r *http.Request) {
 		ID:               id.New(),
 		CharacterID:      c.ID,
 		Label:            "Standard",
-		AgeRange:         "20",
+		AgeRange:         "18-20",
 		TimePeriod:       "Present day",
 		Description:      "Baseline visual identity",
 		PipelineSettings: "{}",
