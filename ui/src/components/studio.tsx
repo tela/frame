@@ -1,8 +1,9 @@
 import { useParams } from '@tanstack/react-router'
 import { useCharacter, useGenerate, useBifrostStatus, useLoras, thumbUrl } from '@/lib/api'
 import type { LoRA } from '@/lib/api'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ImagePickerModal } from '@/components/image-picker-modal'
+import type { Character, EraWithStats } from '@/lib/types'
 
 type Workflow = 'txt2img' | 'multi_ref' | 'img2img' | 'pose_transfer' | 'upscale'
 type Tier = 'cheap' | 'complex' | 'frontier'
@@ -80,6 +81,51 @@ interface GeneratedImage {
   status: 'generating' | 'complete'
 }
 
+function buildCharacterPrompt(character: Character & { eras?: EraWithStats[] }, era?: EraWithStats): string {
+  const parts: string[] = []
+
+  // Core identity
+  if (character.gender) parts.push(character.gender)
+  if (character.ethnicity) parts.push(character.ethnicity)
+  parts.push('person')
+
+  // Age from era
+  if (era?.age_range) parts.push(`age ${era.age_range}`)
+
+  // Eyes
+  if (character.eye_color) parts.push(`${character.eye_color} eyes`)
+
+  // Hair — prefer era-level color/length, fall back to character-level
+  const hairColor = era?.hair_color || character.natural_hair_color
+  const hairTexture = character.natural_hair_texture
+  const hairLength = era?.hair_length
+  const hairParts: string[] = []
+  if (hairColor) hairParts.push(hairColor)
+  if (hairLength) hairParts.push(hairLength)
+  if (hairTexture && hairTexture !== 'shaven') hairParts.push(hairTexture)
+  if (hairParts.length > 0) {
+    parts.push(`${hairParts.join(' ')} hair`)
+  }
+  if (hairTexture === 'shaven') parts.push('shaved head')
+
+  // Build / body
+  if (era?.build) parts.push(`${era.build} build`)
+  if (era?.height_cm) parts.push(`${era.height_cm}cm tall`)
+
+  // Face details
+  if (era?.face_shape) parts.push(`${era.face_shape} face`)
+  if (era?.jaw_definition) parts.push(`${era.jaw_definition} jaw`)
+
+  // Skin
+  if (character.skin_tone) parts.push(`${character.skin_tone} skin`)
+  if (era?.skin_texture) parts.push(`${era.skin_texture} skin texture`)
+
+  // Distinguishing features
+  if (character.distinguishing_features) parts.push(character.distinguishing_features)
+
+  return parts.join(', ')
+}
+
 export function Studio() {
   const { characterId, eraId } = useParams({ from: '/characters/$characterId/eras/$eraId/studio' })
   const { data: character } = useCharacter(characterId)
@@ -110,6 +156,14 @@ export function Studio() {
 
   const era = character?.eras.find((e) => e.id === eraId)
   const bifrostAvailable = bifrostStatus?.available ?? false
+  const promptInitialized = useRef(false)
+
+  // Auto-populate prompt from character + era physical details on first load
+  useEffect(() => {
+    if (promptInitialized.current || !character || prompt) return
+    promptInitialized.current = true
+    setPrompt(buildCharacterPrompt(character, era))
+  }, [character, era]) // eslint-disable-line react-hooks/exhaustive-deps
   const dim = DIMENSIONS[dimensions]
   const activeLora = (loras ?? []).find((l: LoRA) => l.id === selectedLora)
 
