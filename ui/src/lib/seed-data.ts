@@ -27,14 +27,14 @@ export const SEED_CHARACTER_DETAILS: Record<string, CharacterWithEras> = {
   'seed-theo': {
     ...SEED_CHARACTERS[1],
     eras: [
-      { id: 'seed-era-4', character_id: 'seed-theo', label: 'Bohemian', age_range: 'Mid 20s', time_period: 'Present day', description: 'Free-spirited artist phase', visual_description: 'Mid 20s, confident, colorful wardrobe, expressive face', prompt_prefix: '', pipeline_settings: '{}', sort_order: 1, created_at: now, updated_at: now, image_count: 31, reference_package_ready: true },
+      { id: 'seed-era-4', character_id: 'seed-theo', label: 'Bohemian', age_range: 'Mid 20s', time_period: 'Present day', description: 'Free-spirited artist phase', visual_description: 'Mid 20s, confident, colorful wardrobe, expressive face', prompt_prefix: '', pipeline_settings: '{}', sort_order: 1, created_at: now, updated_at: now, image_count: 31, reference_package_ready: true } as EraWithStats,
       { id: 'seed-era-5', character_id: 'seed-theo', label: 'Recluse', age_range: 'Late 20s', time_period: 'Present day', description: 'Withdrawal after trauma', visual_description: 'Late 20s, withdrawn, muted tones, guarded posture', prompt_prefix: '', pipeline_settings: '{}', sort_order: 2, created_at: now, updated_at: now, image_count: 12, reference_package_ready: false } as EraWithStats,
     ],
   },
   'seed-montague': {
     ...SEED_CHARACTERS[3],
     eras: [
-      { id: 'seed-era-6', character_id: 'seed-montague', label: 'Academic', age_range: '50s', time_period: '1960s', description: 'Professor of parapsychology at the height of his career', visual_description: '50s, tweed, wire glasses, library settings, measured demeanor', prompt_prefix: '', pipeline_settings: '{}', sort_order: 1, created_at: now, updated_at: now, image_count: 22, reference_package_ready: true },
+      { id: 'seed-era-6', character_id: 'seed-montague', label: 'Academic', age_range: '50s', time_period: '1960s', description: 'Professor of parapsychology at the height of his career', visual_description: '50s, tweed, wire glasses, library settings, measured demeanor', prompt_prefix: '', pipeline_settings: '{}', sort_order: 1, created_at: now, updated_at: now, image_count: 22, reference_package_ready: true } as EraWithStats,
     ],
   },
 }
