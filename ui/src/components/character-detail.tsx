@@ -1,6 +1,6 @@
 import { Link, useParams, useNavigate } from '@tanstack/react-router'
-import { useCharacter, useDatasets, useCharacterImages, useFavorites, useToggleFavorite, useIngestImage, useDeleteCharacterImage, useUpdateCharacter, useCreateEra, useFigStatus, usePublishToFig, useShoots, useCreateShoot, useShootImages, avatarUrl, thumbUrl } from '@/lib/api'
-import { useState } from 'react'
+import { useCharacter, useDatasets, useCharacterImages, useFavorites, useToggleFavorite, useIngestImage, useDeleteCharacterImage, useUpdateCharacter, useUpdateEra, useCreateEra, useFigStatus, usePublishToFig, useShoots, useCreateShoot, useShootImages, avatarUrl, thumbUrl } from '@/lib/api'
+import { useState, useRef, useEffect } from 'react'
 import { Dropzone } from '@/components/dropzone'
 import { PoseSetDashboard } from '@/components/pose-set-dashboard'
 import { GoSeeLooks } from '@/components/go-see-looks'
@@ -446,12 +446,70 @@ function ProspectImageCard({ ci, characterId, defaultEraId, onToggleFavorite, is
 
 type DetailsTab = 'identity' | 'physicality'
 
-function DetailRow({ label, value }: { label: string; value: string | number | undefined | null }) {
+function EditableField({ label, value, onSave, options }: {
+  label: string
+  value: string | number | undefined | null
+  onSave: (val: string) => void
+  options?: string[]
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const inputRef = useRef<HTMLInputElement | HTMLSelectElement>(null)
+
   const display = value != null && value !== '' ? String(value) : '—'
+
+  const startEdit = () => {
+    setDraft(value != null && value !== '' ? String(value) : '')
+    setEditing(true)
+  }
+
+  useEffect(() => {
+    if (editing && inputRef.current) inputRef.current.focus()
+  }, [editing])
+
+  const commit = () => {
+    setEditing(false)
+    if (draft !== (value ?? '')) onSave(draft)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') commit()
+    if (e.key === 'Escape') setEditing(false)
+  }
+
   return (
-    <div className="flex justify-between py-1">
+    <div className="flex justify-between items-center py-1 group">
       <span className="text-muted text-[11px] uppercase tracking-wider">{label}</span>
-      <span className="text-on-surface text-[13px] capitalize">{display}</span>
+      {editing ? (
+        options ? (
+          <select
+            ref={inputRef as React.RefObject<HTMLSelectElement>}
+            value={draft}
+            onChange={(e) => { setDraft(e.target.value); }}
+            onBlur={commit}
+            className="bg-background border-b border-on-surface text-[13px] text-on-surface py-0 px-1 focus:ring-0 focus:outline-none w-36 text-right appearance-none capitalize"
+          >
+            <option value="">—</option>
+            {options.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+        ) : (
+          <input
+            ref={inputRef as React.RefObject<HTMLInputElement>}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={handleKeyDown}
+            className="bg-background border-b border-on-surface text-[13px] text-on-surface py-0 px-1 focus:ring-0 focus:outline-none w-36 text-right"
+          />
+        )
+      ) : (
+        <span
+          onClick={startEdit}
+          className="text-on-surface text-[13px] capitalize cursor-pointer hover:border-b hover:border-dashed hover:border-muted transition-all"
+        >
+          {display}
+        </span>
+      )}
     </div>
   )
 }
@@ -464,8 +522,21 @@ function CharacterHero({ character, figStatus, publishToFig }: {
   const [showDetails, setShowDetails] = useState(false)
   const [detailsTab, setDetailsTab] = useState<DetailsTab>('identity')
   const { data: allImages } = useCharacterImages(character.id)
+  const updateCharacter = useUpdateCharacter()
+  const updateEra = useUpdateEra()
   const defaultEra = character.eras[0]
   const hasFaceRef = defaultEra?.reference_package_ready
+
+  const saveCharField = (field: string) => (val: string) => {
+    updateCharacter.mutate({ id: character.id, [field]: val })
+  }
+  const saveEraField = (field: string) => (val: string) => {
+    if (!defaultEra) return
+    const v = ['height_cm', 'weight_kg'].includes(field) ? (val ? Number(val) : null)
+      : ['waist_hip_ratio', 'head_body_ratio', 'leg_torso_ratio', 'shoulder_hip_ratio'].includes(field) ? (val ? Number(val) : null)
+      : val
+    updateEra.mutate({ eraId: defaultEra.id, [field]: v })
+  }
 
   const totalImages = (allImages ?? []).length || character.eras.reduce((sum, e) => sum + e.image_count, 0)
 
@@ -547,17 +618,17 @@ function CharacterHero({ character, figStatus, publishToFig }: {
               )}
             </div>
 
-            {/* Identity Tab — character-level immutable traits */}
+            {/* Identity Tab — character-level traits */}
             {detailsTab === 'identity' && (
               <div className="p-4 grid grid-cols-2 gap-x-8 gap-y-1">
-                <DetailRow label="Gender" value={character.gender} />
-                <DetailRow label="Ethnicity" value={character.ethnicity} />
-                <DetailRow label="Eye Color" value={character.eye_color} />
-                <DetailRow label="Eye Shape" value={character.eye_shape} />
-                <DetailRow label="Hair Texture" value={character.natural_hair_texture} />
-                <DetailRow label="Hair Color" value={character.natural_hair_color} />
-                <DetailRow label="Skin Tone" value={character.skin_tone} />
-                <DetailRow label="Distinguishing" value={character.distinguishing_features} />
+                <EditableField label="Gender" value={character.gender} onSave={saveCharField('gender')} options={['female', 'male', 'non-binary', 'fluid']} />
+                <EditableField label="Ethnicity" value={character.ethnicity} onSave={saveCharField('ethnicity')} />
+                <EditableField label="Eye Color" value={character.eye_color} onSave={saveCharField('eye_color')} options={['amber', 'blue', 'brown', 'gray', 'green', 'hazel', 'dark brown', 'black']} />
+                <EditableField label="Eye Shape" value={character.eye_shape} onSave={saveCharField('eye_shape')} options={['almond', 'round', 'hooded', 'monolid', 'upturned', 'downturned', 'deep-set', 'wide-set']} />
+                <EditableField label="Hair Texture" value={character.natural_hair_texture} onSave={saveCharField('natural_hair_texture')} options={['straight', 'wavy', 'curly', 'coily', 'shaven']} />
+                <EditableField label="Hair Color" value={character.natural_hair_color} onSave={saveCharField('natural_hair_color')} />
+                <EditableField label="Skin Tone" value={character.skin_tone} onSave={saveCharField('skin_tone')} />
+                <EditableField label="Distinguishing" value={character.distinguishing_features} onSave={saveCharField('distinguishing_features')} />
               </div>
             )}
 
@@ -568,63 +639,63 @@ function CharacterHero({ character, figStatus, publishToFig }: {
                 <div>
                   <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Body</h4>
                   <div className="grid grid-cols-2 gap-x-8 gap-y-1">
-                    <DetailRow label="Height" value={defaultEra.height_cm ? `${defaultEra.height_cm} cm` : undefined} />
-                    <DetailRow label="Weight" value={defaultEra.weight_kg ? `${defaultEra.weight_kg} kg` : undefined} />
-                    <DetailRow label="Build" value={defaultEra.build} />
-                    <DetailRow label="Hip Shape" value={defaultEra.hip_shape} />
-                    <DetailRow label="Breast Size" value={defaultEra.breast_size} />
-                    <DetailRow label="Gynecoid Stage" value={defaultEra.gynecoid_stage} />
-                    <DetailRow label="Waist-Hip Ratio" value={defaultEra.waist_hip_ratio} />
+                    <EditableField label="Height (cm)" value={defaultEra.height_cm} onSave={saveEraField('height_cm')} />
+                    <EditableField label="Weight (kg)" value={defaultEra.weight_kg} onSave={saveEraField('weight_kg')} />
+                    <EditableField label="Build" value={defaultEra.build} onSave={saveEraField('build')} options={['petite', 'slim', 'athletic', 'average', 'curvy', 'full', 'muscular']} />
+                    <EditableField label="Hip Shape" value={defaultEra.hip_shape} onSave={saveEraField('hip_shape')} options={['narrow', 'moderate', 'wide', 'heart-shaped']} />
+                    <EditableField label="Breast Size" value={defaultEra.breast_size} onSave={saveEraField('breast_size')} options={['flat', 'small', 'medium', 'large', 'very large']} />
+                    <EditableField label="Gynecoid Stage" value={defaultEra.gynecoid_stage} onSave={saveEraField('gynecoid_stage')} />
+                    <EditableField label="Waist-Hip Ratio" value={defaultEra.waist_hip_ratio} onSave={saveEraField('waist_hip_ratio')} />
                   </div>
                 </div>
                 {/* Face */}
                 <div>
                   <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Face</h4>
                   <div className="grid grid-cols-2 gap-x-8 gap-y-1">
-                    <DetailRow label="Face Shape" value={defaultEra.face_shape} />
-                    <DetailRow label="Buccal Fat" value={defaultEra.buccal_fat} />
-                    <DetailRow label="Jaw" value={defaultEra.jaw_definition} />
-                    <DetailRow label="Brow Ridge" value={defaultEra.brow_ridge} />
-                    <DetailRow label="Nasolabial" value={defaultEra.nasolabial_depth} />
+                    <EditableField label="Face Shape" value={defaultEra.face_shape} onSave={saveEraField('face_shape')} options={['round', 'oval', 'heart', 'square', 'oblong']} />
+                    <EditableField label="Buccal Fat" value={defaultEra.buccal_fat} onSave={saveEraField('buccal_fat')} options={['full', 'moderate', 'slim', 'hollow']} />
+                    <EditableField label="Jaw" value={defaultEra.jaw_definition} onSave={saveEraField('jaw_definition')} options={['soft', 'moderate', 'defined', 'angular']} />
+                    <EditableField label="Brow Ridge" value={defaultEra.brow_ridge} onSave={saveEraField('brow_ridge')} options={['subtle', 'moderate', 'prominent']} />
+                    <EditableField label="Nasolabial" value={defaultEra.nasolabial_depth} onSave={saveEraField('nasolabial_depth')} options={['absent', 'faint', 'moderate', 'defined']} />
                   </div>
                 </div>
                 {/* Skin */}
                 <div>
                   <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Skin</h4>
                   <div className="grid grid-cols-2 gap-x-8 gap-y-1">
-                    <DetailRow label="Texture" value={defaultEra.skin_texture} />
-                    <DetailRow label="Pore Visibility" value={defaultEra.skin_pore_visibility} />
-                    <DetailRow label="Under-Eye" value={defaultEra.under_eye} />
+                    <EditableField label="Texture" value={defaultEra.skin_texture} onSave={saveEraField('skin_texture')} options={['smooth', 'clear', 'fine_lines', 'textured']} />
+                    <EditableField label="Pore Visibility" value={defaultEra.skin_pore_visibility} onSave={saveEraField('skin_pore_visibility')} options={['absent', 'fine', 'visible']} />
+                    <EditableField label="Under-Eye" value={defaultEra.under_eye} onSave={saveEraField('under_eye')} options={['smooth', 'faint_hollow', 'defined_hollow']} />
                   </div>
                 </div>
                 {/* Hair (era-level) */}
                 <div>
                   <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Hair (Era)</h4>
                   <div className="grid grid-cols-2 gap-x-8 gap-y-1">
-                    <DetailRow label="Color" value={defaultEra.hair_color} />
-                    <DetailRow label="Length" value={defaultEra.hair_length} />
-                    <DetailRow label="Pubic Style" value={defaultEra.pubic_hair_style} />
+                    <EditableField label="Color" value={defaultEra.hair_color} onSave={saveEraField('hair_color')} />
+                    <EditableField label="Length" value={defaultEra.hair_length} onSave={saveEraField('hair_length')} options={['buzzed', 'short', 'chin-length', 'shoulder', 'mid-back', 'waist', 'longer']} />
+                    <EditableField label="Pubic Style" value={defaultEra.pubic_hair_style} onSave={saveEraField('pubic_hair_style')} options={['natural', 'trimmed', 'landing_strip', 'brazilian', 'shaved']} />
                   </div>
                 </div>
                 {/* Intimate */}
                 <div>
                   <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Intimate</h4>
                   <div className="grid grid-cols-2 gap-x-8 gap-y-1">
-                    <DetailRow label="Areola Size" value={defaultEra.areola_size} />
-                    <DetailRow label="Areola Color" value={defaultEra.areola_color} />
-                    <DetailRow label="Areola Shape" value={defaultEra.areola_shape} />
-                    <DetailRow label="Labia Majora" value={defaultEra.labia_majora} />
-                    <DetailRow label="Labia Minora" value={defaultEra.labia_minora} />
-                    <DetailRow label="Labia Color" value={defaultEra.labia_color} />
+                    <EditableField label="Areola Size" value={defaultEra.areola_size} onSave={saveEraField('areola_size')} options={['small', 'medium', 'large']} />
+                    <EditableField label="Areola Color" value={defaultEra.areola_color} onSave={saveEraField('areola_color')} options={['light', 'medium', 'dark']} />
+                    <EditableField label="Areola Shape" value={defaultEra.areola_shape} onSave={saveEraField('areola_shape')} options={['flat', 'puffy', 'raised', 'pronounced']} />
+                    <EditableField label="Labia Majora" value={defaultEra.labia_majora} onSave={saveEraField('labia_majora')} options={['flat', 'moderate', 'full']} />
+                    <EditableField label="Labia Minora" value={defaultEra.labia_minora} onSave={saveEraField('labia_minora')} options={['minimal', 'visible', 'protruding']} />
+                    <EditableField label="Labia Color" value={defaultEra.labia_color} onSave={saveEraField('labia_color')} options={['light', 'medium', 'dark']} />
                   </div>
                 </div>
                 {/* Proportions */}
                 <div>
                   <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Proportions</h4>
                   <div className="grid grid-cols-2 gap-x-8 gap-y-1">
-                    <DetailRow label="Head:Body" value={defaultEra.head_body_ratio} />
-                    <DetailRow label="Leg:Torso" value={defaultEra.leg_torso_ratio} />
-                    <DetailRow label="Shoulder:Hip" value={defaultEra.shoulder_hip_ratio} />
+                    <EditableField label="Head:Body" value={defaultEra.head_body_ratio} onSave={saveEraField('head_body_ratio')} />
+                    <EditableField label="Leg:Torso" value={defaultEra.leg_torso_ratio} onSave={saveEraField('leg_torso_ratio')} />
+                    <EditableField label="Shoulder:Hip" value={defaultEra.shoulder_hip_ratio} onSave={saveEraField('shoulder_hip_ratio')} />
                   </div>
                 </div>
               </div>

@@ -146,11 +146,19 @@ func (a *API) getCharacter(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateCharacterRequest struct {
-	Name            *string `json:"name,omitempty"`
-	DisplayName     *string `json:"display_name,omitempty"`
-	Status          *string `json:"status,omitempty"`
-	FigPublished    *bool   `json:"fig_published,omitempty"`
-	FigCharacterURL *string `json:"fig_character_url,omitempty"`
+	Name                   *string `json:"name,omitempty"`
+	DisplayName            *string `json:"display_name,omitempty"`
+	Status                 *string `json:"status,omitempty"`
+	FigPublished           *bool   `json:"fig_published,omitempty"`
+	FigCharacterURL        *string `json:"fig_character_url,omitempty"`
+	Gender                 *string `json:"gender,omitempty"`
+	Ethnicity              *string `json:"ethnicity,omitempty"`
+	SkinTone               *string `json:"skin_tone,omitempty"`
+	EyeColor               *string `json:"eye_color,omitempty"`
+	EyeShape               *string `json:"eye_shape,omitempty"`
+	NaturalHairColor       *string `json:"natural_hair_color,omitempty"`
+	NaturalHairTexture     *string `json:"natural_hair_texture,omitempty"`
+	DistinguishingFeatures *string `json:"distinguishing_features,omitempty"`
 }
 
 func (a *API) updateCharacter(w http.ResponseWriter, r *http.Request) {
@@ -226,6 +234,23 @@ func (a *API) updateCharacter(w http.ResponseWriter, r *http.Request) {
 			url = *req.FigCharacterURL
 		}
 		a.Characters.UpdateFigStatus(id, published, url)
+	}
+
+	// Physical attribute updates
+	physFields := map[string]interface{}{}
+	if req.Gender != nil { physFields["gender"] = *req.Gender }
+	if req.Ethnicity != nil { physFields["ethnicity"] = *req.Ethnicity }
+	if req.SkinTone != nil { physFields["skin_tone"] = *req.SkinTone }
+	if req.EyeColor != nil { physFields["eye_color"] = *req.EyeColor }
+	if req.EyeShape != nil { physFields["eye_shape"] = *req.EyeShape }
+	if req.NaturalHairColor != nil { physFields["natural_hair_color"] = *req.NaturalHairColor }
+	if req.NaturalHairTexture != nil { physFields["natural_hair_texture"] = *req.NaturalHairTexture }
+	if req.DistinguishingFeatures != nil { physFields["distinguishing_features"] = *req.DistinguishingFeatures }
+	if len(physFields) > 0 {
+		if err := a.Characters.UpdatePhysical(id, physFields); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 
 	// Return updated character
@@ -319,6 +344,23 @@ func (a *API) listEras(w http.ResponseWriter, r *http.Request) {
 		eras = []character.Era{}
 	}
 	writeJSON(w, http.StatusOK, eras)
+}
+
+func (a *API) updateEra(w http.ResponseWriter, r *http.Request) {
+	eraID := r.PathValue("eraId")
+
+	var fields map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&fields); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+
+	if err := a.Characters.UpdateEra(eraID, fields); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 // statusRank maps lifecycle stages to ordinal values for forward-only enforcement.

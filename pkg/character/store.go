@@ -3,6 +3,7 @@ package character
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -150,6 +151,77 @@ func (s *Store) Update(id string, name, displayName string) error {
 		return fmt.Errorf("character %s not found", id)
 	}
 	return nil
+}
+
+// UpdatePhysical updates the physical attribute fields on a character.
+func (s *Store) UpdatePhysical(id string, fields map[string]interface{}) error {
+	if len(fields) == 0 {
+		return nil
+	}
+	allowed := map[string]bool{
+		"gender": true, "ethnicity": true, "skin_tone": true,
+		"eye_color": true, "eye_shape": true,
+		"natural_hair_color": true, "natural_hair_texture": true,
+		"distinguishing_features": true,
+	}
+	var setClauses []string
+	var args []interface{}
+	for k, v := range fields {
+		if !allowed[k] {
+			continue
+		}
+		setClauses = append(setClauses, k+" = ?")
+		args = append(args, v)
+	}
+	if len(setClauses) == 0 {
+		return nil
+	}
+	setClauses = append(setClauses, "updated_at = datetime('now')")
+	args = append(args, id)
+
+	query := "UPDATE characters SET " + strings.Join(setClauses, ", ") + " WHERE id = ?"
+	_, err := s.db.Exec(query, args...)
+	return err
+}
+
+// UpdateEra updates fields on an era record.
+func (s *Store) UpdateEra(eraID string, fields map[string]interface{}) error {
+	if len(fields) == 0 {
+		return nil
+	}
+	allowed := map[string]bool{
+		"label": true, "age_range": true, "time_period": true,
+		"description": true, "visual_description": true, "prompt_prefix": true,
+		"height_cm": true, "weight_kg": true, "build": true,
+		"breast_size": true, "breast_tanner": true, "hip_shape": true,
+		"pubic_hair_style": true, "pubic_hair_tanner": true,
+		"hair_color": true, "hair_length": true,
+		"gynecoid_stage": true, "waist_hip_ratio": true,
+		"face_shape": true, "buccal_fat": true, "jaw_definition": true,
+		"brow_ridge": true, "nasolabial_depth": true,
+		"skin_texture": true, "skin_pore_visibility": true, "under_eye": true,
+		"head_body_ratio": true, "leg_torso_ratio": true, "shoulder_hip_ratio": true,
+		"areola_size": true, "areola_color": true, "areola_shape": true,
+		"labia_majora": true, "labia_minora": true, "labia_color": true,
+	}
+	var setClauses []string
+	var args []interface{}
+	for k, v := range fields {
+		if !allowed[k] {
+			continue
+		}
+		setClauses = append(setClauses, k+" = ?")
+		args = append(args, v)
+	}
+	if len(setClauses) == 0 {
+		return nil
+	}
+	setClauses = append(setClauses, "updated_at = datetime('now')")
+	args = append(args, eraID)
+
+	query := "UPDATE eras SET " + strings.Join(setClauses, ", ") + " WHERE id = ?"
+	_, err := s.db.Exec(query, args...)
+	return err
 }
 
 // CreateEra inserts a new era for a character.
