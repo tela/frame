@@ -444,17 +444,29 @@ function ProspectImageCard({ ci, characterId, defaultEraId, onToggleFavorite, is
   )
 }
 
+type DetailsTab = 'identity' | 'physicality'
+
+function DetailRow({ label, value }: { label: string; value: string | number | undefined | null }) {
+  const display = value != null && value !== '' ? String(value) : '—'
+  return (
+    <div className="flex justify-between py-1">
+      <span className="text-muted text-[11px] uppercase tracking-wider">{label}</span>
+      <span className="text-on-surface text-[13px] capitalize">{display}</span>
+    </div>
+  )
+}
+
 function CharacterHero({ character, figStatus, publishToFig }: {
-  character: { id: string; name: string; display_name: string; status: string; fig_published: boolean; fig_character_url: string; gender: string; ethnicity: string; eye_color: string; natural_hair_texture: string; natural_hair_color: string; eras: EraWithStats[] }
+  character: { id: string; name: string; display_name: string; status: string; fig_published: boolean; fig_character_url: string; gender: string; ethnicity: string; skin_tone: string; eye_color: string; eye_shape: string; natural_hair_texture: string; natural_hair_color: string; distinguishing_features: string; eras: EraWithStats[] }
   figStatus: { available: boolean } | undefined
   publishToFig: { mutate: (id: string) => void; isPending: boolean }
 }) {
   const [showDetails, setShowDetails] = useState(false)
+  const [detailsTab, setDetailsTab] = useState<DetailsTab>('identity')
   const { data: allImages } = useCharacterImages(character.id)
   const defaultEra = character.eras[0]
   const hasFaceRef = defaultEra?.reference_package_ready
 
-  // Use allImages length for accurate count (era stats can miss images without era_id)
   const totalImages = (allImages ?? []).length || character.eras.reduce((sum, e) => sum + e.image_count, 0)
 
   return (
@@ -465,7 +477,7 @@ function CharacterHero({ character, figStatus, publishToFig }: {
           <span className="bg-surface-low text-on-surface text-[10px] font-bold px-3 py-1 tracking-widest uppercase">{character.status}</span>
           {defaultEra && (
             <span className="text-muted text-[10px] font-medium uppercase tracking-widest">
-              Era Indicator: {defaultEra.label} · {defaultEra.age_range}
+              {defaultEra.label} · {defaultEra.age_range}
             </span>
           )}
         </div>
@@ -478,7 +490,6 @@ function CharacterHero({ character, figStatus, publishToFig }: {
         {/* ID + Physical Details toggle */}
         <div className="flex flex-wrap items-center gap-x-8 gap-y-4 mb-8">
           <span className="text-muted text-[10px] font-medium uppercase tracking-widest tabular-nums">ID: {character.id}</span>
-          {/* Fig status */}
           {character.fig_published && (
             <>
               <span className="flex items-center gap-1.5 text-[11px] text-muted">
@@ -506,26 +517,118 @@ function CharacterHero({ character, figStatus, publishToFig }: {
             onClick={() => setShowDetails(v => !v)}
             className="flex items-center gap-2 text-on-surface hover:opacity-70 transition-opacity"
           >
-            <span className="material-symbols-outlined text-base">help_outline</span>
-            <span className="text-[10px] font-bold uppercase tracking-widest">Physical Details</span>
+            <span className="material-symbols-outlined text-base">{showDetails ? 'expand_less' : 'help_outline'}</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest">Character Sheet</span>
           </button>
         </div>
 
-        {/* Physical Details Panel */}
+        {/* Character Sheet Panel */}
         {showDetails && (
-          <div className="bg-surface-low p-4 mb-8 grid grid-cols-2 gap-x-8 gap-y-2">
-            {[
-              ['Gender', character.gender],
-              ['Ethnicity', character.ethnicity],
-              ['Eye Color', character.eye_color],
-              ['Hair Texture', character.natural_hair_texture],
-              ['Hair Color', character.natural_hair_color],
-            ].map(([label, value]) => (
-              <div key={label} className="flex justify-between py-1">
-                <span className="text-muted text-[11px] uppercase tracking-wider">{label}</span>
-                <span className="text-on-surface text-[13px] capitalize">{value || '—'}</span>
+          <div className="bg-surface-low mb-8">
+            {/* Tabs */}
+            <div className="flex border-b border-outline-variant/20">
+              {(['identity', 'physicality'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setDetailsTab(tab)}
+                  className={`px-6 py-3 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                    detailsTab === tab
+                      ? 'text-on-surface border-b-2 border-on-surface'
+                      : 'text-muted hover:text-on-surface'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+              {defaultEra && (
+                <span className="ml-auto px-4 py-3 text-[10px] text-muted uppercase tracking-wider self-center">
+                  Era: {defaultEra.label}
+                </span>
+              )}
+            </div>
+
+            {/* Identity Tab — character-level immutable traits */}
+            {detailsTab === 'identity' && (
+              <div className="p-4 grid grid-cols-2 gap-x-8 gap-y-1">
+                <DetailRow label="Gender" value={character.gender} />
+                <DetailRow label="Ethnicity" value={character.ethnicity} />
+                <DetailRow label="Eye Color" value={character.eye_color} />
+                <DetailRow label="Eye Shape" value={character.eye_shape} />
+                <DetailRow label="Hair Texture" value={character.natural_hair_texture} />
+                <DetailRow label="Hair Color" value={character.natural_hair_color} />
+                <DetailRow label="Skin Tone" value={character.skin_tone} />
+                <DetailRow label="Distinguishing" value={character.distinguishing_features} />
               </div>
-            ))}
+            )}
+
+            {/* Physicality Tab — era-level body details */}
+            {detailsTab === 'physicality' && defaultEra && (
+              <div className="p-4 space-y-4">
+                {/* Body */}
+                <div>
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Body</h4>
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-1">
+                    <DetailRow label="Height" value={defaultEra.height_cm ? `${defaultEra.height_cm} cm` : undefined} />
+                    <DetailRow label="Weight" value={defaultEra.weight_kg ? `${defaultEra.weight_kg} kg` : undefined} />
+                    <DetailRow label="Build" value={defaultEra.build} />
+                    <DetailRow label="Hip Shape" value={defaultEra.hip_shape} />
+                    <DetailRow label="Breast Size" value={defaultEra.breast_size} />
+                    <DetailRow label="Gynecoid Stage" value={defaultEra.gynecoid_stage} />
+                    <DetailRow label="Waist-Hip Ratio" value={defaultEra.waist_hip_ratio} />
+                  </div>
+                </div>
+                {/* Face */}
+                <div>
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Face</h4>
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-1">
+                    <DetailRow label="Face Shape" value={defaultEra.face_shape} />
+                    <DetailRow label="Buccal Fat" value={defaultEra.buccal_fat} />
+                    <DetailRow label="Jaw" value={defaultEra.jaw_definition} />
+                    <DetailRow label="Brow Ridge" value={defaultEra.brow_ridge} />
+                    <DetailRow label="Nasolabial" value={defaultEra.nasolabial_depth} />
+                  </div>
+                </div>
+                {/* Skin */}
+                <div>
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Skin</h4>
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-1">
+                    <DetailRow label="Texture" value={defaultEra.skin_texture} />
+                    <DetailRow label="Pore Visibility" value={defaultEra.skin_pore_visibility} />
+                    <DetailRow label="Under-Eye" value={defaultEra.under_eye} />
+                  </div>
+                </div>
+                {/* Hair (era-level) */}
+                <div>
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Hair (Era)</h4>
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-1">
+                    <DetailRow label="Color" value={defaultEra.hair_color} />
+                    <DetailRow label="Length" value={defaultEra.hair_length} />
+                    <DetailRow label="Pubic Style" value={defaultEra.pubic_hair_style} />
+                  </div>
+                </div>
+                {/* Intimate */}
+                <div>
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Intimate</h4>
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-1">
+                    <DetailRow label="Areola Size" value={defaultEra.areola_size} />
+                    <DetailRow label="Areola Color" value={defaultEra.areola_color} />
+                    <DetailRow label="Areola Shape" value={defaultEra.areola_shape} />
+                    <DetailRow label="Labia Majora" value={defaultEra.labia_majora} />
+                    <DetailRow label="Labia Minora" value={defaultEra.labia_minora} />
+                    <DetailRow label="Labia Color" value={defaultEra.labia_color} />
+                  </div>
+                </div>
+                {/* Proportions */}
+                <div>
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Proportions</h4>
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-1">
+                    <DetailRow label="Head:Body" value={defaultEra.head_body_ratio} />
+                    <DetailRow label="Leg:Torso" value={defaultEra.leg_torso_ratio} />
+                    <DetailRow label="Shoulder:Hip" value={defaultEra.shoulder_hip_ratio} />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
