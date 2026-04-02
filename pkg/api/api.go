@@ -156,7 +156,8 @@ func (a *API) Register(mux *http.ServeMux) {
 	// Preprocessing
 	mux.HandleFunc("POST /api/v1/preprocess/apply", a.applyPreprocess)
 
-	// Import
+	// Import & Browse
+	mux.HandleFunc("GET /api/v1/browse", a.handleBrowse)
 	mux.HandleFunc("POST /api/v1/import/directory", a.handleImportDirectory)
 
 	// Audit log
