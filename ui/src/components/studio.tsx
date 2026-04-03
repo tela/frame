@@ -504,29 +504,31 @@ export function Studio() {
           </div>
 
           {/* Template — Generate mode only */}
-          {mode === 'generate' && <div className="flex flex-col gap-2">
-            <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Template</label>
-            <div className="relative">
-              <select
-                value={template}
-                onChange={(e) => {
-                  const t = TEMPLATES.find((t) => t.value === e.target.value)
-                  setTemplate(e.target.value)
-                  if (t && t.value) {
-                    const prefix = era?.prompt_prefix ? `${era.prompt_prefix}, ` : ''
-                    setPrompt(prefix + t.prompt)
-                    setNegativePrompt(t.negative)
-                  }
-                }}
-                className="w-full appearance-none bg-transparent border border-border-subtle py-2.5 px-3 text-sm focus:outline-none focus:border-primary cursor-pointer"
-              >
-                {TEMPLATES.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
-              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted text-[18px]">expand_more</span>
+          {mode === 'generate' && (
+            <div className="flex flex-col gap-2">
+              <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Template</label>
+              <div className="relative">
+                <select
+                  value={template}
+                  onChange={(e) => {
+                    const t = TEMPLATES.find((t) => t.value === e.target.value)
+                    setTemplate(e.target.value)
+                    if (t && t.value) {
+                      const prefix = era?.prompt_prefix ? `${era.prompt_prefix}, ` : ''
+                      setPrompt(prefix + t.prompt)
+                      setNegativePrompt(t.negative)
+                    }
+                  }}
+                  className="w-full appearance-none bg-transparent border border-border-subtle py-2.5 px-3 text-sm focus:outline-none focus:border-primary cursor-pointer"
+                >
+                  {TEMPLATES.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+                <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted text-[18px]">expand_more</span>
+              </div>
             </div>
-          </div>}
+          )}
 
           {/* Source Image (for refine/process modes) */}
           {needsSource && (
@@ -610,7 +612,8 @@ export function Studio() {
           )}
 
           {/* LoRA Selector — not in process mode */}
-          {mode !== 'process' && <div className="flex flex-col gap-2">
+          {mode !== 'process' && (
+            <div className="flex flex-col gap-2">
             <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">LoRA Adapter</label>
             <div className="relative">
               <select
@@ -648,33 +651,35 @@ export function Studio() {
                 />
               </div>
             )}
-          </div>}
-
-          {/* Prompt — not in process mode */}
-          {mode !== 'process' &&
-          <div className="flex flex-col gap-2">
-            <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted flex justify-between">
-              Prompt
-              <span className="tracking-normal lowercase tabular-nums">{prompt.length}/1000</span>
-            </label>
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              className="w-full h-[140px] resize-none bg-surface border border-border-subtle p-3 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
-              placeholder="Describe the subject, environment, lighting..."
-            />
           </div>
+          )}
 
-          {/* Negative Prompt */}
-          <div className="flex flex-col gap-2">
-            <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Negative Prompt</label>
-            <textarea
-              value={negativePrompt}
-              onChange={(e) => setNegativePrompt(e.target.value)}
-              className="w-full h-[60px] resize-none bg-surface border border-border-subtle p-3 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
-              placeholder="What to exclude..."
-            />
-          </div>}
+          {/* Prompt + Negative — not in process mode */}
+          {mode !== 'process' && (
+            <>
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted flex justify-between">
+                  Prompt
+                  <span className="tracking-normal lowercase tabular-nums">{prompt.length}/1000</span>
+                </label>
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  className="w-full h-[140px] resize-none bg-surface border border-border-subtle p-3 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
+                  placeholder="Describe the subject, environment, lighting..."
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Negative Prompt</label>
+                <textarea
+                  value={negativePrompt}
+                  onChange={(e) => setNegativePrompt(e.target.value)}
+                  className="w-full h-[60px] resize-none bg-surface border border-border-subtle p-3 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
+                  placeholder="What to exclude..."
+                />
+              </div>
+            </>
+          )}
 
           {/* Process mode — simple operation description */}
           {mode === 'process' && (
