@@ -130,9 +130,81 @@ function buildCharacterPrompt(character: Character & { eras?: EraWithStats[] }, 
   return parts.join(', ')
 }
 
+// Intent presets map user actions to Studio configuration
+type StudioIntent = 'headshot' | 'consistent' | 'portrait' | 'full_body' | 'full_body_nude' | 'remix' | 'upscale' | 'clothing_swap'
+
+interface IntentConfig {
+  workflow: Workflow
+  contentRating: ContentRating
+  includeRefs: boolean
+  promptSuffix: string
+  needsSource: boolean
+  denoise?: number
+}
+
+const INTENT_CONFIGS: Record<StudioIntent, IntentConfig> = {
+  headshot: {
+    workflow: 'text-to-image',
+    contentRating: 'sfw',
+    includeRefs: false,
+    promptSuffix: ', front-facing headshot, neutral expression, studio lighting, portrait photography',
+    needsSource: false,
+  },
+  consistent: {
+    workflow: 'sdxl_character_gen',
+    contentRating: 'sfw',
+    includeRefs: true,
+    promptSuffix: '',
+    needsSource: false,
+  },
+  portrait: {
+    workflow: 'sdxl_character_gen',
+    contentRating: 'sfw',
+    includeRefs: true,
+    promptSuffix: ', three-quarter portrait, soft natural lighting, elegant',
+    needsSource: false,
+  },
+  full_body: {
+    workflow: 'sdxl_character_gen',
+    contentRating: 'sfw',
+    includeRefs: true,
+    promptSuffix: ', full body standing pose, clean studio background, professional photography',
+    needsSource: false,
+  },
+  full_body_nude: {
+    workflow: 'sdxl_character_gen',
+    contentRating: 'nsfw',
+    includeRefs: true,
+    promptSuffix: ', full body nude standing, clean studio background, professional photography',
+    needsSource: false,
+  },
+  remix: {
+    workflow: 'sdxl_img2img',
+    contentRating: 'sfw',
+    includeRefs: false,
+    promptSuffix: '',
+    needsSource: true,
+    denoise: 0.6,
+  },
+  upscale: {
+    workflow: 'sdxl_quality_postprocess',
+    contentRating: 'sfw',
+    includeRefs: false,
+    promptSuffix: '',
+    needsSource: true,
+  },
+  clothing_swap: {
+    workflow: 'sdxl_clothing_swap',
+    contentRating: 'nsfw',
+    includeRefs: true,
+    promptSuffix: '',
+    needsSource: true,
+  },
+}
+
 export function Studio() {
   const { characterId, eraId } = useParams({ from: '/characters/$characterId/eras/$eraId/studio' })
-  const { source: sourceParam } = useSearch({ from: '/characters/$characterId/eras/$eraId/studio' })
+  const { intent: intentParam, source: sourceParam } = useSearch({ from: '/characters/$characterId/eras/$eraId/studio' })
   const { data: character } = useCharacter(characterId)
   const { data: bifrostStatus } = useBifrostStatus()
   const { data: loras } = useLoras()
@@ -158,16 +230,38 @@ export function Studio() {
   const [selectedRefs, setSelectedRefs] = useState<string[]>([])
   const [sourceImageId, setSourceImageId] = useState<string>(sourceParam || '')
   const [includeEraRefs, setIncludeEraRefs] = useState(true)
+  const [activeIntent, setActiveIntent] = useState<string>(intentParam || '')
 
   const era = character?.eras.find((e) => e.id === eraId)
   const bifrostAvailable = bifrostStatus?.available ?? false
-  const promptInitialized = useRef(false)
+  const intentApplied = useRef(false)
 
-  // Auto-populate prompt from character + era physical details on first load
+  // Apply intent configuration on first load
   useEffect(() => {
-    if (promptInitialized.current || !character || prompt) return
-    promptInitialized.current = true
-    setPrompt(buildCharacterPrompt(character, era))
+    if (intentApplied.current || !character) return
+    intentApplied.current = true
+
+    const intent = intentParam as StudioIntent | undefined
+    const config = intent ? INTENT_CONFIGS[intent] : undefined
+
+    if (config) {
+      setWorkflow(config.workflow)
+      setContentRating(config.contentRating)
+      setIncludeEraRefs(config.includeRefs)
+      if (config.denoise != null) setDenoiseStrength(config.denoise)
+      if (sourceParam) setSourceImageId(sourceParam)
+
+      // Build prompt from character + intent suffix
+      const charPrompt = buildCharacterPrompt(character, era)
+      setPrompt(charPrompt + config.promptSuffix)
+    } else {
+      // No intent — just populate character prompt
+      setPrompt(buildCharacterPrompt(character, era))
+      if (sourceParam) {
+        setSourceImageId(sourceParam)
+        setWorkflow('sdxl_img2img')
+      }
+    }
   }, [character, era]) // eslint-disable-line react-hooks/exhaustive-deps
   const dim = DIMENSIONS[dimensions]
   const activeLora = (loras ?? []).find((l: LoRA) => l.id === selectedLora)
@@ -253,6 +347,11 @@ export function Studio() {
             <p className="text-muted text-sm mt-1">
               {character?.display_name || character?.name}{era ? ` — ${era.label}` : ''}
             </p>
+            {activeIntent && (
+              <span className="inline-block mt-2 bg-on-surface text-background text-[10px] font-bold uppercase tracking-widest px-3 py-1">
+                {activeIntent.replace('_', ' ')}
+              </span>
+            )}
             {!bifrostAvailable && (
               <p className="text-accent text-xs mt-2 flex items-center gap-1">
                 <span className="material-symbols-outlined text-[14px]">warning</span>
