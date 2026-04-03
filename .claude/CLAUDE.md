@@ -27,6 +27,7 @@ frame version    # Print version
 ## Conventions
 - **Atomic commits always** — one logical change per commit
 - **Branch for feature work** — main stays clean
+- **User merges** — never merge PRs or merge main into branches; the user always handles merges unless explicitly instructed otherwise
 - **pnpm** — not npm
 - **TanStack** — Router + Query for React frontend
 - **shadcn/ui** — for UI components, don't hand-roll
