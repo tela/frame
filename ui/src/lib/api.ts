@@ -404,6 +404,7 @@ export interface GenerateRequest {
   include_refs?: boolean
   ref_image_ids?: string[]
   source_image_id?: string
+  pose_image_id?: string
   denoise_strength?: number
   pose_id?: string
   outfit_id?: string

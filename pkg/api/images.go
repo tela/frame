@@ -171,13 +171,21 @@ func (a *API) serveImageFile(w http.ResponseWriter, r *http.Request, imageID str
 func (a *API) getCharacterAvatar(w http.ResponseWriter, r *http.Request) {
 	charID := r.PathValue("id")
 
-	// Prefer the most recent favorited image as the avatar
-	var avatarImageID string
-	favorites, err := a.Images.ListFavorites(charID)
-	if err == nil && len(favorites) > 0 {
-		avatarImageID = favorites[0].ImageID // most recent favorite (sorted DESC)
-	} else {
-		// Fall back to most recent image
+	char, err := a.Characters.Get(charID)
+	if err != nil || char == nil {
+		writeError(w, http.StatusNotFound, "character not found")
+		return
+	}
+
+	// Priority: explicit avatar > most recent favorite > most recent image
+	avatarImageID := char.AvatarImageID
+	if avatarImageID == "" {
+		favorites, err := a.Images.ListFavorites(charID)
+		if err == nil && len(favorites) > 0 {
+			avatarImageID = favorites[0].ImageID
+		}
+	}
+	if avatarImageID == "" {
 		images, err := a.Images.ListByCharacter(charID, nil)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
@@ -191,8 +199,7 @@ func (a *API) getCharacterAvatar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	folderName := charID
-	char, err := a.Characters.Get(charID)
-	if err == nil && char != nil && char.FolderName != "" {
+	if char.FolderName != "" {
 		folderName = char.FolderName
 	}
 	thumbPath := a.Ingester.ThumbnailPath(avatarImageID, folderName)

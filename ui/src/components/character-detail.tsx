@@ -18,6 +18,7 @@ export function CharacterDetail() {
   const createEra = useCreateEra()
   const { data: figStatus } = useFigStatus()
   const publishToFig = usePublishToFig()
+  const [avatarVersion, setAvatarVersion] = useState(0)
   const [showCreateEra, setShowCreateEra] = useState(false)
   const [newEraLabel, setNewEraLabel] = useState('')
   const [newEraAgeRange, setNewEraAgeRange] = useState('')
@@ -51,7 +52,7 @@ export function CharacterDetail() {
         </div>
 
         {/* Character Hero */}
-        <CharacterHero character={character} figStatus={figStatus} publishToFig={publishToFig} />
+        <CharacterHero character={character} figStatus={figStatus} publishToFig={publishToFig} avatarVersion={avatarVersion} />
 
         {/* Eras Section — show for cast and development */}
         {(character.status === 'cast' || character.status === 'development') && (
@@ -133,7 +134,7 @@ export function CharacterDetail() {
 
         {/* Lookbook view — prospect always, development always */}
         {(character.status === 'prospect' || character.status === 'development') && (
-          <ProspectView characterId={character.id} characterName={character.display_name || character.name} status={character.status} defaultEraId={character.eras[0]?.id} eras={character.eras} />
+          <ProspectView characterId={character.id} characterName={character.display_name || character.name} status={character.status} defaultEraId={character.eras[0]?.id} eras={character.eras} onAvatarChange={() => setAvatarVersion(v => v + 1)} />
         )}
 
 
@@ -244,8 +245,8 @@ export function CharacterDetail() {
 
 type ProspectTab = 'lookbook' | 'scrapbook'
 
-function ProspectView({ characterId, characterName, status, defaultEraId, eras }: {
-  characterId: string; characterName: string; status: string; defaultEraId?: string; eras: EraWithStats[]
+function ProspectView({ characterId, characterName, status, defaultEraId, eras, onAvatarChange }: {
+  characterId: string; characterName: string; status: string; defaultEraId?: string; eras: EraWithStats[]; onAvatarChange?: () => void
 }) {
   const [activeTab, setActiveTab] = useState<ProspectTab>('lookbook')
   const { data: allImages } = useCharacterImages(characterId)
@@ -397,7 +398,7 @@ function ProspectView({ characterId, characterName, status, defaultEraId, eras }
                 characterId,
                 imageId: ci.image_id,
                 favorited: !((favorites ?? []).some(f => f.image_id === ci.image_id)),
-              })}
+              }, { onSuccess: () => onAvatarChange?.() })}
               isFavorited={(favorites ?? []).some(f => f.image_id === ci.image_id)}
               onDelete={() => handleDelete(ci.image_id)}
               onClick={() => setLightboxId(ci.image_id)}
@@ -599,10 +600,11 @@ function EditableField({ label, value, onSave, options }: {
   )
 }
 
-function CharacterHero({ character, figStatus, publishToFig }: {
+function CharacterHero({ character, figStatus, publishToFig, avatarVersion }: {
   character: { id: string; name: string; display_name: string; status: string; fig_published: boolean; fig_character_url: string; gender: string; ethnicity: string; skin_tone: string; eye_color: string; eye_shape: string; natural_hair_texture: string; natural_hair_color: string; distinguishing_features: string; eras: EraWithStats[] }
   figStatus: { available: boolean } | undefined
   publishToFig: { mutate: (id: string) => void; isPending: boolean }
+  avatarVersion?: number
 }) {
   const [showDetails, setShowDetails] = useState(false)
   const [detailsTab, setDetailsTab] = useState<DetailsTab>('identity')
@@ -813,7 +815,7 @@ function CharacterHero({ character, figStatus, publishToFig }: {
         <div className="w-[160px] h-[200px] bg-surface-low overflow-hidden ring-1 ring-black/5 flex items-center justify-center">
           {totalImages > 0 ? (
             <img
-              src={avatarUrl(character.id)}
+              src={`${avatarUrl(character.id)}?v=${avatarVersion ?? 0}`}
               alt={character.display_name || character.name}
               className="w-full h-full object-cover"
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}

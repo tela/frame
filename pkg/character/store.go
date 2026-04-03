@@ -64,11 +64,11 @@ func (s *Store) Get(id string) (*Character, error) {
 	err := s.db.QueryRow(
 		`SELECT id, name, display_name, folder_name, status, fig_published, fig_character_url, source,
 		 gender, ethnicity, skin_tone, eye_color, eye_shape, natural_hair_color, natural_hair_texture, distinguishing_features,
-		 created_at, updated_at
+		 COALESCE(avatar_image_id, ''), created_at, updated_at
 		 FROM characters WHERE id = ?`, id,
 	).Scan(&c.ID, &c.Name, &c.DisplayName, &c.FolderName, &c.Status, &figPub, &c.FigCharacterURL, &c.Source,
 		&c.Gender, &c.Ethnicity, &c.SkinTone, &c.EyeColor, &c.EyeShape, &c.NaturalHairColor, &c.NaturalHairTexture, &c.DistinguishingFeatures,
-		&createdAt, &updatedAt)
+		&c.AvatarImageID, &createdAt, &updatedAt)
 	c.FigPublished = figPub != 0
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -86,7 +86,7 @@ func (s *Store) List() ([]Character, error) {
 	rows, err := s.db.Query(
 		`SELECT id, name, display_name, folder_name, status, fig_published, fig_character_url, source,
 		 gender, ethnicity, skin_tone, eye_color, eye_shape, natural_hair_color, natural_hair_texture, distinguishing_features,
-		 created_at, updated_at
+		 COALESCE(avatar_image_id, ''), created_at, updated_at
 		 FROM characters ORDER BY created_at DESC`,
 	)
 	if err != nil {
@@ -101,7 +101,7 @@ func (s *Store) List() ([]Character, error) {
 		var figPub int
 		if err := rows.Scan(&c.ID, &c.Name, &c.DisplayName, &c.FolderName, &c.Status, &figPub, &c.FigCharacterURL, &c.Source,
 			&c.Gender, &c.Ethnicity, &c.SkinTone, &c.EyeColor, &c.EyeShape, &c.NaturalHairColor, &c.NaturalHairTexture, &c.DistinguishingFeatures,
-			&createdAt, &updatedAt); err != nil {
+			&c.AvatarImageID, &createdAt, &updatedAt); err != nil {
 			return nil, fmt.Errorf("scan character: %w", err)
 		}
 		c.FigPublished = figPub != 0
@@ -126,6 +126,15 @@ func (s *Store) UpdateStatus(id string, status Status) error {
 		return fmt.Errorf("character %s not found", id)
 	}
 	return nil
+}
+
+// SetAvatarImage sets the character's avatar image. Only called on favorite, not on unfavorite.
+func (s *Store) SetAvatarImage(id, imageID string) error {
+	_, err := s.db.Exec(
+		`UPDATE characters SET avatar_image_id = ?, updated_at = datetime('now') WHERE id = ?`,
+		imageID, id,
+	)
+	return err
 }
 
 // UpdateFigStatus sets the fig_published and fig_character_url fields.
