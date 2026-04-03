@@ -1,5 +1,5 @@
 import { Link, useParams, useSearch, useNavigate } from '@tanstack/react-router'
-import { useCharacter, useReferencePackage, useIngestImage, useCharacterImages, useBulkUpdateCharacterImages, useShoots, useBulkAddShootImages, useShootImages, useCreateShoot, thumbUrl } from '@/lib/api'
+import { useCharacter, useReferencePackage, useIngestImage, useCharacterImages, useDeleteCharacterImage, useBulkUpdateCharacterImages, useShoots, useBulkAddShootImages, useShootImages, useCreateShoot, thumbUrl } from '@/lib/api'
 import { useState, useCallback, useMemo } from 'react'
 import { Dropzone } from '@/components/dropzone'
 import { TagPicker } from '@/components/tag-picker'
@@ -10,6 +10,7 @@ export function EraWorkspace() {
   const { shoot: shootFilter } = useSearch({ from: '/characters/$characterId/eras/$eraId' })
   const navigate = useNavigate()
   const ingestImage = useIngestImage()
+  const deleteImage = useDeleteCharacterImage()
   const bulkUpdate = useBulkUpdateCharacterImages()
   const bulkAddShoot = useBulkAddShootImages()
   const createShoot = useCreateShoot()
@@ -273,9 +274,12 @@ export function EraWorkspace() {
               <EraImageCard
                 key={ci.image_id}
                 ci={ci}
+                characterId={characterId}
+                eraId={eraId}
                 isSelected={selectedImages.has(ci.image_id)}
                 onToggleSelect={() => toggleSelect(ci.image_id)}
                 onUpdate={(field, value) => handleSingleUpdate(ci.image_id, field, value)}
+                onDelete={() => deleteImage.mutate({ characterId, imageId: ci.image_id })}
                 shootName={shootMap.get(ci.image_id)}
               />
             ))}
@@ -426,11 +430,14 @@ export function EraWorkspace() {
   )
 }
 
-function EraImageCard({ ci, isSelected, onToggleSelect, onUpdate, shootName }: {
+function EraImageCard({ ci, characterId, eraId, isSelected, onToggleSelect, onUpdate, onDelete, shootName }: {
   ci: CharacterImage
+  characterId: string
+  eraId: string
   isSelected: boolean
   onToggleSelect: () => void
   onUpdate: (field: string, value: unknown) => void
+  onDelete: () => void
   shootName?: string
 }) {
   const [editingCaption, setEditingCaption] = useState(false)
@@ -476,19 +483,60 @@ function EraImageCard({ ci, isSelected, onToggleSelect, onUpdate, shootName }: {
 
       {/* Hover overlay */}
       <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-4 text-background">
-        {/* Top: quick actions */}
-        <div className="flex justify-end gap-1">
-          {(['face', 'body', 'breasts', 'vagina'] as const).map((rt) => (
-            <button
-              key={rt}
-              onClick={() => onUpdate('ref_type', ci.ref_type === rt ? '' : rt)}
-              className={`px-2 py-1 text-[9px] uppercase font-bold tracking-wider rounded-sm transition-colors ${
-                ci.ref_type === rt ? 'bg-accent text-white' : 'bg-background/20 hover:bg-accent/60'
-              }`}
-            >
-              {rt === 'breasts' ? 'Br' : rt === 'vagina' ? 'V' : rt.charAt(0).toUpperCase()}
-            </button>
-          ))}
+        {/* Top row: ref type toggles + delete */}
+        <div className="flex justify-between">
+          <div className="flex gap-1">
+            {(['face', 'body', 'breasts', 'vagina'] as const).map((rt) => (
+              <button
+                key={rt}
+                onClick={() => onUpdate('ref_type', ci.ref_type === rt ? '' : rt)}
+                className={`px-2 py-1 text-[9px] uppercase font-bold tracking-wider rounded-sm transition-colors ${
+                  ci.ref_type === rt ? 'bg-accent text-white' : 'bg-background/20 hover:bg-accent/60'
+                }`}
+              >
+                {rt === 'breasts' ? 'Br' : rt === 'vagina' ? 'V' : rt.charAt(0).toUpperCase()}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={onDelete}
+            className="w-7 h-7 rounded-full bg-background/20 flex items-center justify-center hover:bg-red-500/80 transition-colors"
+            title="Delete"
+          >
+            <span className="material-symbols-outlined text-[14px]">delete</span>
+          </button>
+        </div>
+
+        {/* Middle: triage + studio actions */}
+        <div className="flex justify-center gap-2">
+          <button
+            onClick={() => onUpdate('triage_status', 'approved')}
+            className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${
+              ci.triage_status === 'approved'
+                ? 'bg-green-500 text-white'
+                : 'bg-background/80 text-on-surface hover:bg-green-500 hover:text-white'
+            }`}
+          >
+            Approve
+          </button>
+          <button
+            onClick={() => onUpdate('triage_status', 'rejected')}
+            className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${
+              ci.triage_status === 'rejected'
+                ? 'bg-red-500 text-white'
+                : 'bg-background/80 text-on-surface hover:bg-red-500 hover:text-white'
+            }`}
+          >
+            Reject
+          </button>
+          <Link
+            to="/characters/$characterId/eras/$eraId/studio"
+            params={{ characterId, eraId }}
+            search={{ intent: 'remix', source: ci.image_id }}
+            className="px-3 py-1.5 bg-background/80 rounded-full text-on-surface text-[10px] font-bold uppercase tracking-widest hover:bg-white transition-colors"
+          >
+            Remix
+          </Link>
         </div>
 
         {/* Bottom: rating + badges */}
@@ -511,7 +559,11 @@ function EraImageCard({ ci, isSelected, onToggleSelect, onUpdate, shootName }: {
             <span className="text-[9px] tracking-widest uppercase bg-background/20 px-1.5 py-0.5 backdrop-blur-md">
               {ci.set_type}
             </span>
-            <span className="text-[9px] tracking-widest uppercase bg-background/20 px-1.5 py-0.5 backdrop-blur-md">
+            <span className={`text-[9px] tracking-widest uppercase px-1.5 py-0.5 backdrop-blur-md ${
+              ci.triage_status === 'approved' ? 'bg-green-500/40' :
+              ci.triage_status === 'rejected' ? 'bg-red-500/40' :
+              'bg-background/20'
+            }`}>
               {ci.triage_status}
             </span>
           </div>
