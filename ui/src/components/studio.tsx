@@ -213,10 +213,10 @@ const INTENT_CONFIGS: Record<StudioIntent, IntentConfig> = {
     mode: 'refine',
     workflow: 'sdxl_img2img',
     contentRating: 'sfw',
-    includeRefs: false,
+    includeRefs: true,
     promptSuffix: '',
     needsSource: true,
-    denoise: 0.6,
+    denoise: 0.35,
   },
   upscale: {
     mode: 'process',
