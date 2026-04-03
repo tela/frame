@@ -254,6 +254,20 @@ func (s *testServer) ingestImage(charID string, color byte) string {
 	return r.ImageID
 }
 
+// ingestEraImage uploads a test image for a character+era and returns the image ID.
+func (s *testServer) ingestEraImage(charID, eraID string, color byte) string {
+	s.t.Helper()
+	png := testPNG(color, color, color)
+	path := fmt.Sprintf("/api/v1/characters/%s/eras/%s/ingest", charID, eraID)
+	code, body := s.uploadFile(path, png, fmt.Sprintf("test_%d.png", color), map[string]string{"source": "manual"})
+	if code != 201 {
+		s.t.Fatalf("ingest era image: status %d, body: %s", code, body)
+	}
+	var r struct{ ImageID string `json:"image_id"` }
+	s.decode(body, &r)
+	return r.ImageID
+}
+
 // writeTestImages creates a temp directory with N test PNG files and returns the path.
 func writeTestImages(t *testing.T, count int) string {
 	t.Helper()
