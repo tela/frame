@@ -209,6 +209,8 @@ export function Studio() {
   const { data: bifrostStatus } = useBifrostStatus()
   const { data: loras } = useLoras()
   const generate = useGenerate()
+  const deleteImage = useDeleteCharacterImage()
+  const toggleFavorite = useToggleFavorite()
 
   const [template, setTemplate] = useState('')
   const [prompt, setPrompt] = useState('')
@@ -732,11 +734,22 @@ export function Studio() {
                       />
                       <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-4">
                         <div className="flex justify-end gap-2">
-                          <button className="bg-background/90 text-primary p-1.5 hover:text-accent transition-colors" title="Reject">
-                            <span className="material-symbols-outlined text-[18px]">close</span>
+                          <button
+                            onClick={() => {
+                              deleteImage.mutate({ characterId, imageId: img.id })
+                              setSessionImages(prev => prev.filter(s => s.id !== img.id))
+                            }}
+                            className="bg-background/90 text-primary p-1.5 hover:text-accent transition-colors"
+                            title="Delete"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">delete</span>
                           </button>
-                          <button className="bg-accent/90 text-white p-1.5 hover:bg-accent transition-colors" title="Accept">
-                            <span className="material-symbols-outlined text-[18px]">check</span>
+                          <button
+                            onClick={() => toggleFavorite.mutate({ characterId, imageId: img.id, favorited: true })}
+                            className="bg-accent/90 text-white p-1.5 hover:bg-accent transition-colors"
+                            title="Favorite"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">favorite</span>
                           </button>
                         </div>
                         <div className="text-white">
