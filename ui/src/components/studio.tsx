@@ -4,6 +4,7 @@ import type { LoRA } from '@/lib/api'
 import { useState, useEffect, useRef } from 'react'
 import { ImagePickerModal } from '@/components/image-picker-modal'
 import { TagPicker } from '@/components/tag-picker'
+import { Lightbox } from '@/components/lightbox'
 import type { Character, EraWithStats } from '@/lib/types'
 
 type Workflow = 'text-to-image' | 'sdxl_text2img' | 'sdxl_character_gen' | 'sdxl_multi_ref' | 'sdxl_clothing_swap' | 'sdxl_pose_transfer' | 'sdxl_img2img' | 'sdxl_quality_postprocess' | 'kontext'
@@ -151,7 +152,7 @@ const GENERATE_WORKFLOWS: Workflow[] = ['text-to-image', 'sdxl_text2img', 'sdxl_
 const REFINE_WORKFLOWS: Workflow[] = ['sdxl_img2img', 'sdxl_clothing_swap', 'sdxl_pose_transfer', 'kontext']
 const PROCESS_WORKFLOWS: Workflow[] = ['sdxl_quality_postprocess']
 
-function modeForWorkflow(w: Workflow): StudioMode {
+function _modeForWorkflow(w: Workflow): StudioMode {
   if (REFINE_WORKFLOWS.includes(w)) return 'refine'
   if (PROCESS_WORKFLOWS.includes(w)) return 'process'
   return 'generate'
@@ -262,6 +263,7 @@ export function Studio() {
   const [showParams, setShowParams] = useState(false)
   const [sessionImages, setSessionImages] = useState<GeneratedImage[]>([])
   const [panelOpen, setPanelOpen] = useState(true)
+  const [lightboxId, setLightboxId] = useState<string | null>(null)
   const [showRefPicker, setShowRefPicker] = useState(false)
   const [showSourcePicker, setShowSourcePicker] = useState(false)
   const [selectedRefs, setSelectedRefs] = useState<string[]>([])
@@ -820,8 +822,9 @@ export function Studio() {
                     <>
                       <img
                         alt="Generated image"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover cursor-pointer"
                         src={img.url}
+                        onClick={() => setLightboxId(img.id)}
                       />
                       <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-4">
                         <div className="flex justify-end gap-2">
@@ -882,6 +885,22 @@ export function Studio() {
         characterId={characterId}
         eraId={eraId}
         initialSelected={sourceImageId ? [sourceImageId] : []}
+      />
+
+      {/* Lightbox */}
+      <Lightbox
+        imageId={lightboxId}
+        onClose={() => setLightboxId(null)}
+        onPrev={(() => {
+          const completedImages = sessionImages.filter(i => i.status === 'complete')
+          const idx = completedImages.findIndex(i => i.id === lightboxId)
+          return idx > 0 ? () => setLightboxId(completedImages[idx - 1].id) : undefined
+        })()}
+        onNext={(() => {
+          const completedImages = sessionImages.filter(i => i.status === 'complete')
+          const idx = completedImages.findIndex(i => i.id === lightboxId)
+          return idx < completedImages.length - 1 ? () => setLightboxId(completedImages[idx + 1].id) : undefined
+        })()}
       />
 
       <style>{`

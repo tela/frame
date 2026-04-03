@@ -7,6 +7,7 @@ import { GoSeeLooks } from '@/components/go-see-looks'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ImportModal } from '@/components/import-modal'
 import { TagPicker } from '@/components/tag-picker'
+import { Lightbox } from '@/components/lightbox'
 import type { EraWithStats, CharacterImage, Shoot } from '@/lib/types'
 
 export function CharacterDetail() {
@@ -256,8 +257,10 @@ function ProspectView({ characterId, characterName, status, defaultEraId, eras }
   const [showImport, setShowImport] = useState(false)
   const [uploadStatus, setUploadStatus] = useState<string | null>(null)
   const [showDevelopConfirm, setShowDevelopConfirm] = useState(false)
+  const [lightboxId, setLightboxId] = useState<string | null>(null)
 
   const images = activeTab === 'lookbook' ? (favorites ?? []) : (allImages ?? [])
+  const lightboxIndex = lightboxId ? images.findIndex(i => i.image_id === lightboxId) : -1
 
   const handleDrop = (files: File[]) => {
     setUploadStatus(`Uploading ${files.length} file(s)...`)
@@ -377,6 +380,7 @@ function ProspectView({ characterId, characterName, status, defaultEraId, eras }
               })}
               isFavorited={(favorites ?? []).some(f => f.image_id === ci.image_id)}
               onDelete={() => handleDelete(ci.image_id)}
+              onClick={() => setLightboxId(ci.image_id)}
             />
           ))}
           {/* Placeholder slot */}
@@ -386,6 +390,14 @@ function ProspectView({ characterId, characterName, status, defaultEraId, eras }
           </div>
         </div>
       )}
+
+      {/* Lightbox */}
+      <Lightbox
+        imageId={lightboxId}
+        onClose={() => setLightboxId(null)}
+        onPrev={lightboxIndex > 0 ? () => setLightboxId(images[lightboxIndex - 1].image_id) : undefined}
+        onNext={lightboxIndex < images.length - 1 ? () => setLightboxId(images[lightboxIndex + 1].image_id) : undefined}
+      />
 
       {/* Develop Confirmation Dialog */}
       <Dialog open={showDevelopConfirm} onOpenChange={setShowDevelopConfirm}>
@@ -417,14 +429,14 @@ function ProspectView({ characterId, characterName, status, defaultEraId, eras }
   )
 }
 
-function ProspectImageCard({ ci, characterId, defaultEraId, onToggleFavorite, isFavorited, onDelete }: {
-  ci: CharacterImage; characterId: string; defaultEraId?: string; onToggleFavorite: () => void; isFavorited: boolean; onDelete: () => void
+function ProspectImageCard({ ci, characterId, defaultEraId, onToggleFavorite, isFavorited, onDelete, onClick }: {
+  ci: CharacterImage; characterId: string; defaultEraId?: string; onToggleFavorite: () => void; isFavorited: boolean; onDelete: () => void; onClick: () => void
 }) {
   const [showTags, setShowTags] = useState(false)
   const { data: imageTags } = useImageTags(showTags ? ci.image_id : '')
   return (
     <>
-    <div className="group relative aspect-square bg-surface-low overflow-hidden">
+    <div className="group relative aspect-square bg-surface-low overflow-hidden cursor-pointer" onClick={onClick}>
       <img
         src={thumbUrl(ci.image_id)}
         alt=""
