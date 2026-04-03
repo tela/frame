@@ -810,13 +810,17 @@ function CharacterHero({ character, figStatus, publishToFig }: {
 
       {/* Portrait */}
       <div className="relative group shrink-0 hidden md:block">
-        <div className="w-[160px] h-[200px] bg-surface-low overflow-hidden ring-1 ring-black/5">
-          <img
-            src={avatarUrl(character.id)}
-            alt={character.display_name || character.name}
-            className="w-full h-full object-cover"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-          />
+        <div className="w-[160px] h-[200px] bg-surface-low overflow-hidden ring-1 ring-black/5 flex items-center justify-center">
+          {totalImages > 0 ? (
+            <img
+              src={avatarUrl(character.id)}
+              alt={character.display_name || character.name}
+              className="w-full h-full object-cover"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+            />
+          ) : (
+            <span className="material-symbols-outlined text-4xl text-muted/30">person</span>
+          )}
         </div>
       </div>
     </div>
