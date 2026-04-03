@@ -118,6 +118,64 @@ func TestFavorite_ToggleOnOff(t *testing.T) {
 	}
 }
 
+func TestAvatar_StickyOnUnfavorite(t *testing.T) {
+	s := newTestServer(t)
+	charID := s.createCharacter("Avatar Sticky", "Avatar Sticky", "prospect")
+
+	img1 := s.ingestImage(charID, 100)
+	_ = s.ingestImage(charID, 110)
+
+	// Favorite img1 — sets avatar_image_id
+	s.postJSON("/api/v1/characters/"+charID+"/images/"+img1+"/favorite", map[string]bool{"favorited": true})
+
+	// Verify avatar_image_id is set
+	code, body := s.get("/api/v1/characters/" + charID)
+	if code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", code)
+	}
+	var char struct{ AvatarImageID string `json:"avatar_image_id"` }
+	s.decode(body, &char)
+	if char.AvatarImageID != img1 {
+		t.Fatalf("expected avatar_image_id=%s after favorite, got %s", img1, char.AvatarImageID)
+	}
+
+	// Unfavorite img1 — avatar should NOT change
+	s.postJSON("/api/v1/characters/"+charID+"/images/"+img1+"/favorite", map[string]bool{"favorited": false})
+
+	code, body = s.get("/api/v1/characters/" + charID)
+	if code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", code)
+	}
+	s.decode(body, &char)
+	if char.AvatarImageID != img1 {
+		t.Errorf("avatar_image_id should be sticky after unfavorite: expected %s, got %s", img1, char.AvatarImageID)
+	}
+}
+
+func TestAvatar_FavoriteNewImageUpdatesAvatar(t *testing.T) {
+	s := newTestServer(t)
+	charID := s.createCharacter("Avatar Switch", "Avatar Switch", "prospect")
+
+	img1 := s.ingestImage(charID, 120)
+	img2 := s.ingestImage(charID, 130)
+
+	// Favorite img1
+	s.postJSON("/api/v1/characters/"+charID+"/images/"+img1+"/favorite", map[string]bool{"favorited": true})
+
+	// Favorite img2 — should update avatar
+	s.postJSON("/api/v1/characters/"+charID+"/images/"+img2+"/favorite", map[string]bool{"favorited": true})
+
+	code, body := s.get("/api/v1/characters/" + charID)
+	if code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", code)
+	}
+	var char struct{ AvatarImageID string `json:"avatar_image_id"` }
+	s.decode(body, &char)
+	if char.AvatarImageID != img2 {
+		t.Errorf("expected avatar to switch to %s, got %s", img2, char.AvatarImageID)
+	}
+}
+
 func TestFavorite_MultipleFavorites(t *testing.T) {
 	s := newTestServer(t)
 	charID := s.createCharacter("Multi Fav", "Multi Fav", "prospect")

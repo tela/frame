@@ -75,7 +75,7 @@ func (a *API) handleComposePrompt(w http.ResponseWriter, r *http.Request) {
 
 	// Load character
 	char, err := a.Characters.Get(req.CharacterID)
-	if err != nil {
+	if err != nil || char == nil {
 		writeError(w, http.StatusNotFound, "character not found")
 		return
 	}
