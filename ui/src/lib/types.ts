@@ -127,6 +127,7 @@ export interface CharacterImage {
   ref_score: number | null
   ref_rank: number | null
   caption: string | null
+  source: ImageSource
   created_at: string
 }
 

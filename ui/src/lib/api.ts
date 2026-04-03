@@ -18,6 +18,7 @@ import type {
   Dataset,
   DatasetWithStats,
   DatasetImage,
+  Image,
 } from './types'
 import { SEED_CHARACTERS, SEED_MEDIA } from './seed-data'
 
@@ -537,6 +538,31 @@ export function useDeleteTemplate() {
       return fetch(`/api/v1/templates/${id}`, { method: 'DELETE' }).then(r => r.json())
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['templates'] }) },
+  })
+}
+
+export interface ImageStats {
+  total: number
+  by_source: Record<string, number>
+  by_set_type: Record<string, number>
+  by_triage: Record<string, number>
+  has_face_ref: boolean
+  has_body_ref: boolean
+}
+
+export function useImageStats(characterId: string) {
+  return useQuery({
+    queryKey: ['characters', characterId, 'image-stats'],
+    queryFn: () => fetchJSON<ImageStats>(`/api/v1/characters/${characterId}/images/stats`),
+    enabled: !!characterId,
+  })
+}
+
+export function useImageMeta(imageId: string | null) {
+  return useQuery({
+    queryKey: ['image-meta', imageId],
+    queryFn: () => fetchJSON<Image>(`/api/v1/images/${imageId}/meta`),
+    enabled: !!imageId,
   })
 }
 

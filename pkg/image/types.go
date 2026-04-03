@@ -70,6 +70,7 @@ type CharacterImage struct {
 	RefScore     *float64     `json:"ref_score,omitempty"`
 	RefRank      *int         `json:"ref_rank,omitempty"`
 	Caption      *string      `json:"caption,omitempty"`
+	Source       Source       `json:"source"`
 	CreatedAt    time.Time    `json:"created_at"`
 }
 

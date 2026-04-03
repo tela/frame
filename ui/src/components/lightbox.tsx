@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react'
-import { imageUrl } from '@/lib/api'
+import { imageUrl, useImageMeta } from '@/lib/api'
 
 interface Props {
   imageId: string | null
@@ -8,7 +8,15 @@ interface Props {
   onNext?: () => void
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 export function Lightbox({ imageId, onClose, onPrev, onNext }: Props) {
+  const { data: meta } = useImageMeta(imageId)
+
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') onClose()
     if (e.key === 'ArrowLeft' && onPrev) onPrev()
@@ -62,9 +70,28 @@ export function Lightbox({ imageId, onClose, onPrev, onNext }: Props) {
       <img
         src={imageUrl(imageId)}
         alt=""
-        className="max-w-[90vw] max-h-[90vh] object-contain cursor-default"
+        className="max-w-[90vw] max-h-[85vh] object-contain cursor-default"
         onClick={(e) => e.stopPropagation()}
       />
+
+      {/* Metadata bar */}
+      {meta && (
+        <div
+          className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm px-8 py-4 flex items-center gap-8 text-white/70 text-[11px] font-label uppercase tracking-wider"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span>{meta.width} x {meta.height}</span>
+          <span>{meta.format.toUpperCase()}</span>
+          <span>{formatBytes(meta.file_size)}</span>
+          <span className={meta.source === 'comfyui' ? 'text-white' : ''}>
+            {meta.source === 'comfyui' ? 'Generated' : meta.source}
+          </span>
+          {meta.original_filename && meta.original_filename !== '' && (
+            <span className="text-white/40 truncate max-w-[300px]">{meta.original_filename}</span>
+          )}
+          <span className="ml-auto text-white/40 tabular-nums">{imageId}</span>
+        </div>
+      )}
     </div>
   )
 }
