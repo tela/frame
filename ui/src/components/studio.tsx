@@ -1,6 +1,6 @@
 import { useParams, useSearch } from '@tanstack/react-router'
-import { useCharacter, useGenerate, useBifrostStatus, useLoras, useDeleteCharacterImage, useToggleFavorite, useImageTags, thumbUrl, imageUrl } from '@/lib/api'
-import type { LoRA } from '@/lib/api'
+import { useCharacter, useGenerate, useBifrostStatus, useLoras, useDeleteCharacterImage, useToggleFavorite, useImageTags, useComposePrompt, usePromptJobs, thumbUrl, imageUrl } from '@/lib/api'
+import type { LoRA, ComposeJobInfo } from '@/lib/api'
 import { useState, useEffect, useRef } from 'react'
 import { ImagePickerModal } from '@/components/image-picker-modal'
 import { TagPicker } from '@/components/tag-picker'
@@ -11,46 +11,17 @@ type Workflow = 'text-to-image' | 'sdxl_text2img' | 'sdxl_character_gen' | 'sdxl
 type Tier = 'cheap' | 'complex' | 'frontier'
 type ContentRating = 'sfw' | 'nsfw'
 
-interface PromptTemplate {
-  value: string
-  label: string
-  prompt: string
-  negative: string
+// Job-to-intent mapping: which jobs drive which Studio modes
+const JOB_MODE_MAP: Record<string, StudioMode> = {
+  identity: 'generate',
+  physicality: 'generate',
+  outfit: 'generate',
+  detail: 'generate',
+  refine: 'refine',
 }
 
-const TEMPLATES: PromptTemplate[] = [
-  { value: '', label: 'Custom', prompt: '', negative: '' },
-  {
-    value: 'headshot',
-    label: 'Headshot',
-    prompt: 'professional headshot portrait, soft studio lighting, shallow depth of field, neutral background, sharp focus on eyes, natural expression',
-    negative: 'full body, hands, deformed, blurry, low quality, watermark, text',
-  },
-  {
-    value: 'headshot_editorial',
-    label: 'Headshot — Editorial',
-    prompt: 'editorial headshot portrait, dramatic side lighting, high contrast, moody atmosphere, confident expression, fashion magazine quality',
-    negative: 'full body, hands, deformed, blurry, low quality, watermark, text, flat lighting',
-  },
-  {
-    value: 'portrait_half',
-    label: 'Half-Body Portrait',
-    prompt: 'half-body portrait from waist up, natural lighting, clean composition, relaxed pose, detailed skin texture',
-    negative: 'full body, legs, deformed, blurry, low quality, watermark, text',
-  },
-  {
-    value: 'full_body',
-    label: 'Full Body',
-    prompt: 'full body portrait, standing pose, even studio lighting, full figure visible head to toe, clean background',
-    negative: 'cropped, cut off, deformed, blurry, low quality, watermark, text',
-  },
-  {
-    value: 'detail_face',
-    label: 'Detail — Face Close-up',
-    prompt: 'extreme close-up face portrait, macro detail, sharp focus on skin texture and eyes, soft diffused lighting',
-    negative: 'full body, hands, deformed, blurry, low quality, watermark, text',
-  },
-]
+// Jobs that need a source image (refinement workflows)
+const REFINE_JOBS = new Set(['refine_subtle', 'refine_style_shift', 'refine_expression', 'refine_undress'])
 
 const WORKFLOWS: { value: Workflow; label: string; description: string }[] = [
   { value: 'text-to-image', label: 'Flux Text-to-Image', description: 'Fast SFW headshots via Flux (~3s)' },
@@ -87,48 +58,27 @@ interface GeneratedImage {
   status: 'generating' | 'complete'
 }
 
-function buildCharacterPrompt(character: Character & { eras?: EraWithStats[] }, era?: EraWithStats): string {
+// buildCharacterPrompt is a fallback for when the compose endpoint isn't used
+// (e.g., custom prompts where the user wants identity as a starting point).
+// The shared prompts package handles the full composition server-side.
+function buildIdentityFallback(character: Character & { eras?: EraWithStats[] }, era?: EraWithStats): string {
   const parts: string[] = []
-
-  // Core identity
   if (character.gender) parts.push(character.gender)
   if (character.ethnicity) parts.push(character.ethnicity)
   parts.push('person')
-
-  // Age from era
   if (era?.age_range) parts.push(`age ${era.age_range}`)
-
-  // Eyes
   if (character.eye_color) parts.push(`${character.eye_color} eyes`)
-
-  // Hair — prefer era-level color/length, fall back to character-level
   const hairColor = era?.hair_color || character.natural_hair_color
   const hairTexture = character.natural_hair_texture
   const hairLength = era?.hair_length
   const hairParts: string[] = []
-  if (hairColor) hairParts.push(hairColor)
   if (hairLength) hairParts.push(hairLength)
   if (hairTexture && hairTexture !== 'shaven') hairParts.push(hairTexture)
-  if (hairParts.length > 0) {
-    parts.push(`${hairParts.join(' ')} hair`)
-  }
+  if (hairColor) hairParts.push(hairColor)
+  if (hairParts.length > 0) parts.push(`${hairParts.join(' ')} hair`)
   if (hairTexture === 'shaven') parts.push('shaved head')
-
-  // Build / body
-  if (era?.build) parts.push(`${era.build} build`)
-  if (era?.height_cm) parts.push(`${era.height_cm}cm tall`)
-
-  // Face details
-  if (era?.face_shape) parts.push(`${era.face_shape} face`)
-  if (era?.jaw_definition) parts.push(`${era.jaw_definition} jaw`)
-
-  // Skin
   if (character.skin_tone) parts.push(`${character.skin_tone} skin`)
-  if (era?.skin_texture) parts.push(`${era.skin_texture} skin texture`)
-
-  // Distinguishing features
   if (character.distinguishing_features) parts.push(character.distinguishing_features)
-
   return parts.join(', ')
 }
 
@@ -243,12 +193,14 @@ export function Studio() {
   const { data: character } = useCharacter(characterId)
   const { data: bifrostStatus } = useBifrostStatus()
   const { data: loras } = useLoras()
+  const { data: jobsData } = usePromptJobs()
+  const compose = useComposePrompt()
   const generate = useGenerate()
   const deleteImage = useDeleteCharacterImage()
   const toggleFavorite = useToggleFavorite()
 
   const [mode, setMode] = useState<StudioMode>(sourceParam ? 'refine' : 'generate')
-  const [template, setTemplate] = useState('')
+  const [selectedJob, setSelectedJob] = useState('')
   const [prompt, setPrompt] = useState('')
   const [negativePrompt, setNegativePrompt] = useState('')
   const [workflow, setWorkflow] = useState<Workflow>(sourceParam ? 'sdxl_img2img' : 'text-to-image')
@@ -291,12 +243,35 @@ export function Studio() {
       if (config.denoise != null) setDenoiseStrength(config.denoise)
       if (sourceParam) setSourceImageId(sourceParam)
 
-      // Build prompt from character + intent suffix
-      const charPrompt = buildCharacterPrompt(character, era)
-      setPrompt(charPrompt + config.promptSuffix)
+      // Map legacy intent to a job name for compose
+      const intentJobMap: Record<string, string> = {
+        headshot: 'headshot_neutral',
+        portrait: 'three_quarter_portrait',
+        full_body: 'full_body_standing',
+        full_body_nude: 'nude_front_standing',
+        remix: 'refine_subtle',
+        clothing_swap: 'refine_undress',
+      }
+      const jobName = intentJobMap[intent!]
+      if (jobName && eraId) {
+        setSelectedJob(jobName)
+        compose.mutate({
+          character_id: characterId,
+          era_id: eraId,
+          job_name: jobName,
+          content_rating: config.contentRating,
+        }, {
+          onSuccess: (result) => {
+            setPrompt(result.prompt)
+            setNegativePrompt(result.negative)
+          },
+        })
+      } else {
+        setPrompt(buildIdentityFallback(character, era) + config.promptSuffix)
+      }
     } else {
-      // No intent — just populate character prompt
-      setPrompt(buildCharacterPrompt(character, era))
+      // No intent — just populate identity as starting prompt
+      setPrompt(buildIdentityFallback(character, era))
       if (sourceParam) {
         setSourceImageId(sourceParam)
         setMode('refine')
@@ -503,30 +478,63 @@ export function Studio() {
             </div>
           </div>
 
-          {/* Template — Generate mode only */}
+          {/* Job Selector — Generate mode only */}
           {mode === 'generate' && (
             <div className="flex flex-col gap-2">
-              <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Template</label>
+              <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Job</label>
               <div className="relative">
                 <select
-                  value={template}
+                  value={selectedJob}
                   onChange={(e) => {
-                    const t = TEMPLATES.find((t) => t.value === e.target.value)
-                    setTemplate(e.target.value)
-                    if (t && t.value) {
-                      const prefix = era?.prompt_prefix ? `${era.prompt_prefix}, ` : ''
-                      setPrompt(prefix + t.prompt)
-                      setNegativePrompt(t.negative)
+                    const jobName = e.target.value
+                    setSelectedJob(jobName)
+                    if (jobName && character) {
+                      const job = (jobsData?.jobs ?? []).find((j: ComposeJobInfo) => j.name === jobName)
+                      if (job) {
+                        setContentRating(job.content_rating as ContentRating)
+                        setWorkflow(job.workflow as Workflow)
+                      }
+                      compose.mutate({
+                        character_id: characterId,
+                        era_id: eraId,
+                        job_name: jobName,
+                        content_rating: contentRating,
+                        lora_trigger: activeLora?.name || undefined,
+                      }, {
+                        onSuccess: (result) => {
+                          setPrompt(result.prompt)
+                          setNegativePrompt(result.negative)
+                        },
+                      })
                     }
                   }}
                   className="w-full appearance-none bg-transparent border border-border-subtle py-2.5 px-3 text-sm focus:outline-none focus:border-primary cursor-pointer"
                 >
-                  {TEMPLATES.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
+                  <option value="">Custom</option>
+                  {(jobsData?.jobs ?? [])
+                    .filter((j: ComposeJobInfo) => (JOB_MODE_MAP[j.category] || 'generate') === 'generate')
+                    .sort((a: ComposeJobInfo, b: ComposeJobInfo) => a.display_name.localeCompare(b.display_name))
+                    .map((j: ComposeJobInfo) => (
+                      <option key={j.name} value={j.name}>
+                        {j.display_name} {j.content_rating === 'nsfw' ? '(NSFW)' : ''}
+                      </option>
+                    ))}
                 </select>
                 <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted text-[18px]">expand_more</span>
               </div>
+              {selectedJob && compose.data?.blocks && (
+                <details className="text-[11px] text-muted">
+                  <summary className="cursor-pointer hover:text-primary">Prompt blocks</summary>
+                  <div className="mt-1 flex flex-col gap-1 pl-3 border-l border-border-subtle">
+                    {Object.entries(compose.data.blocks).filter(([, v]) => v).map(([k, v]) => (
+                      <div key={k}>
+                        <span className="font-bold uppercase tracking-wider">{k}:</span>{' '}
+                        <span className="text-on-surface">{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
             </div>
           )}
 
