@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useBrowse, useImportDirectory, useCreateShoot } from '@/lib/api'
-import type { BrowseEntry } from '@/lib/api'
 import type { EraWithStats } from '@/lib/types'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
@@ -31,7 +30,6 @@ export function ImportModal({ open, onClose, characterId, characterName, eras, d
 
   // Browse state — empty string means "use server default"
   const [browsePath, setBrowsePath] = useState('__default__')
-  const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set())
   const [selectedDirs, setSelectedDirs] = useState<SelectedDir[]>([])
   const [editingPath, setEditingPath] = useState(false)
@@ -51,15 +49,6 @@ export function ImportModal({ open, onClose, characterId, characterName, eras, d
   const { data: browseData } = useBrowse(browsePath === '__default__' ? '' : browsePath)
 
   const totalSelected = selectedFiles.size
-
-  const toggleDir = (dirPath: string) => {
-    setExpandedDirs(prev => {
-      const next = new Set(prev)
-      if (next.has(dirPath)) next.delete(dirPath)
-      else next.add(dirPath)
-      return next
-    })
-  }
 
   const selectAllInDir = (dirPath: string, dirName: string, fileCount: number) => {
     // Toggle: if dir is already fully selected, deselect
@@ -167,7 +156,6 @@ export function ImportModal({ open, onClose, characterId, characterName, eras, d
   const resetAndClose = () => {
     setStep('browse')
     setBrowsePath('__default__')
-    setExpandedDirs(new Set())
     setEditingPath(false)
     setSelectedFiles(new Set())
     setSelectedDirs([])

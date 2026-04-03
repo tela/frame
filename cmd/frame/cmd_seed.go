@@ -301,7 +301,16 @@ func cmdSeed() {
 		{"Anatomical Detail", "anatomical_detail.safetensors", "detail", "nsfw", 0.7},
 		{"Pose Accuracy V3", "pose_accuracy_v3.safetensors", "pose", "sfw", 0.5},
 	}
+	existingLoras, _ := loraStore.List("", "")
+	existingLoraNames := map[string]bool{}
+	for _, el := range existingLoras {
+		existingLoraNames[el.Name] = true
+	}
 	for _, l := range loras {
+		if existingLoraNames[l.name] {
+			fmt.Printf("  skip lora %s: already exists\n", l.name)
+			continue
+		}
 		lr := &lora.LoRA{
 			ID:                  id.New(),
 			Name:                l.name,

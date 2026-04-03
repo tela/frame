@@ -1,4 +1,4 @@
-import { useParams } from '@tanstack/react-router'
+import { useParams, useSearch } from '@tanstack/react-router'
 import { useCharacter, useGenerate, useBifrostStatus, useLoras, thumbUrl } from '@/lib/api'
 import type { LoRA } from '@/lib/api'
 import { useState, useEffect, useRef } from 'react'
@@ -132,6 +132,7 @@ function buildCharacterPrompt(character: Character & { eras?: EraWithStats[] }, 
 
 export function Studio() {
   const { characterId, eraId } = useParams({ from: '/characters/$characterId/eras/$eraId/studio' })
+  const { source: sourceParam } = useSearch({ from: '/characters/$characterId/eras/$eraId/studio' })
   const { data: character } = useCharacter(characterId)
   const { data: bifrostStatus } = useBifrostStatus()
   const { data: loras } = useLoras()
@@ -140,7 +141,7 @@ export function Studio() {
   const [template, setTemplate] = useState('')
   const [prompt, setPrompt] = useState('')
   const [negativePrompt, setNegativePrompt] = useState('')
-  const [workflow, setWorkflow] = useState<Workflow>('text-to-image')
+  const [workflow, setWorkflow] = useState<Workflow>(sourceParam ? 'sdxl_img2img' : 'text-to-image')
   const [tier, setTier] = useState<Tier>('cheap')
   const [contentRating, setContentRating] = useState<ContentRating>('sfw')
   const [dimensions, setDimensions] = useState(0) // index into DIMENSIONS
@@ -155,7 +156,7 @@ export function Studio() {
   const [showRefPicker, setShowRefPicker] = useState(false)
   const [showSourcePicker, setShowSourcePicker] = useState(false)
   const [selectedRefs, setSelectedRefs] = useState<string[]>([])
-  const [sourceImageId, setSourceImageId] = useState<string>('')
+  const [sourceImageId, setSourceImageId] = useState<string>(sourceParam || '')
   const [includeEraRefs, setIncludeEraRefs] = useState(true)
 
   const era = character?.eras.find((e) => e.id === eraId)
@@ -447,7 +448,7 @@ export function Studio() {
                 className="w-full appearance-none bg-transparent border border-border-subtle py-2.5 px-3 text-sm focus:outline-none focus:border-primary cursor-pointer"
               >
                 <option value="">None</option>
-                {(loras ?? []).map((l: LoRA) => (
+                {(loras ?? []).filter((l: LoRA, i: number, arr: LoRA[]) => arr.findIndex(x => x.name === l.name) === i).map((l: LoRA) => (
                   <option key={l.id} value={l.id}>
                     {l.name} {l.content_rating === 'nsfw' ? '(NSFW)' : ''}
                   </option>
