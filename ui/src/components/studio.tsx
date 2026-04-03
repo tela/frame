@@ -1,200 +1,18 @@
 import { useParams, useSearch } from '@tanstack/react-router'
-import { useCharacter, useGenerate, useBifrostStatus, useLoras, useDeleteCharacterImage, useToggleFavorite, useImageTags, useComposePrompt, usePromptJobs, thumbUrl, imageUrl } from '@/lib/api'
+import { useCharacter, useGenerate, useBifrostStatus, useLoras, useComposePrompt, usePromptJobs, thumbUrl, imageUrl } from '@/lib/api'
 import type { LoRA, ComposeJobInfo } from '@/lib/api'
 import { useState, useEffect, useRef } from 'react'
 import { ImagePickerModal } from '@/components/image-picker-modal'
-import { TagPicker } from '@/components/tag-picker'
-import { Lightbox } from '@/components/lightbox'
-import type { Character, EraWithStats } from '@/lib/types'
-
-type Workflow = 'text-to-image' | 'sdxl_text2img' | 'sdxl_character_gen' | 'sdxl_multi_ref' | 'sdxl_clothing_swap' | 'sdxl_pose_transfer' | 'sdxl_img2img' | 'sdxl_quality_postprocess' | 'kontext'
-type Tier = 'cheap' | 'complex' | 'frontier'
-type ContentRating = 'sfw' | 'nsfw'
-
-// Job category → Studio mode mapping
-const JOB_MODE_MAP: Record<string, StudioMode> = {
-  identity: 'generate',
-  physicality: 'generate',
-  outfit: 'generate',
-  detail: 'generate',
-  wardrobe: 'refine',
-  refine: 'refine',
-  video: 'generate',
-  artistic: 'process',
-}
-
-// Category display order and labels for the job selector optgroups
-const JOB_CATEGORY_LABELS: Record<string, string> = {
-  identity: 'Identity',
-  physicality: 'Physicality',
-  outfit: 'Standard Outfits',
-  detail: 'Detail Shots',
-  wardrobe: 'Wardrobe',
-  refine: 'Refinement',
-  video: 'Video',
-  artistic: 'Artistic',
-}
-
-const JOB_CATEGORY_ORDER = ['identity', 'physicality', 'outfit', 'detail', 'wardrobe', 'refine', 'video', 'artistic']
-
-const WORKFLOWS: { value: Workflow; label: string; description: string }[] = [
-  { value: 'text-to-image', label: 'Flux Text-to-Image', description: 'Fast SFW headshots via Flux (~3s)' },
-  { value: 'sdxl_text2img', label: 'SDXL Text-to-Image', description: 'SFW/NSFW from prompt (~45s)' },
-  { value: 'sdxl_character_gen', label: 'Character Gen (single ref)', description: 'Consistent character from one reference (~108s)' },
-  { value: 'sdxl_multi_ref', label: 'Character Gen (multi ref)', description: 'Consistent character from multiple refs (~94s)' },
-  { value: 'sdxl_clothing_swap', label: 'Clothing Swap', description: 'Undress or swap clothing (~213s)' },
-  { value: 'sdxl_pose_transfer', label: 'Pose Transfer', description: 'Apply pose to character (~114s)' },
-  { value: 'sdxl_img2img', label: 'Image Refinement', description: 'Refine an existing image (~63s)' },
-  { value: 'sdxl_quality_postprocess', label: 'Quality Upscale', description: 'Upscale + enhance detail (~648s)' },
-  { value: 'kontext', label: 'Flux Kontext', description: 'Prompt-based image editing (~3s)' },
-]
-
-const TIERS: { value: Tier; label: string }[] = [
-  { value: 'cheap', label: 'Lo' },
-  { value: 'complex', label: 'Mid' },
-  { value: 'frontier', label: 'Hi' },
-]
-
-const DIMENSIONS: { label: string; w: number; h: number }[] = [
-  { label: 'Portrait', w: 768, h: 1024 },
-  { label: 'Square', w: 1024, h: 1024 },
-  { label: 'Landscape', w: 1024, h: 768 },
-]
-
-const BATCH_SIZES = [1, 2, 4, 8]
-
-interface GeneratedImage {
-  id: string
-  url: string
-  seed: number
-  prompt: string
-  timestamp: string
-  status: 'generating' | 'complete'
-}
-
-// buildCharacterPrompt is a fallback for when the compose endpoint isn't used
-// (e.g., custom prompts where the user wants identity as a starting point).
-// The shared prompts package handles the full composition server-side.
-function buildIdentityFallback(character: Character & { eras?: EraWithStats[] }, era?: EraWithStats): string {
-  const parts: string[] = []
-  if (character.gender) parts.push(character.gender)
-  if (character.ethnicity) parts.push(character.ethnicity)
-  parts.push('person')
-  if (era?.age_range) parts.push(`age ${era.age_range}`)
-  if (character.eye_color) parts.push(`${character.eye_color} eyes`)
-  const hairColor = era?.hair_color || character.natural_hair_color
-  const hairTexture = character.natural_hair_texture
-  const hairLength = era?.hair_length
-  const hairParts: string[] = []
-  if (hairLength) hairParts.push(hairLength)
-  if (hairTexture && hairTexture !== 'shaven') hairParts.push(hairTexture)
-  if (hairColor) hairParts.push(hairColor)
-  if (hairParts.length > 0) parts.push(`${hairParts.join(' ')} hair`)
-  if (hairTexture === 'shaven') parts.push('shaved head')
-  if (character.skin_tone) parts.push(`${character.skin_tone} skin`)
-  if (character.distinguishing_features) parts.push(character.distinguishing_features)
-  return parts.join(', ')
-}
-
-// Studio modes
-type StudioMode = 'generate' | 'refine' | 'process'
-
-// Intent presets map user actions to Studio configuration
-type StudioIntent = 'headshot' | 'consistent' | 'portrait' | 'full_body' | 'full_body_nude' | 'remix' | 'upscale' | 'clothing_swap'
-
-interface IntentConfig {
-  mode: StudioMode
-  workflow: Workflow
-  contentRating: ContentRating
-  includeRefs: boolean
-  promptSuffix: string
-  needsSource: boolean
-  denoise?: number
-}
-
-const GENERATE_WORKFLOWS: Workflow[] = ['text-to-image', 'sdxl_text2img', 'sdxl_character_gen', 'sdxl_multi_ref', 'sdxl_pose_transfer']
-const REFINE_WORKFLOWS: Workflow[] = ['sdxl_img2img', 'sdxl_clothing_swap', 'kontext']
-const PROCESS_WORKFLOWS: Workflow[] = ['sdxl_quality_postprocess']
-
-
-function defaultWorkflowForMode(mode: StudioMode): Workflow {
-  if (mode === 'refine') return 'sdxl_img2img'
-  if (mode === 'process') return 'sdxl_quality_postprocess'
-  return 'text-to-image'
-}
-
-function workflowsForMode(mode: StudioMode) {
-  const allowed = mode === 'refine' ? REFINE_WORKFLOWS : mode === 'process' ? PROCESS_WORKFLOWS : GENERATE_WORKFLOWS
-  return WORKFLOWS.filter(w => allowed.includes(w.value))
-}
-
-const INTENT_CONFIGS: Record<StudioIntent, IntentConfig> = {
-  headshot: {
-    mode: 'generate',
-    workflow: 'text-to-image',
-    contentRating: 'sfw',
-    includeRefs: false,
-    promptSuffix: ', front-facing headshot, neutral expression, studio lighting, portrait photography',
-    needsSource: false,
-  },
-  consistent: {
-    mode: 'generate',
-    workflow: 'sdxl_character_gen',
-    contentRating: 'sfw',
-    includeRefs: true,
-    promptSuffix: '',
-    needsSource: false,
-  },
-  portrait: {
-    mode: 'generate',
-    workflow: 'sdxl_character_gen',
-    contentRating: 'sfw',
-    includeRefs: true,
-    promptSuffix: ', three-quarter portrait, soft natural lighting, elegant',
-    needsSource: false,
-  },
-  full_body: {
-    mode: 'generate',
-    workflow: 'sdxl_character_gen',
-    contentRating: 'sfw',
-    includeRefs: true,
-    promptSuffix: ', full body standing pose, clean studio background, professional photography',
-    needsSource: false,
-  },
-  full_body_nude: {
-    mode: 'generate',
-    workflow: 'sdxl_character_gen',
-    contentRating: 'nsfw',
-    includeRefs: true,
-    promptSuffix: ', full body nude standing, clean studio background, professional photography',
-    needsSource: false,
-  },
-  remix: {
-    mode: 'refine',
-    workflow: 'sdxl_img2img',
-    contentRating: 'sfw',
-    includeRefs: true,
-    promptSuffix: '',
-    needsSource: true,
-    denoise: 0.35,
-  },
-  upscale: {
-    mode: 'process',
-    workflow: 'sdxl_quality_postprocess',
-    contentRating: 'sfw',
-    includeRefs: false,
-    promptSuffix: '',
-    needsSource: true,
-  },
-  clothing_swap: {
-    mode: 'refine',
-    workflow: 'sdxl_clothing_swap',
-    contentRating: 'nsfw',
-    includeRefs: true,
-    promptSuffix: '',
-    needsSource: true,
-  },
-}
+import { StudioGallery } from '@/components/studio-gallery'
+import type {
+  Workflow, Tier, ContentRating, StudioMode, StudioIntent, GeneratedImage,
+} from '@/components/studio-types'
+import {
+  JOB_MODE_MAP, JOB_CATEGORY_LABELS, JOB_CATEGORY_ORDER,
+  WORKFLOWS, TIERS, DIMENSIONS, BATCH_SIZES,
+  INTENT_CONFIGS, INTENT_JOB_MAP,
+  defaultWorkflowForMode, workflowsForMode, buildIdentityFallback,
+} from '@/components/studio-types'
 
 export function Studio() {
   const { characterId, eraId } = useParams({ from: '/characters/$characterId/eras/$eraId/studio' })
@@ -205,8 +23,6 @@ export function Studio() {
   const { data: jobsData } = usePromptJobs()
   const compose = useComposePrompt()
   const generate = useGenerate()
-  const deleteImage = useDeleteCharacterImage()
-  const toggleFavorite = useToggleFavorite()
 
   const [mode, setMode] = useState<StudioMode>(sourceParam ? 'refine' : 'generate')
   const [selectedJob, setSelectedJob] = useState('')
@@ -224,7 +40,6 @@ export function Studio() {
   const [showParams, setShowParams] = useState(false)
   const [sessionImages, setSessionImages] = useState<GeneratedImage[]>([])
   const [panelOpen, setPanelOpen] = useState(true)
-  const [lightboxId, setLightboxId] = useState<string | null>(null)
   const [showRefPicker, setShowRefPicker] = useState(false)
   const [showSourcePicker, setShowSourcePicker] = useState(false)
   const [showPosePicker, setShowPosePicker] = useState(false)
@@ -254,16 +69,7 @@ export function Studio() {
       if (config.denoise != null) setDenoiseStrength(config.denoise)
       if (sourceParam) setSourceImageId(sourceParam)
 
-      // Map legacy intent to a job name for compose
-      const intentJobMap: Record<string, string> = {
-        headshot: 'headshot_neutral',
-        portrait: 'three_quarter_portrait',
-        full_body: 'full_body_standing',
-        full_body_nude: 'nude_front_standing',
-        remix: 'refine_subtle',
-        clothing_swap: 'refine_undress',
-      }
-      const jobName = intentJobMap[intent!]
+      const jobName = INTENT_JOB_MAP[intent!]
       if (jobName && eraId) {
         setSelectedJob(jobName)
         compose.mutate({
@@ -558,6 +364,33 @@ export function Studio() {
             </div>
           )}
 
+          {/* Prompt + Negative — not in process mode */}
+          {mode !== 'process' && (
+            <>
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted flex justify-between">
+                  Prompt
+                  <span className="tracking-normal lowercase tabular-nums">{prompt.length}/1000</span>
+                </label>
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  className="w-full h-[140px] resize-none bg-surface border border-border-subtle p-3 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
+                  placeholder="Describe the subject, environment, lighting..."
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Negative Prompt</label>
+                <textarea
+                  value={negativePrompt}
+                  onChange={(e) => setNegativePrompt(e.target.value)}
+                  className="w-full h-[60px] resize-none bg-surface border border-border-subtle p-3 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
+                  placeholder="What to exclude..."
+                />
+              </div>
+            </>
+          )}
+
           {/* Source Image (for refine/process modes) */}
           {needsSource && (
             <div className="flex flex-col gap-2">
@@ -709,33 +542,6 @@ export function Studio() {
           </div>
           )}
 
-          {/* Prompt + Negative — not in process mode */}
-          {mode !== 'process' && (
-            <>
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted flex justify-between">
-                  Prompt
-                  <span className="tracking-normal lowercase tabular-nums">{prompt.length}/1000</span>
-                </label>
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  className="w-full h-[140px] resize-none bg-surface border border-border-subtle p-3 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
-                  placeholder="Describe the subject, environment, lighting..."
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Negative Prompt</label>
-                <textarea
-                  value={negativePrompt}
-                  onChange={(e) => setNegativePrompt(e.target.value)}
-                  className="w-full h-[60px] resize-none bg-surface border border-border-subtle p-3 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
-                  placeholder="What to exclude..."
-                />
-              </div>
-            </>
-          )}
-
           {/* Process mode — simple operation description */}
           {mode === 'process' && (
             <div className="bg-surface-low p-4">
@@ -832,97 +638,12 @@ export function Studio() {
       </aside>
 
       {/* Preview & History Area (Right) */}
-      <section className="flex-1 flex flex-col bg-surface overflow-hidden relative">
-        <div className="h-[73px] border-b border-border-subtle bg-background flex items-center justify-between px-8 flex-shrink-0">
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium">Session History</span>
-            <span className="text-xs text-muted bg-surface px-2 py-1 border border-border-subtle">
-              {sessionImages.length} Items
-            </span>
-          </div>
-          <button
-            onClick={() => setSessionImages([])}
-            className="text-[11px] uppercase tracking-[0.1em] font-bold border border-border-subtle px-4 py-2 hover:bg-surface transition-colors"
-          >
-            Clear Session
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-8">
-          {sessionImages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-muted gap-4">
-              <span className="material-symbols-outlined text-[48px]">auto_awesome</span>
-              <p className="text-sm">Generated images will appear here</p>
-            </div>
-          ) : (
-            <div className={`grid gap-6 ${
-              sessionImages.length === 1 ? 'grid-cols-1 max-w-[500px] mx-auto' :
-              sessionImages.length <= 4 ? 'grid-cols-2' :
-              'grid-cols-2 xl:grid-cols-3'
-            }`}>
-              {sessionImages.map((img) => (
-                <div key={img.id} className="aspect-[3/4] relative overflow-hidden border border-border-subtle group cursor-pointer bg-background">
-                  {img.status === 'generating' ? (
-                    <>
-                      <div className="absolute inset-0 bg-muted/10 backdrop-blur-md" />
-                      <div className="absolute top-0 left-0 w-full h-[2px] bg-background overflow-hidden">
-                        <div className="h-full w-full bg-accent" style={{ animation: 'progress 2s infinite linear' }} />
-                      </div>
-                      <div className="relative z-10 flex flex-col items-center justify-center h-full text-muted gap-3">
-                        <span className="material-symbols-outlined text-[32px] animate-pulse">model_training</span>
-                        <span className="text-xs uppercase tracking-[0.15em] animate-pulse">Processing...</span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <img
-                        alt="Generated image"
-                        className="w-full h-full object-cover cursor-pointer"
-                        src={img.url}
-                        onClick={() => setLightboxId(img.id)}
-                      />
-                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-4">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => {
-                              deleteImage.mutate({ characterId, imageId: img.id })
-                              setSessionImages(prev => prev.filter(s => s.id !== img.id))
-                            }}
-                            className="bg-background/90 text-primary p-1.5 hover:text-accent transition-colors"
-                            title="Delete"
-                          >
-                            <span className="material-symbols-outlined text-[18px]">delete</span>
-                          </button>
-                          <button
-                            onClick={() => toggleFavorite.mutate({ characterId, imageId: img.id, favorited: true })}
-                            className="bg-accent/90 text-white p-1.5 hover:bg-accent transition-colors"
-                            title="Favorite"
-                          >
-                            <span className="material-symbols-outlined text-[18px]">favorite</span>
-                          </button>
-                          <SessionImageTagButton imageId={img.id} />
-                        </div>
-                        <div className="flex justify-center">
-                          <button
-                            onClick={() => handleRefineImage(img.id)}
-                            className="px-4 py-1.5 bg-white/90 backdrop-blur-sm rounded-full text-on-surface text-[10px] font-bold uppercase tracking-widest hover:bg-white transition-colors"
-                          >
-                            Refine
-                          </button>
-                        </div>
-                        <div className="text-white">
-                          <div className="text-xs font-body opacity-80 mb-1">{img.timestamp} · Seed: {img.seed}</div>
-                          <div className="text-sm line-clamp-2 leading-tight">{img.prompt}</div>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+      <StudioGallery
+        characterId={characterId}
+        sessionImages={sessionImages}
+        setSessionImages={setSessionImages}
+        onRefineImage={handleRefineImage}
+      />
 
       {/* Modals */}
       <ImagePickerModal
@@ -950,50 +671,6 @@ export function Studio() {
         initialSelected={poseImageId ? [poseImageId] : []}
       />
 
-      {/* Lightbox */}
-      <Lightbox
-        imageId={lightboxId}
-        onClose={() => setLightboxId(null)}
-        onPrev={(() => {
-          const completedImages = sessionImages.filter(i => i.status === 'complete')
-          const idx = completedImages.findIndex(i => i.id === lightboxId)
-          return idx > 0 ? () => setLightboxId(completedImages[idx - 1].id) : undefined
-        })()}
-        onNext={(() => {
-          const completedImages = sessionImages.filter(i => i.status === 'complete')
-          const idx = completedImages.findIndex(i => i.id === lightboxId)
-          return idx < completedImages.length - 1 ? () => setLightboxId(completedImages[idx + 1].id) : undefined
-        })()}
-      />
-
-      <style>{`
-        @keyframes progress {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-      `}</style>
     </div>
-  )
-}
-
-function SessionImageTagButton({ imageId }: { imageId: string }) {
-  const [showTags, setShowTags] = useState(false)
-  const { data: imageTags } = useImageTags(showTags ? imageId : '')
-  return (
-    <>
-      <button
-        onClick={() => setShowTags(true)}
-        className="bg-background/90 text-primary p-1.5 hover:text-accent transition-colors"
-        title="Tag"
-      >
-        <span className="material-symbols-outlined text-[18px]">label</span>
-      </button>
-      <TagPicker
-        open={showTags}
-        onClose={() => setShowTags(false)}
-        imageIds={[imageId]}
-        existingTags={(imageTags ?? []).map(t => ({ namespace: t.tag_namespace, value: t.tag_value }))}
-      />
-    </>
   )
 }
