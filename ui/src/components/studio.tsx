@@ -112,8 +112,8 @@ interface IntentConfig {
   denoise?: number
 }
 
-const GENERATE_WORKFLOWS: Workflow[] = ['text-to-image', 'sdxl_text2img', 'sdxl_character_gen', 'sdxl_multi_ref']
-const REFINE_WORKFLOWS: Workflow[] = ['sdxl_img2img', 'sdxl_clothing_swap', 'sdxl_pose_transfer', 'kontext']
+const GENERATE_WORKFLOWS: Workflow[] = ['text-to-image', 'sdxl_text2img', 'sdxl_character_gen', 'sdxl_multi_ref', 'sdxl_pose_transfer']
+const REFINE_WORKFLOWS: Workflow[] = ['sdxl_img2img', 'sdxl_clothing_swap', 'kontext']
 const PROCESS_WORKFLOWS: Workflow[] = ['sdxl_quality_postprocess']
 
 
@@ -227,8 +227,10 @@ export function Studio() {
   const [lightboxId, setLightboxId] = useState<string | null>(null)
   const [showRefPicker, setShowRefPicker] = useState(false)
   const [showSourcePicker, setShowSourcePicker] = useState(false)
+  const [showPosePicker, setShowPosePicker] = useState(false)
   const [selectedRefs, setSelectedRefs] = useState<string[]>([])
   const [sourceImageId, setSourceImageId] = useState<string>(sourceParam || '')
+  const [poseImageId, setPoseImageId] = useState<string>('')
   const [includeEraRefs, setIncludeEraRefs] = useState(true)
   const activeIntent = intentParam || ''
 
@@ -291,7 +293,7 @@ export function Studio() {
   const dim = DIMENSIONS[dimensions]
   const activeLora = (loras ?? []).find((l: LoRA) => l.id === selectedLora)
   const needsSource = mode === 'refine' || mode === 'process'
-  const needsRefs = ['sdxl_multi_ref', 'sdxl_character_gen'].includes(workflow)
+  const needsRefs = ['sdxl_multi_ref', 'sdxl_character_gen', 'sdxl_pose_transfer'].includes(workflow)
   const availableWorkflows = workflowsForMode(mode)
 
   const handleModeChange = (newMode: StudioMode) => {
@@ -326,7 +328,7 @@ export function Studio() {
         prompt: prompt,
         negative_prompt: negativePrompt || undefined,
         workflow: workflow,
-        include_refs: includeEraRefs && (workflow === 'sdxl_multi_ref' || workflow === 'sdxl_character_gen'),
+        include_refs: includeEraRefs && (workflow === 'sdxl_multi_ref' || workflow === 'sdxl_character_gen' || workflow === 'sdxl_pose_transfer'),
         ref_image_ids: selectedRefs.length > 0 ? selectedRefs : undefined,
         batch_size: batchSize,
         width: dim.w,
@@ -336,6 +338,7 @@ export function Studio() {
         lora_adapter: activeLora?.filename || undefined,
         lora_strength: activeLora ? loraStrength : undefined,
         source_image_id: needsSource ? sourceImageId || undefined : undefined,
+        pose_image_id: workflow === 'sdxl_pose_transfer' ? poseImageId || undefined : undefined,
         denoise_strength: workflow === 'sdxl_img2img' ? denoiseStrength : undefined,
       },
       {
@@ -598,6 +601,33 @@ export function Studio() {
             </div>
           )}
 
+          {/* Pose Reference Image (for pose transfer workflow) */}
+          {workflow === 'sdxl_pose_transfer' && (
+            <div className="flex flex-col gap-2">
+              <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Pose Reference</label>
+              <p className="text-[11px] text-muted">Select an image with the pose you want to apply. The character's face refs provide identity.</p>
+              {poseImageId ? (
+                <div className="relative w-20 h-20 border border-border-subtle overflow-hidden group">
+                  <img src={thumbUrl(poseImageId)} alt="" className="w-full h-full object-cover" />
+                  <button
+                    onClick={() => setPoseImageId('')}
+                    className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                  >
+                    <span className="material-symbols-outlined text-white text-[14px]">close</span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowPosePicker(true)}
+                  className="border border-dashed border-border-subtle text-muted text-[12px] py-3 px-3 hover:border-primary hover:text-primary transition-colors flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[16px]">accessibility_new</span>
+                  Select pose image
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Reference Images (generate mode with character_gen workflows) */}
           {mode === 'generate' && needsRefs && (
             <div className="flex flex-col gap-2">
@@ -788,7 +818,7 @@ export function Studio() {
         <div className="p-8 border-t border-border-subtle bg-surface/50">
           <button
             onClick={handleGenerate}
-            disabled={!bifrostAvailable || (mode !== 'process' && !prompt.trim()) || generate.isPending || (needsSource && !sourceImageId) || (mode === 'generate' && needsRefs && !includeEraRefs && selectedRefs.length === 0)}
+            disabled={!bifrostAvailable || (mode !== 'process' && !prompt.trim()) || generate.isPending || (needsSource && !sourceImageId) || (mode === 'generate' && needsRefs && !includeEraRefs && selectedRefs.length === 0) || (workflow === 'sdxl_pose_transfer' && !poseImageId)}
             className="w-full bg-accent text-white py-4 font-medium tracking-ui hover:bg-accent/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -910,6 +940,14 @@ export function Studio() {
         characterId={characterId}
         eraId={eraId}
         initialSelected={sourceImageId ? [sourceImageId] : []}
+      />
+      <ImagePickerModal
+        open={showPosePicker}
+        onClose={() => setShowPosePicker(false)}
+        onConfirm={(ids) => { if (ids.length > 0) setPoseImageId(ids[0]); setShowPosePicker(false) }}
+        characterId={characterId}
+        eraId={eraId}
+        initialSelected={poseImageId ? [poseImageId] : []}
       />
 
       {/* Lightbox */}
