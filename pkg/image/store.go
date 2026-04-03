@@ -17,14 +17,15 @@ func parseTime(s string) time.Time {
 }
 
 // columns shared by all character_images queries.
-const ciColumns = `image_id, character_id, era_id, set_type, triage_status, rating, ref_type, ref_score, ref_rank, caption, created_at`
+const ciColumns = `ci.image_id, ci.character_id, ci.era_id, ci.set_type, ci.triage_status, ci.rating, ci.ref_type, ci.ref_score, ci.ref_rank, ci.caption, COALESCE(i.source, 'manual'), ci.created_at`
+const ciFrom = `character_images ci LEFT JOIN images i ON i.id = ci.image_id`
 
 func scanCI(sc interface{ Scan(...any) error }) (CharacterImage, error) {
 	var ci CharacterImage
 	var createdAt string
 	err := sc.Scan(
 		&ci.ImageID, &ci.CharacterID, &ci.EraID, &ci.SetType, &ci.TriageStatus,
-		&ci.Rating, &ci.RefType, &ci.RefScore, &ci.RefRank, &ci.Caption, &createdAt,
+		&ci.Rating, &ci.RefType, &ci.RefScore, &ci.RefRank, &ci.Caption, &ci.Source, &createdAt,
 	)
 	ci.CreatedAt = parseTime(createdAt)
 	return ci, err
@@ -56,7 +57,7 @@ func NewStore(db *sql.DB) *Store {
 // GetCharacterImage returns the first character_image link for an image.
 func (s *Store) GetCharacterImage(imageID string) (*CharacterImage, error) {
 	row := s.db.QueryRow(
-		`SELECT `+ciColumns+` FROM character_images WHERE image_id = ? LIMIT 1`, imageID,
+		`SELECT `+ciColumns+` FROM `+ciFrom+` WHERE ci.image_id = ? LIMIT 1`, imageID,
 	)
 	ci, err := scanCI(row)
 	if err == sql.ErrNoRows {
@@ -139,12 +140,12 @@ func (s *Store) ListByCharacter(characterID string, eraID *string) ([]CharacterI
 	var err error
 	if eraID != nil {
 		rows, err = s.db.Query(
-			`SELECT `+ciColumns+` FROM character_images WHERE character_id = ? AND era_id = ? ORDER BY created_at DESC`,
+			`SELECT `+ciColumns+` FROM `+ciFrom+` WHERE ci.character_id = ? AND ci.era_id = ? ORDER BY ci.created_at DESC`,
 			characterID, *eraID,
 		)
 	} else {
 		rows, err = s.db.Query(
-			`SELECT `+ciColumns+` FROM character_images WHERE character_id = ? ORDER BY created_at DESC`,
+			`SELECT `+ciColumns+` FROM `+ciFrom+` WHERE ci.character_id = ? ORDER BY ci.created_at DESC`,
 			characterID,
 		)
 	}
@@ -157,9 +158,9 @@ func (s *Store) ListByCharacter(characterID string, eraID *string) ([]CharacterI
 // ListRefsByType returns reference images of a given type for a character era, ordered by rank.
 func (s *Store) ListRefsByType(characterID, eraID string, refType RefType) ([]CharacterImage, error) {
 	rows, err := s.db.Query(
-		`SELECT `+ciColumns+` FROM character_images
-		 WHERE character_id = ? AND era_id = ? AND ref_type = ?
-		 ORDER BY ref_rank ASC NULLS LAST`,
+		`SELECT `+ciColumns+` FROM `+ciFrom+`
+		 WHERE ci.character_id = ? AND ci.era_id = ? AND ci.ref_type = ?
+		 ORDER BY ci.ref_rank ASC NULLS LAST`,
 		characterID, eraID, refType,
 	)
 	if err != nil {
@@ -294,12 +295,12 @@ func (s *Store) ListPendingByCharacter(characterID string, eraID *string) ([]Cha
 	var err error
 	if eraID != nil {
 		rows, err = s.db.Query(
-			`SELECT `+ciColumns+` FROM character_images WHERE character_id = ? AND era_id = ? AND triage_status = 'pending' ORDER BY created_at DESC`,
+			`SELECT `+ciColumns+` FROM `+ciFrom+` WHERE ci.character_id = ? AND ci.era_id = ? AND ci.triage_status = 'pending' ORDER BY ci.created_at DESC`,
 			characterID, *eraID,
 		)
 	} else {
 		rows, err = s.db.Query(
-			`SELECT `+ciColumns+` FROM character_images WHERE character_id = ? AND triage_status = 'pending' ORDER BY created_at DESC`,
+			`SELECT `+ciColumns+` FROM `+ciFrom+` WHERE ci.character_id = ? AND ci.triage_status = 'pending' ORDER BY ci.created_at DESC`,
 			characterID,
 		)
 	}
@@ -321,7 +322,7 @@ func (s *Store) ToggleFavorite(imageID, characterID string, favorited bool) erro
 // ListFavorites returns favorited images for a character.
 func (s *Store) ListFavorites(characterID string) ([]CharacterImage, error) {
 	rows, err := s.db.Query(
-		`SELECT `+ciColumns+` FROM character_images WHERE character_id = ? AND is_favorited = 1 ORDER BY created_at DESC`,
+		`SELECT `+ciColumns+` FROM `+ciFrom+` WHERE ci.character_id = ? AND ci.is_favorited = 1 ORDER BY ci.created_at DESC`,
 		characterID,
 	)
 	if err != nil {
