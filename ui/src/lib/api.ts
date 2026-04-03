@@ -131,8 +131,11 @@ export function useUpdateCharacter() {
     }) =>
       patchJSON<Character>(`/api/v1/characters/${id}`, body),
     onSuccess: (_, vars) => {
-      qc.invalidateQueries({ queryKey: ['characters'] })
       qc.invalidateQueries({ queryKey: ['characters', vars.id] })
+      // Only invalidate the list if name/status changed (affects library display)
+      if (vars.name || vars.display_name || vars.status) {
+        qc.invalidateQueries({ queryKey: ['characters'], exact: true })
+      }
     },
   })
 }
@@ -140,10 +143,13 @@ export function useUpdateCharacter() {
 export function useUpdateEra() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ eraId, ...fields }: { eraId: string; [key: string]: unknown }) =>
+    mutationFn: ({ eraId, characterId, ...fields }: { eraId: string; characterId?: string; [key: string]: unknown }) =>
       patchJSON<{ status: string }>(`/api/v1/eras/${eraId}`, fields),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['characters'] })
+    onSuccess: (_, vars) => {
+      // Only invalidate the specific character that owns this era
+      if (vars.characterId) {
+        qc.invalidateQueries({ queryKey: ['characters', vars.characterId] })
+      }
     },
   })
 }
@@ -214,9 +220,31 @@ export function useToggleFavorite() {
   return useMutation({
     mutationFn: ({ characterId, imageId, favorited }: { characterId: string; imageId: string; favorited: boolean }) =>
       postJSON<{ favorited: boolean }>(`/api/v1/characters/${characterId}/images/${imageId}/favorite`, { favorited }),
-    onSuccess: (_, vars) => {
+    onMutate: async (vars) => {
+      const key = ['characters', vars.characterId, 'favorites']
+      await qc.cancelQueries({ queryKey: key })
+      const previous = qc.getQueryData<CharacterImage[]>(key)
+      if (vars.favorited) {
+        // Optimistic add: get the image from the images query and prepend
+        const allImages = qc.getQueryData<CharacterImage[]>(['characters', vars.characterId, 'images']) ?? []
+        const image = allImages.find(i => i.image_id === vars.imageId)
+        if (image) {
+          qc.setQueryData<CharacterImage[]>(key, [image, ...(previous ?? [])])
+        }
+      } else {
+        // Optimistic remove
+        qc.setQueryData<CharacterImage[]>(key, (previous ?? []).filter(i => i.image_id !== vars.imageId))
+      }
+      return { previous }
+    },
+    onError: (_err, vars, context) => {
+      // Roll back on error
+      if (context?.previous) {
+        qc.setQueryData(['characters', vars.characterId, 'favorites'], context.previous)
+      }
+    },
+    onSettled: (_, _err, vars) => {
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'favorites'] })
-      qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'images'] })
     },
   })
 }
@@ -282,8 +310,11 @@ export function useUpdateCharacterImage() {
     }) => patchJSON<CharacterImage>(`/api/v1/characters/${characterId}/images/${imageId}`, update),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'images'] })
-      qc.invalidateQueries({ queryKey: ['characters', vars.characterId] })
-      qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'eras'] })
+      qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'images', 'pending'] })
+      // Only invalidate eras if ref_type changed (affects reference_package_ready)
+      if (vars.ref_type !== undefined) {
+        qc.invalidateQueries({ queryKey: ['characters', vars.characterId] })
+      }
     },
   })
 }
@@ -323,8 +354,11 @@ export function useIngestImage() {
 
       return postFormData<IngestResult>(path, formData)
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['characters'] })
+    onSuccess: (_, vars) => {
+      if (vars.characterId) {
+        qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'images'] })
+        qc.invalidateQueries({ queryKey: ['characters', vars.characterId] })
+      }
     },
   })
 }
@@ -335,8 +369,9 @@ export function useDeleteCharacterImage() {
     mutationFn: ({ characterId, imageId }: { characterId: string; imageId: string }) =>
       fetch(`/api/v1/characters/${characterId}/images/${imageId}`, { method: 'DELETE' })
         .then((r) => { if (!r.ok) throw new Error('delete failed'); return null }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['characters'] })
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'images'] })
+      qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'favorites'] })
     },
   })
 }
@@ -779,8 +814,11 @@ export function useBulkUpdateCharacterImages() {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'images'] })
-      qc.invalidateQueries({ queryKey: ['characters', vars.characterId] })
-      qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'eras'] })
+      qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'images', 'pending'] })
+      // Only invalidate eras if ref_type changed (affects reference_package_ready)
+      if (vars.update.ref_type !== undefined) {
+        qc.invalidateQueries({ queryKey: ['characters', vars.characterId] })
+      }
     },
   })
 }
@@ -839,8 +877,16 @@ export function useImportDirectory() {
   return useMutation({
     mutationFn: (body: { path: string; character_id?: string; era_id?: string; shoot_id?: string; source?: string; tags?: string[] }) =>
       postJSON<{ imported: number; skipped: number; failed: number; total: number; errors?: string[] }>('/api/v1/import/directory', body),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['characters'] })
+    onSuccess: (_, vars) => {
+      if (vars.character_id) {
+        qc.invalidateQueries({ queryKey: ['characters', vars.character_id, 'images'] })
+        qc.invalidateQueries({ queryKey: ['characters', vars.character_id] })
+      } else {
+        qc.invalidateQueries({ queryKey: ['characters'] })
+      }
+      if (vars.shoot_id) {
+        qc.invalidateQueries({ queryKey: ['shoots', vars.shoot_id, 'images'] })
+      }
     },
   })
 }
