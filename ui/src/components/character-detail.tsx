@@ -1,5 +1,5 @@
 import { Link, useParams } from '@tanstack/react-router'
-import { useCharacter, useDatasets, useCreateEra, useFigStatus, usePublishToFig, thumbUrl } from '@/lib/api'
+import { useCharacter, useDatasets, useCreateEra, useFigStatus, usePublishToFig } from '@/lib/api'
 import { useState } from 'react'
 import { PoseSetDashboard } from '@/components/pose-set-dashboard'
 import { GoSeeLooks } from '@/components/go-see-looks'
@@ -82,7 +82,7 @@ export function CharacterDetail() {
             ))}
 
             {/* Go-see Looks */}
-            <GoSeeLooks characterId={character.id} eraId={character.eras[0]?.id} />
+            <GoSeeLooks characterId={character.id} />
 
             {/* Datasets */}
             {characterDatasets.length > 0 && (
