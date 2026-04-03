@@ -165,6 +165,10 @@ func (a *API) Register(mux *http.ServeMux) {
 	// Audit log
 	mux.HandleFunc("GET /api/v1/audit", a.queryAuditLog)
 
+	// Prompt composition (shared prompts package)
+	mux.HandleFunc("POST /api/v1/prompts/compose", a.handleComposePrompt)
+	mux.HandleFunc("GET /api/v1/prompts/jobs", a.handleListJobs)
+
 	// Generation (Bifrost)
 	mux.HandleFunc("POST /api/v1/generate", a.handleGenerate)
 	mux.HandleFunc("GET /api/v1/bifrost/status", a.handleBifrostStatus)
