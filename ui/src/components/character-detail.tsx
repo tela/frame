@@ -620,7 +620,7 @@ function CharacterHero({ character, figStatus, publishToFig }: {
     const v = ['height_cm', 'weight_kg'].includes(field) ? (val ? Number(val) : null)
       : ['waist_hip_ratio', 'head_body_ratio', 'leg_torso_ratio', 'shoulder_hip_ratio'].includes(field) ? (val ? Number(val) : null)
       : val
-    updateEra.mutate({ eraId: defaultEra.id, [field]: v })
+    updateEra.mutate({ eraId: defaultEra.id, characterId: character.id, [field]: v })
   }
 
   const totalImages = (allImages ?? []).length || character.eras.reduce((sum, e) => sum + e.image_count, 0)
