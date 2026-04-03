@@ -51,6 +51,7 @@ type generateRequest struct {
 	IncludeRefs     bool     `json:"include_refs"`
 	RefImageIDs     []string `json:"ref_image_ids,omitempty"`
 	SourceImageID   string   `json:"source_image_id,omitempty"`
+	PoseImageID     string   `json:"pose_image_id,omitempty"`
 	DenoiseStrength float64  `json:"denoise_strength,omitempty"`
 	PoseID          string   `json:"pose_id,omitempty"`
 	OutfitID        string   `json:"outfit_id,omitempty"`
@@ -89,14 +90,19 @@ func (a *API) handleGenerate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Workflows that require a source image
+	// Workflows that require a source image (img2img-style)
 	requiresSource := req.Workflow == WorkflowSDXLImg2Img ||
 		req.Workflow == WorkflowSDXLPostprocess ||
 		req.Workflow == WorkflowSDXLClothingSwap ||
-		req.Workflow == WorkflowSDXLPoseTransfer ||
 		req.Workflow == WorkflowKontext
 	if requiresSource && req.SourceImageID == "" {
 		writeError(w, http.StatusBadRequest, "source_image_id is required for "+req.Workflow)
+		return
+	}
+
+	// Pose transfer requires a pose reference image
+	if req.Workflow == WorkflowSDXLPoseTransfer && req.PoseImageID == "" {
+		writeError(w, http.StatusBadRequest, "pose_image_id is required for "+req.Workflow)
 		return
 	}
 
@@ -133,7 +139,16 @@ func (a *API) handleGenerate(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	// Source image for img2img, refinement, clothing swap, pose transfer, kontext
+	// Pose reference image for pose transfer
+	if req.PoseImageID != "" {
+		refs = append(refs, bifrost.ReferenceImage{
+			URL:   fmt.Sprintf("http://localhost:%d/api/v1/images/%s", a.Port, req.PoseImageID),
+			Type:  bifrost.RefTypePose,
+			Label: "pose reference",
+		})
+	}
+
+	// Source image for img2img, refinement, clothing swap, kontext
 	if req.SourceImageID != "" {
 		refs = append(refs, bifrost.ReferenceImage{
 			URL:   fmt.Sprintf("http://localhost:%d/api/v1/images/%s", a.Port, req.SourceImageID),
