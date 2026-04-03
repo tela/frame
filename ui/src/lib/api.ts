@@ -462,6 +462,58 @@ export function useBifrostStatus() {
   })
 }
 
+// ===== Prompt Composition (shared prompts package) =====
+
+export interface ComposeRequest {
+  character_id: string
+  era_id?: string
+  job_name: string
+  content_rating?: string
+  setting?: string
+  lighting?: string
+  props?: string
+  lora_trigger?: string
+  lora_style?: string
+  movement?: string
+  camera_motion?: string
+  tempo?: string
+  duration?: string
+  expression_arc?: string
+}
+
+export interface ComposeJobInfo {
+  name: string
+  display_name: string
+  category: string
+  content_rating: string
+  workflow: string
+}
+
+export interface ComposeResponse {
+  prompt: string
+  negative: string
+  blocks: Record<string, string>
+  job: ComposeJobInfo
+}
+
+export interface ListJobsResponse {
+  jobs: ComposeJobInfo[]
+}
+
+export function useComposePrompt() {
+  return useMutation({
+    mutationFn: (req: ComposeRequest) =>
+      postJSON<ComposeResponse>('/api/v1/prompts/compose', req),
+  })
+}
+
+export function usePromptJobs() {
+  return useQuery({
+    queryKey: ['prompts', 'jobs'],
+    queryFn: () => fetchJSON<ListJobsResponse>('/api/v1/prompts/jobs'),
+  })
+}
+
 // ===== Audit Log =====
 
 export interface AuditEvent {
