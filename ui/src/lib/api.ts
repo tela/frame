@@ -18,6 +18,7 @@ import type {
   Dataset,
   DatasetWithStats,
   DatasetImage,
+  Image,
 } from './types'
 import { SEED_CHARACTERS, SEED_MEDIA } from './seed-data'
 
@@ -537,6 +538,14 @@ export function useDeleteTemplate() {
       return fetch(`/api/v1/templates/${id}`, { method: 'DELETE' }).then(r => r.json())
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['templates'] }) },
+  })
+}
+
+export function useImageMeta(imageId: string | null) {
+  return useQuery({
+    queryKey: ['image-meta', imageId],
+    queryFn: () => fetchJSON<Image>(`/api/v1/images/${imageId}/meta`),
+    enabled: !!imageId,
   })
 }
 
