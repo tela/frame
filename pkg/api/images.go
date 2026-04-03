@@ -171,22 +171,31 @@ func (a *API) serveImageFile(w http.ResponseWriter, r *http.Request, imageID str
 func (a *API) getCharacterAvatar(w http.ResponseWriter, r *http.Request) {
 	charID := r.PathValue("id")
 
-	images, err := a.Images.ListByCharacter(charID, nil)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if len(images) == 0 {
-		writeError(w, http.StatusNotFound, "no images for character")
-		return
+	// Prefer the most recent favorited image as the avatar
+	var avatarImageID string
+	favorites, err := a.Images.ListFavorites(charID)
+	if err == nil && len(favorites) > 0 {
+		avatarImageID = favorites[0].ImageID // most recent favorite (sorted DESC)
+	} else {
+		// Fall back to most recent image
+		images, err := a.Images.ListByCharacter(charID, nil)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if len(images) == 0 {
+			writeError(w, http.StatusNotFound, "no images for character")
+			return
+		}
+		avatarImageID = images[0].ImageID
 	}
 
-	first := images[0]
 	folderName := charID
 	char, err := a.Characters.Get(charID)
 	if err == nil && char != nil && char.FolderName != "" {
 		folderName = char.FolderName
 	}
-	thumbPath := a.Ingester.ThumbnailPath(first.ImageID, folderName)
+	thumbPath := a.Ingester.ThumbnailPath(avatarImageID, folderName)
+	w.Header().Set("Cache-Control", "no-store")
 	http.ServeFile(w, r, thumbPath)
 }
