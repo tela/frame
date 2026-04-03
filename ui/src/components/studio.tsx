@@ -310,9 +310,6 @@ export function Studio() {
   const handleModeChange = (newMode: StudioMode) => {
     setMode(newMode)
     setWorkflow(defaultWorkflowForMode(newMode))
-    if (newMode === 'generate') {
-      setSourceImageId('')
-    }
   }
 
   const handleRefineImage = (imageId: string) => {
