@@ -152,6 +152,10 @@ func (a *API) toggleFavorite(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	// Set avatar on favorite (not on unfavorite)
+	if req.Favorited {
+		_ = a.Characters.SetAvatarImage(charID, imageID)
+	}
 	writeJSON(w, http.StatusOK, map[string]bool{"favorited": req.Favorited})
 }
 

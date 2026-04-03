@@ -40,6 +40,8 @@ type Character struct {
 	NaturalHairTexture   string `json:"natural_hair_texture"`
 	DistinguishingFeatures string `json:"distinguishing_features"`
 
+	AvatarImageID string `json:"avatar_image_id,omitempty"`
+
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
