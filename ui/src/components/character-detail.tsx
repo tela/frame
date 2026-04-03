@@ -464,6 +464,14 @@ function ProspectImageCard({ ci, characterId, defaultEraId, onToggleFavorite, is
         loading="lazy"
         onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
       />
+      {/* Source badge */}
+      {ci.source && ci.source !== 'manual' && (
+        <span className={`absolute top-2 left-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 ${
+          ci.source === 'comfyui' ? 'bg-on-surface/80 text-background' : 'bg-primary-dim/80 text-background'
+        }`}>
+          {ci.source === 'comfyui' ? 'Generated' : ci.source}
+        </span>
+      )}
       {/* Hover overlay */}
       <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-4">
         <div className="flex justify-end gap-2">
