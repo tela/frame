@@ -1,8 +1,9 @@
 import { useParams, useSearch } from '@tanstack/react-router'
-import { useCharacter, useGenerate, useBifrostStatus, useLoras, useDeleteCharacterImage, useToggleFavorite, thumbUrl, imageUrl } from '@/lib/api'
+import { useCharacter, useGenerate, useBifrostStatus, useLoras, useDeleteCharacterImage, useToggleFavorite, useImageTags, thumbUrl, imageUrl } from '@/lib/api'
 import type { LoRA } from '@/lib/api'
 import { useState, useEffect, useRef } from 'react'
 import { ImagePickerModal } from '@/components/image-picker-modal'
+import { TagPicker } from '@/components/tag-picker'
 import type { Character, EraWithStats } from '@/lib/types'
 
 type Workflow = 'text-to-image' | 'sdxl_text2img' | 'sdxl_character_gen' | 'sdxl_multi_ref' | 'sdxl_clothing_swap' | 'sdxl_pose_transfer' | 'sdxl_img2img' | 'sdxl_quality_postprocess' | 'kontext'
@@ -130,10 +131,14 @@ function buildCharacterPrompt(character: Character & { eras?: EraWithStats[] }, 
   return parts.join(', ')
 }
 
+// Studio modes
+type StudioMode = 'generate' | 'refine' | 'process'
+
 // Intent presets map user actions to Studio configuration
 type StudioIntent = 'headshot' | 'consistent' | 'portrait' | 'full_body' | 'full_body_nude' | 'remix' | 'upscale' | 'clothing_swap'
 
 interface IntentConfig {
+  mode: StudioMode
   workflow: Workflow
   contentRating: ContentRating
   includeRefs: boolean
@@ -142,8 +147,30 @@ interface IntentConfig {
   denoise?: number
 }
 
+const GENERATE_WORKFLOWS: Workflow[] = ['text-to-image', 'sdxl_text2img', 'sdxl_character_gen', 'sdxl_multi_ref']
+const REFINE_WORKFLOWS: Workflow[] = ['sdxl_img2img', 'sdxl_clothing_swap', 'sdxl_pose_transfer', 'kontext']
+const PROCESS_WORKFLOWS: Workflow[] = ['sdxl_quality_postprocess']
+
+function modeForWorkflow(w: Workflow): StudioMode {
+  if (REFINE_WORKFLOWS.includes(w)) return 'refine'
+  if (PROCESS_WORKFLOWS.includes(w)) return 'process'
+  return 'generate'
+}
+
+function defaultWorkflowForMode(mode: StudioMode): Workflow {
+  if (mode === 'refine') return 'sdxl_img2img'
+  if (mode === 'process') return 'sdxl_quality_postprocess'
+  return 'text-to-image'
+}
+
+function workflowsForMode(mode: StudioMode) {
+  const allowed = mode === 'refine' ? REFINE_WORKFLOWS : mode === 'process' ? PROCESS_WORKFLOWS : GENERATE_WORKFLOWS
+  return WORKFLOWS.filter(w => allowed.includes(w.value))
+}
+
 const INTENT_CONFIGS: Record<StudioIntent, IntentConfig> = {
   headshot: {
+    mode: 'generate',
     workflow: 'text-to-image',
     contentRating: 'sfw',
     includeRefs: false,
@@ -151,6 +178,7 @@ const INTENT_CONFIGS: Record<StudioIntent, IntentConfig> = {
     needsSource: false,
   },
   consistent: {
+    mode: 'generate',
     workflow: 'sdxl_character_gen',
     contentRating: 'sfw',
     includeRefs: true,
@@ -158,6 +186,7 @@ const INTENT_CONFIGS: Record<StudioIntent, IntentConfig> = {
     needsSource: false,
   },
   portrait: {
+    mode: 'generate',
     workflow: 'sdxl_character_gen',
     contentRating: 'sfw',
     includeRefs: true,
@@ -165,6 +194,7 @@ const INTENT_CONFIGS: Record<StudioIntent, IntentConfig> = {
     needsSource: false,
   },
   full_body: {
+    mode: 'generate',
     workflow: 'sdxl_character_gen',
     contentRating: 'sfw',
     includeRefs: true,
@@ -172,6 +202,7 @@ const INTENT_CONFIGS: Record<StudioIntent, IntentConfig> = {
     needsSource: false,
   },
   full_body_nude: {
+    mode: 'generate',
     workflow: 'sdxl_character_gen',
     contentRating: 'nsfw',
     includeRefs: true,
@@ -179,14 +210,16 @@ const INTENT_CONFIGS: Record<StudioIntent, IntentConfig> = {
     needsSource: false,
   },
   remix: {
+    mode: 'refine',
     workflow: 'sdxl_img2img',
     contentRating: 'sfw',
-    includeRefs: false,
+    includeRefs: true,
     promptSuffix: '',
     needsSource: true,
-    denoise: 0.6,
+    denoise: 0.35,
   },
   upscale: {
+    mode: 'process',
     workflow: 'sdxl_quality_postprocess',
     contentRating: 'sfw',
     includeRefs: false,
@@ -194,6 +227,7 @@ const INTENT_CONFIGS: Record<StudioIntent, IntentConfig> = {
     needsSource: true,
   },
   clothing_swap: {
+    mode: 'refine',
     workflow: 'sdxl_clothing_swap',
     contentRating: 'nsfw',
     includeRefs: true,
@@ -212,6 +246,7 @@ export function Studio() {
   const deleteImage = useDeleteCharacterImage()
   const toggleFavorite = useToggleFavorite()
 
+  const [mode, setMode] = useState<StudioMode>(sourceParam ? 'refine' : 'generate')
   const [template, setTemplate] = useState('')
   const [prompt, setPrompt] = useState('')
   const [negativePrompt, setNegativePrompt] = useState('')
@@ -247,6 +282,7 @@ export function Studio() {
     const config = intent ? INTENT_CONFIGS[intent] : undefined
 
     if (config) {
+      setMode(config.mode)
       setWorkflow(config.workflow)
       setContentRating(config.contentRating)
       setIncludeEraRefs(config.includeRefs)
@@ -261,14 +297,28 @@ export function Studio() {
       setPrompt(buildCharacterPrompt(character, era))
       if (sourceParam) {
         setSourceImageId(sourceParam)
+        setMode('refine')
         setWorkflow('sdxl_img2img')
       }
     }
   }, [character, era]) // eslint-disable-line react-hooks/exhaustive-deps
   const dim = DIMENSIONS[dimensions]
   const activeLora = (loras ?? []).find((l: LoRA) => l.id === selectedLora)
-  const needsSource = ['sdxl_img2img', 'sdxl_quality_postprocess', 'sdxl_clothing_swap', 'sdxl_pose_transfer', 'kontext'].includes(workflow)
+  const needsSource = mode === 'refine' || mode === 'process'
   const needsRefs = ['sdxl_multi_ref', 'sdxl_character_gen'].includes(workflow)
+  const availableWorkflows = workflowsForMode(mode)
+
+  const handleModeChange = (newMode: StudioMode) => {
+    setMode(newMode)
+    setWorkflow(defaultWorkflowForMode(newMode))
+  }
+
+  const handleRefineImage = (imageId: string) => {
+    setMode('refine')
+    setWorkflow('sdxl_img2img')
+    setSourceImageId(imageId)
+    setDenoiseStrength(0.6)
+  }
 
   const handleGenerate = () => {
     if (!prompt.trim()) return
@@ -370,6 +420,28 @@ export function Studio() {
           </button>
         </div>
 
+        {/* Mode Tabs */}
+        <div className="flex border-b border-border-subtle">
+          {([
+            { value: 'generate' as StudioMode, label: 'Generate', icon: 'auto_awesome' },
+            { value: 'refine' as StudioMode, label: 'Refine', icon: 'tune' },
+            { value: 'process' as StudioMode, label: 'Process', icon: 'construction' },
+          ]).map((m) => (
+            <button
+              key={m.value}
+              onClick={() => handleModeChange(m.value)}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 text-[11px] uppercase tracking-widest font-bold transition-colors ${
+                mode === m.value
+                  ? 'text-on-surface border-b-2 border-on-surface'
+                  : 'text-muted hover:text-on-surface'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">{m.icon}</span>
+              {m.label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-6">
           {/* Workflow Selector */}
           <div className="flex flex-col gap-2">
@@ -380,7 +452,7 @@ export function Studio() {
                 onChange={(e) => setWorkflow(e.target.value as Workflow)}
                 className="w-full appearance-none bg-transparent border border-border-subtle py-2.5 px-3 text-sm focus:outline-none focus:border-primary cursor-pointer"
               >
-                {WORKFLOWS.map((w) => (
+                {availableWorkflows.map((w) => (
                   <option key={w.value} value={w.value}>{w.label}</option>
                 ))}
               </select>
@@ -429,32 +501,34 @@ export function Studio() {
             </div>
           </div>
 
-          {/* Template */}
-          <div className="flex flex-col gap-2">
-            <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Template</label>
-            <div className="relative">
-              <select
-                value={template}
-                onChange={(e) => {
-                  const t = TEMPLATES.find((t) => t.value === e.target.value)
-                  setTemplate(e.target.value)
-                  if (t && t.value) {
-                    const prefix = era?.prompt_prefix ? `${era.prompt_prefix}, ` : ''
-                    setPrompt(prefix + t.prompt)
-                    setNegativePrompt(t.negative)
-                  }
-                }}
-                className="w-full appearance-none bg-transparent border border-border-subtle py-2.5 px-3 text-sm focus:outline-none focus:border-primary cursor-pointer"
-              >
-                {TEMPLATES.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
-              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted text-[18px]">expand_more</span>
+          {/* Template — Generate mode only */}
+          {mode === 'generate' && (
+            <div className="flex flex-col gap-2">
+              <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Template</label>
+              <div className="relative">
+                <select
+                  value={template}
+                  onChange={(e) => {
+                    const t = TEMPLATES.find((t) => t.value === e.target.value)
+                    setTemplate(e.target.value)
+                    if (t && t.value) {
+                      const prefix = era?.prompt_prefix ? `${era.prompt_prefix}, ` : ''
+                      setPrompt(prefix + t.prompt)
+                      setNegativePrompt(t.negative)
+                    }
+                  }}
+                  className="w-full appearance-none bg-transparent border border-border-subtle py-2.5 px-3 text-sm focus:outline-none focus:border-primary cursor-pointer"
+                >
+                  {TEMPLATES.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+                <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted text-[18px]">expand_more</span>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Source Image (for img2img/upscale) */}
+          {/* Source Image (for refine/process modes) */}
           {needsSource && (
             <div className="flex flex-col gap-2">
               <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Source Image</label>
@@ -497,8 +571,8 @@ export function Studio() {
             </div>
           )}
 
-          {/* Reference Images (for multi_ref / txt2img) */}
-          {needsRefs && (
+          {/* Reference Images (generate mode with character_gen workflows) */}
+          {mode === 'generate' && needsRefs && (
             <div className="flex flex-col gap-2">
               <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">References</label>
               <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -535,8 +609,9 @@ export function Studio() {
             </div>
           )}
 
-          {/* LoRA Selector */}
-          <div className="flex flex-col gap-2">
+          {/* LoRA Selector — not in process mode */}
+          {mode !== 'process' && (
+            <div className="flex flex-col gap-2">
             <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">LoRA Adapter</label>
             <div className="relative">
               <select
@@ -575,31 +650,43 @@ export function Studio() {
               </div>
             )}
           </div>
+          )}
 
-          {/* Prompt */}
-          <div className="flex flex-col gap-2">
-            <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted flex justify-between">
-              Prompt
-              <span className="tracking-normal lowercase tabular-nums">{prompt.length}/1000</span>
-            </label>
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              className="w-full h-[140px] resize-none bg-surface border border-border-subtle p-3 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
-              placeholder="Describe the subject, environment, lighting..."
-            />
-          </div>
+          {/* Prompt + Negative — not in process mode */}
+          {mode !== 'process' && (
+            <>
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted flex justify-between">
+                  Prompt
+                  <span className="tracking-normal lowercase tabular-nums">{prompt.length}/1000</span>
+                </label>
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  className="w-full h-[140px] resize-none bg-surface border border-border-subtle p-3 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
+                  placeholder="Describe the subject, environment, lighting..."
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Negative Prompt</label>
+                <textarea
+                  value={negativePrompt}
+                  onChange={(e) => setNegativePrompt(e.target.value)}
+                  className="w-full h-[60px] resize-none bg-surface border border-border-subtle p-3 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
+                  placeholder="What to exclude..."
+                />
+              </div>
+            </>
+          )}
 
-          {/* Negative Prompt */}
-          <div className="flex flex-col gap-2">
-            <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Negative Prompt</label>
-            <textarea
-              value={negativePrompt}
-              onChange={(e) => setNegativePrompt(e.target.value)}
-              className="w-full h-[60px] resize-none bg-surface border border-border-subtle p-3 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
-              placeholder="What to exclude..."
-            />
-          </div>
+          {/* Process mode — simple operation description */}
+          {mode === 'process' && (
+            <div className="bg-surface-low p-4">
+              <p className="text-sm text-primary-dim">
+                Process mode applies non-creative transforms to an existing image. Select a source image above, then click Process to enhance.
+              </p>
+            </div>
+          )}
 
           {/* Parameters */}
           <div className="border-t border-border-subtle pt-4">
@@ -674,11 +761,15 @@ export function Studio() {
         <div className="p-8 border-t border-border-subtle bg-surface/50">
           <button
             onClick={handleGenerate}
-            disabled={!bifrostAvailable || !prompt.trim() || generate.isPending || (needsSource && !sourceImageId) || (needsRefs && !includeEraRefs && selectedRefs.length === 0)}
+            disabled={!bifrostAvailable || (mode !== 'process' && !prompt.trim()) || generate.isPending || (needsSource && !sourceImageId) || (mode === 'generate' && needsRefs && !includeEraRefs && selectedRefs.length === 0)}
             className="w-full bg-accent text-white py-4 font-medium tracking-ui hover:bg-accent/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-            {generate.isPending ? 'Generating...' : `Generate${batchSize > 1 ? ` (${batchSize})` : ''}`}
+            <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+              {mode === 'generate' ? 'auto_awesome' : mode === 'refine' ? 'tune' : 'construction'}
+            </span>
+            {generate.isPending ? 'Processing...' :
+              mode === 'generate' ? `Generate${batchSize > 1 ? ` (${batchSize})` : ''}` :
+              mode === 'refine' ? 'Refine' : 'Process'}
           </button>
         </div>
       </aside>
@@ -751,6 +842,15 @@ export function Studio() {
                           >
                             <span className="material-symbols-outlined text-[18px]">favorite</span>
                           </button>
+                          <SessionImageTagButton imageId={img.id} />
+                        </div>
+                        <div className="flex justify-center">
+                          <button
+                            onClick={() => handleRefineImage(img.id)}
+                            className="px-4 py-1.5 bg-white/90 backdrop-blur-sm rounded-full text-on-surface text-[10px] font-bold uppercase tracking-widest hover:bg-white transition-colors"
+                          >
+                            Refine
+                          </button>
                         </div>
                         <div className="text-white">
                           <div className="text-xs font-body opacity-80 mb-1">{img.timestamp} · Seed: {img.seed}</div>
@@ -791,5 +891,27 @@ export function Studio() {
         }
       `}</style>
     </div>
+  )
+}
+
+function SessionImageTagButton({ imageId }: { imageId: string }) {
+  const [showTags, setShowTags] = useState(false)
+  const { data: imageTags } = useImageTags(showTags ? imageId : '')
+  return (
+    <>
+      <button
+        onClick={() => setShowTags(true)}
+        className="bg-background/90 text-primary p-1.5 hover:text-accent transition-colors"
+        title="Tag"
+      >
+        <span className="material-symbols-outlined text-[18px]">label</span>
+      </button>
+      <TagPicker
+        open={showTags}
+        onClose={() => setShowTags(false)}
+        imageIds={[imageId]}
+        existingTags={(imageTags ?? []).map(t => ({ namespace: t.tag_namespace, value: t.tag_value }))}
+      />
+    </>
   )
 }

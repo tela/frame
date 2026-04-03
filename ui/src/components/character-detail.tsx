@@ -1,11 +1,12 @@
 import { Link, useParams, useNavigate } from '@tanstack/react-router'
-import { useCharacter, useDatasets, useCharacterImages, useFavorites, useToggleFavorite, useIngestImage, useDeleteCharacterImage, useUpdateCharacter, useUpdateEra, useCreateEra, useFigStatus, usePublishToFig, useShoots, useCreateShoot, useShootImages, avatarUrl, thumbUrl } from '@/lib/api'
+import { useCharacter, useDatasets, useCharacterImages, useFavorites, useToggleFavorite, useIngestImage, useDeleteCharacterImage, useUpdateCharacter, useUpdateEra, useCreateEra, useFigStatus, usePublishToFig, useShoots, useCreateShoot, useShootImages, useImageTags, avatarUrl, thumbUrl } from '@/lib/api'
 import { useState, useRef, useEffect } from 'react'
 import { Dropzone } from '@/components/dropzone'
 import { PoseSetDashboard } from '@/components/pose-set-dashboard'
 import { GoSeeLooks } from '@/components/go-see-looks'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ImportModal } from '@/components/import-modal'
+import { TagPicker } from '@/components/tag-picker'
 import type { EraWithStats, CharacterImage, Shoot } from '@/lib/types'
 
 export function CharacterDetail() {
@@ -419,7 +420,10 @@ function ProspectView({ characterId, characterName, status, defaultEraId, eras }
 function ProspectImageCard({ ci, characterId, defaultEraId, onToggleFavorite, isFavorited, onDelete }: {
   ci: CharacterImage; characterId: string; defaultEraId?: string; onToggleFavorite: () => void; isFavorited: boolean; onDelete: () => void
 }) {
+  const [showTags, setShowTags] = useState(false)
+  const { data: imageTags } = useImageTags(showTags ? ci.image_id : '')
   return (
+    <>
     <div className="group relative aspect-square bg-surface-low overflow-hidden">
       <img
         src={thumbUrl(ci.image_id)}
@@ -448,6 +452,12 @@ function ProspectImageCard({ ci, characterId, defaultEraId, onToggleFavorite, is
           >
             <span className="material-symbols-outlined text-on-surface text-base">delete</span>
           </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowTags(true) }}
+            className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
+          >
+            <span className="material-symbols-outlined text-on-surface text-base">label</span>
+          </button>
         </div>
         <div className="flex justify-center">
           <Link
@@ -461,6 +471,13 @@ function ProspectImageCard({ ci, characterId, defaultEraId, onToggleFavorite, is
         </div>
       </div>
     </div>
+    <TagPicker
+      open={showTags}
+      onClose={() => setShowTags(false)}
+      imageIds={[ci.image_id]}
+      existingTags={(imageTags ?? []).map(t => ({ namespace: t.tag_namespace, value: t.tag_value }))}
+    />
+    </>
   )
 }
 

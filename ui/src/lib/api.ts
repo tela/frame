@@ -540,6 +540,16 @@ export function useDeleteTemplate() {
   })
 }
 
+// ===== Image Tags =====
+
+export function useImageTags(imageId: string) {
+  return useQuery({
+    queryKey: ['image-tags', imageId],
+    queryFn: () => fetchJSON<ImageTag[]>(`/api/v1/images/${imageId}/tags`),
+    enabled: !!imageId,
+  })
+}
+
 // ===== Tag Families =====
 
 export function useTagFamilies() {
@@ -1070,7 +1080,7 @@ export function avatarUrl(characterId: string) {
 
 // ===== Wardrobe (Garments) =====
 
-import type { Garment, GarmentDetail, GarmentFacets, Hairstyle, HairstyleDetail, HairstyleFacets, StylistSession, StylistSessionContext, StylistMessage } from './types'
+import type { Garment, GarmentDetail, GarmentFacets, Hairstyle, HairstyleDetail, HairstyleFacets, StylistSession, StylistSessionContext, StylistMessage, ImageTag } from './types'
 
 export interface GarmentListParams {
   q?: string
