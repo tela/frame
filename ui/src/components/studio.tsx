@@ -1,5 +1,5 @@
 import { useParams, useSearch } from '@tanstack/react-router'
-import { useCharacter, useGenerate, useBifrostStatus, useLoras, thumbUrl } from '@/lib/api'
+import { useCharacter, useGenerate, useBifrostStatus, useLoras, useDeleteCharacterImage, useToggleFavorite, thumbUrl, imageUrl } from '@/lib/api'
 import type { LoRA } from '@/lib/api'
 import { useState, useEffect, useRef } from 'react'
 import { ImagePickerModal } from '@/components/image-picker-modal'
@@ -130,13 +130,87 @@ function buildCharacterPrompt(character: Character & { eras?: EraWithStats[] }, 
   return parts.join(', ')
 }
 
+// Intent presets map user actions to Studio configuration
+type StudioIntent = 'headshot' | 'consistent' | 'portrait' | 'full_body' | 'full_body_nude' | 'remix' | 'upscale' | 'clothing_swap'
+
+interface IntentConfig {
+  workflow: Workflow
+  contentRating: ContentRating
+  includeRefs: boolean
+  promptSuffix: string
+  needsSource: boolean
+  denoise?: number
+}
+
+const INTENT_CONFIGS: Record<StudioIntent, IntentConfig> = {
+  headshot: {
+    workflow: 'text-to-image',
+    contentRating: 'sfw',
+    includeRefs: false,
+    promptSuffix: ', front-facing headshot, neutral expression, studio lighting, portrait photography',
+    needsSource: false,
+  },
+  consistent: {
+    workflow: 'sdxl_character_gen',
+    contentRating: 'sfw',
+    includeRefs: true,
+    promptSuffix: '',
+    needsSource: false,
+  },
+  portrait: {
+    workflow: 'sdxl_character_gen',
+    contentRating: 'sfw',
+    includeRefs: true,
+    promptSuffix: ', three-quarter portrait, soft natural lighting, elegant',
+    needsSource: false,
+  },
+  full_body: {
+    workflow: 'sdxl_character_gen',
+    contentRating: 'sfw',
+    includeRefs: true,
+    promptSuffix: ', full body standing pose, clean studio background, professional photography',
+    needsSource: false,
+  },
+  full_body_nude: {
+    workflow: 'sdxl_character_gen',
+    contentRating: 'nsfw',
+    includeRefs: true,
+    promptSuffix: ', full body nude standing, clean studio background, professional photography',
+    needsSource: false,
+  },
+  remix: {
+    workflow: 'sdxl_img2img',
+    contentRating: 'sfw',
+    includeRefs: false,
+    promptSuffix: '',
+    needsSource: true,
+    denoise: 0.6,
+  },
+  upscale: {
+    workflow: 'sdxl_quality_postprocess',
+    contentRating: 'sfw',
+    includeRefs: false,
+    promptSuffix: '',
+    needsSource: true,
+  },
+  clothing_swap: {
+    workflow: 'sdxl_clothing_swap',
+    contentRating: 'nsfw',
+    includeRefs: true,
+    promptSuffix: '',
+    needsSource: true,
+  },
+}
+
 export function Studio() {
   const { characterId, eraId } = useParams({ from: '/characters/$characterId/eras/$eraId/studio' })
-  const { source: sourceParam } = useSearch({ from: '/characters/$characterId/eras/$eraId/studio' })
+  const { intent: intentParam, source: sourceParam } = useSearch({ from: '/characters/$characterId/eras/$eraId/studio' })
   const { data: character } = useCharacter(characterId)
   const { data: bifrostStatus } = useBifrostStatus()
   const { data: loras } = useLoras()
   const generate = useGenerate()
+  const deleteImage = useDeleteCharacterImage()
+  const toggleFavorite = useToggleFavorite()
 
   const [template, setTemplate] = useState('')
   const [prompt, setPrompt] = useState('')
@@ -158,16 +232,38 @@ export function Studio() {
   const [selectedRefs, setSelectedRefs] = useState<string[]>([])
   const [sourceImageId, setSourceImageId] = useState<string>(sourceParam || '')
   const [includeEraRefs, setIncludeEraRefs] = useState(true)
+  const [activeIntent, setActiveIntent] = useState<string>(intentParam || '')
 
   const era = character?.eras.find((e) => e.id === eraId)
   const bifrostAvailable = bifrostStatus?.available ?? false
-  const promptInitialized = useRef(false)
+  const intentApplied = useRef(false)
 
-  // Auto-populate prompt from character + era physical details on first load
+  // Apply intent configuration on first load
   useEffect(() => {
-    if (promptInitialized.current || !character || prompt) return
-    promptInitialized.current = true
-    setPrompt(buildCharacterPrompt(character, era))
+    if (intentApplied.current || !character) return
+    intentApplied.current = true
+
+    const intent = intentParam as StudioIntent | undefined
+    const config = intent ? INTENT_CONFIGS[intent] : undefined
+
+    if (config) {
+      setWorkflow(config.workflow)
+      setContentRating(config.contentRating)
+      setIncludeEraRefs(config.includeRefs)
+      if (config.denoise != null) setDenoiseStrength(config.denoise)
+      if (sourceParam) setSourceImageId(sourceParam)
+
+      // Build prompt from character + intent suffix
+      const charPrompt = buildCharacterPrompt(character, era)
+      setPrompt(charPrompt + config.promptSuffix)
+    } else {
+      // No intent — just populate character prompt
+      setPrompt(buildCharacterPrompt(character, era))
+      if (sourceParam) {
+        setSourceImageId(sourceParam)
+        setWorkflow('sdxl_img2img')
+      }
+    }
   }, [character, era]) // eslint-disable-line react-hooks/exhaustive-deps
   const dim = DIMENSIONS[dimensions]
   const activeLora = (loras ?? []).find((l: LoRA) => l.id === selectedLora)
@@ -216,7 +312,7 @@ export function Studio() {
                 updated[placeholderIdx] = {
                   ...updated[placeholderIdx],
                   id: data.images[i].image_id,
-                  url: thumbUrl(data.images[i].image_id),
+                  url: imageUrl(data.images[i].image_id),
                   status: 'complete',
                 }
               }
@@ -253,6 +349,11 @@ export function Studio() {
             <p className="text-muted text-sm mt-1">
               {character?.display_name || character?.name}{era ? ` — ${era.label}` : ''}
             </p>
+            {activeIntent && (
+              <span className="inline-block mt-2 bg-on-surface text-background text-[10px] font-bold uppercase tracking-widest px-3 py-1">
+                {activeIntent.replace('_', ' ')}
+              </span>
+            )}
             {!bifrostAvailable && (
               <p className="text-accent text-xs mt-2 flex items-center gap-1">
                 <span className="material-symbols-outlined text-[14px]">warning</span>
@@ -606,7 +707,11 @@ export function Studio() {
               <p className="text-sm">Generated images will appear here</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className={`grid gap-6 ${
+              sessionImages.length === 1 ? 'grid-cols-1 max-w-[500px] mx-auto' :
+              sessionImages.length <= 4 ? 'grid-cols-2' :
+              'grid-cols-2 xl:grid-cols-3'
+            }`}>
               {sessionImages.map((img) => (
                 <div key={img.id} className="aspect-[3/4] relative overflow-hidden border border-border-subtle group cursor-pointer bg-background">
                   {img.status === 'generating' ? (
@@ -629,11 +734,22 @@ export function Studio() {
                       />
                       <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-4">
                         <div className="flex justify-end gap-2">
-                          <button className="bg-background/90 text-primary p-1.5 hover:text-accent transition-colors" title="Reject">
-                            <span className="material-symbols-outlined text-[18px]">close</span>
+                          <button
+                            onClick={() => {
+                              deleteImage.mutate({ characterId, imageId: img.id })
+                              setSessionImages(prev => prev.filter(s => s.id !== img.id))
+                            }}
+                            className="bg-background/90 text-primary p-1.5 hover:text-accent transition-colors"
+                            title="Delete"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">delete</span>
                           </button>
-                          <button className="bg-accent/90 text-white p-1.5 hover:bg-accent transition-colors" title="Accept">
-                            <span className="material-symbols-outlined text-[18px]">check</span>
+                          <button
+                            onClick={() => toggleFavorite.mutate({ characterId, imageId: img.id, favorited: true })}
+                            className="bg-accent/90 text-white p-1.5 hover:bg-accent transition-colors"
+                            title="Favorite"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">favorite</span>
                           </button>
                         </div>
                         <div className="text-white">

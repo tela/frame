@@ -71,6 +71,7 @@ const studioRoute = createRoute({
   path: '/characters/$characterId/eras/$eraId/studio',
   component: Studio,
   validateSearch: (search: Record<string, unknown>) => ({
+    intent: (search.intent as string) || undefined,
     source: (search.source as string) || undefined,
   }),
 })

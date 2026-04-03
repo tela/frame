@@ -453,7 +453,7 @@ function ProspectImageCard({ ci, characterId, defaultEraId, onToggleFavorite, is
           <Link
             to="/characters/$characterId/eras/$eraId/studio"
             params={{ characterId, eraId: defaultEraId ?? 'default' }}
-            search={{ source: ci.image_id }}
+            search={{ intent: 'remix', source: ci.image_id }}
             className="px-6 py-2 bg-white/90 backdrop-blur-sm rounded-full text-on-surface text-[10px] font-bold uppercase tracking-widest hover:bg-white transition-colors"
           >
             Remix
