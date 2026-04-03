@@ -232,7 +232,7 @@ export function Studio() {
   const [selectedRefs, setSelectedRefs] = useState<string[]>([])
   const [sourceImageId, setSourceImageId] = useState<string>(sourceParam || '')
   const [includeEraRefs, setIncludeEraRefs] = useState(true)
-  const [activeIntent, setActiveIntent] = useState<string>(intentParam || '')
+  const activeIntent = intentParam || ''
 
   const era = character?.eras.find((e) => e.id === eraId)
   const bifrostAvailable = bifrostStatus?.available ?? false
