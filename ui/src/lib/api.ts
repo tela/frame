@@ -479,6 +479,11 @@ export interface ComposeRequest {
   tempo?: string
   duration?: string
   expression_arc?: string
+  outfit_top?: string
+  outfit_bottom?: string
+  outfit_shoes?: string
+  outfit_accessories?: string
+  outfit_full?: string
 }
 
 export interface ComposeJobInfo {

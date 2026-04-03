@@ -11,17 +11,31 @@ type Workflow = 'text-to-image' | 'sdxl_text2img' | 'sdxl_character_gen' | 'sdxl
 type Tier = 'cheap' | 'complex' | 'frontier'
 type ContentRating = 'sfw' | 'nsfw'
 
-// Job-to-intent mapping: which jobs drive which Studio modes
+// Job category → Studio mode mapping
 const JOB_MODE_MAP: Record<string, StudioMode> = {
   identity: 'generate',
   physicality: 'generate',
   outfit: 'generate',
   detail: 'generate',
+  wardrobe: 'refine',
   refine: 'refine',
+  video: 'generate',
+  artistic: 'process',
 }
 
-// Jobs that need a source image (refinement workflows)
-const REFINE_JOBS = new Set(['refine_subtle', 'refine_style_shift', 'refine_expression', 'refine_undress'])
+// Category display order and labels for the job selector optgroups
+const JOB_CATEGORY_LABELS: Record<string, string> = {
+  identity: 'Identity',
+  physicality: 'Physicality',
+  outfit: 'Standard Outfits',
+  detail: 'Detail Shots',
+  wardrobe: 'Wardrobe',
+  refine: 'Refinement',
+  video: 'Video',
+  artistic: 'Artistic',
+}
+
+const JOB_CATEGORY_ORDER = ['identity', 'physicality', 'outfit', 'detail', 'wardrobe', 'refine', 'video', 'artistic']
 
 const WORKFLOWS: { value: Workflow; label: string; description: string }[] = [
   { value: 'text-to-image', label: 'Flux Text-to-Image', description: 'Fast SFW headshots via Flux (~3s)' },
@@ -478,8 +492,8 @@ export function Studio() {
             </div>
           </div>
 
-          {/* Job Selector — Generate mode only */}
-          {mode === 'generate' && (
+          {/* Job Selector */}
+          {(
             <div className="flex flex-col gap-2">
               <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Job</label>
               <div className="relative">
@@ -491,6 +505,8 @@ export function Studio() {
                     if (jobName && character) {
                       const job = (jobsData?.jobs ?? []).find((j: ComposeJobInfo) => j.name === jobName)
                       if (job) {
+                        const jobMode = JOB_MODE_MAP[job.category] || 'generate'
+                        if (jobMode !== mode) setMode(jobMode)
                         setContentRating(job.content_rating as ContentRating)
                         setWorkflow(job.workflow as Workflow)
                       }
@@ -511,13 +527,19 @@ export function Studio() {
                   className="w-full appearance-none bg-transparent border border-border-subtle py-2.5 px-3 text-sm focus:outline-none focus:border-primary cursor-pointer"
                 >
                   <option value="">Custom</option>
-                  {(jobsData?.jobs ?? [])
-                    .filter((j: ComposeJobInfo) => (JOB_MODE_MAP[j.category] || 'generate') === 'generate')
-                    .sort((a: ComposeJobInfo, b: ComposeJobInfo) => a.display_name.localeCompare(b.display_name))
-                    .map((j: ComposeJobInfo) => (
-                      <option key={j.name} value={j.name}>
-                        {j.display_name} {j.content_rating === 'nsfw' ? '(NSFW)' : ''}
-                      </option>
+                  {JOB_CATEGORY_ORDER
+                    .filter((cat) => (jobsData?.jobs ?? []).some((j: ComposeJobInfo) => j.category === cat))
+                    .map((cat) => (
+                      <optgroup key={cat} label={JOB_CATEGORY_LABELS[cat] || cat}>
+                        {(jobsData?.jobs ?? [])
+                          .filter((j: ComposeJobInfo) => j.category === cat)
+                          .sort((a: ComposeJobInfo, b: ComposeJobInfo) => a.display_name.localeCompare(b.display_name))
+                          .map((j: ComposeJobInfo) => (
+                            <option key={j.name} value={j.name}>
+                              {j.display_name} {j.content_rating === 'nsfw' ? '(NSFW)' : ''}
+                            </option>
+                          ))}
+                      </optgroup>
                     ))}
                 </select>
                 <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted text-[18px]">expand_more</span>

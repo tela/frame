@@ -15,7 +15,7 @@ type composeRequest struct {
 	JobName       string `json:"job_name"`
 	ContentRating string `json:"content_rating,omitempty"`
 
-	// Optional overrides for scene/style/motion blocks
+	// Optional overrides for scene/style/motion/outfit blocks
 	Setting       string `json:"setting,omitempty"`
 	Lighting      string `json:"lighting,omitempty"`
 	Props         string `json:"props,omitempty"`
@@ -26,6 +26,13 @@ type composeRequest struct {
 	Tempo         string `json:"tempo,omitempty"`
 	Duration      string `json:"duration,omitempty"`
 	ExpressionArc string `json:"expression_arc,omitempty"`
+
+	// Outfit — for standard outfit and wardrobe jobs
+	OutfitTop         string `json:"outfit_top,omitempty"`
+	OutfitBottom      string `json:"outfit_bottom,omitempty"`
+	OutfitShoes       string `json:"outfit_shoes,omitempty"`
+	OutfitAccessories string `json:"outfit_accessories,omitempty"`
+	OutfitFull        string `json:"outfit_full,omitempty"` // override: complete outfit description
 }
 
 type composeResponse struct {
@@ -114,6 +121,14 @@ func (a *API) handleComposePrompt(w http.ResponseWriter, r *http.Request) {
 		ExpressionArc: req.ExpressionArc,
 	}
 
+	outfitData := prompts.OutfitData{
+		Top:         req.OutfitTop,
+		Bottom:      req.OutfitBottom,
+		Shoes:       req.OutfitShoes,
+		Accessories: req.OutfitAccessories,
+		FullDesc:    req.OutfitFull,
+	}
+
 	// Determine content rating
 	rating := prompts.SFW
 	if req.ContentRating == "nsfw" {
@@ -126,6 +141,7 @@ func (a *API) handleComposePrompt(w http.ResponseWriter, r *http.Request) {
 		Style:         styleData,
 		Scene:         sceneData,
 		Motion:        motionData,
+		Outfit:        outfitData,
 		ContentRating: rating,
 	}
 
