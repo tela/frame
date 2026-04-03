@@ -331,6 +331,52 @@ func (s *Store) ListFavorites(characterID string) ([]CharacterImage, error) {
 	return scanCIRows(rows)
 }
 
+// ImageStats holds aggregate counts for a character's images.
+type ImageStats struct {
+	Total       int            `json:"total"`
+	BySource    map[string]int `json:"by_source"`
+	BySetType   map[string]int `json:"by_set_type"`
+	ByTriage    map[string]int `json:"by_triage"`
+	HasFaceRef  bool           `json:"has_face_ref"`
+	HasBodyRef  bool           `json:"has_body_ref"`
+}
+
+// GetImageStats returns aggregate counts for a character's images.
+func (s *Store) GetImageStats(characterID string) (*ImageStats, error) {
+	stats := &ImageStats{
+		BySource:  map[string]int{},
+		BySetType: map[string]int{},
+		ByTriage:  map[string]int{},
+	}
+
+	rows, err := s.db.Query(`
+		SELECT COALESCE(i.source, 'manual'), ci.set_type, ci.triage_status, ci.ref_type
+		FROM character_images ci
+		LEFT JOIN images i ON i.id = ci.image_id
+		WHERE ci.character_id = ?`, characterID)
+	if err != nil {
+		return nil, fmt.Errorf("image stats: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var source, setType, triage string
+		var refType *string
+		if err := rows.Scan(&source, &setType, &triage, &refType); err != nil {
+			return nil, fmt.Errorf("scan image stats: %w", err)
+		}
+		stats.Total++
+		stats.BySource[source]++
+		stats.BySetType[setType]++
+		stats.ByTriage[triage]++
+		if refType != nil {
+			if *refType == "face" { stats.HasFaceRef = true }
+			if *refType == "body" { stats.HasBodyRef = true }
+		}
+	}
+	return stats, rows.Err()
+}
+
 // DeleteCharacterImage removes a character_images association and the underlying image record.
 func (s *Store) DeleteCharacterImage(imageID, characterID string) error {
 	tx, err := s.db.Begin()
