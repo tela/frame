@@ -1,8 +1,9 @@
 import { useParams, useSearch } from '@tanstack/react-router'
-import { useCharacter, useGenerate, useBifrostStatus, useLoras, useDeleteCharacterImage, useToggleFavorite, thumbUrl, imageUrl } from '@/lib/api'
+import { useCharacter, useGenerate, useBifrostStatus, useLoras, useDeleteCharacterImage, useToggleFavorite, useImageTags, thumbUrl, imageUrl } from '@/lib/api'
 import type { LoRA } from '@/lib/api'
 import { useState, useEffect, useRef } from 'react'
 import { ImagePickerModal } from '@/components/image-picker-modal'
+import { TagPicker } from '@/components/tag-picker'
 import type { Character, EraWithStats } from '@/lib/types'
 
 type Workflow = 'text-to-image' | 'sdxl_text2img' | 'sdxl_character_gen' | 'sdxl_multi_ref' | 'sdxl_clothing_swap' | 'sdxl_pose_transfer' | 'sdxl_img2img' | 'sdxl_quality_postprocess' | 'kontext'
@@ -841,6 +842,7 @@ export function Studio() {
                           >
                             <span className="material-symbols-outlined text-[18px]">favorite</span>
                           </button>
+                          <SessionImageTagButton imageId={img.id} />
                         </div>
                         <div className="flex justify-center">
                           <button
@@ -889,5 +891,27 @@ export function Studio() {
         }
       `}</style>
     </div>
+  )
+}
+
+function SessionImageTagButton({ imageId }: { imageId: string }) {
+  const [showTags, setShowTags] = useState(false)
+  const { data: imageTags } = useImageTags(showTags ? imageId : '')
+  return (
+    <>
+      <button
+        onClick={() => setShowTags(true)}
+        className="bg-background/90 text-primary p-1.5 hover:text-accent transition-colors"
+        title="Tag"
+      >
+        <span className="material-symbols-outlined text-[18px]">label</span>
+      </button>
+      <TagPicker
+        open={showTags}
+        onClose={() => setShowTags(false)}
+        imageIds={[imageId]}
+        existingTags={(imageTags ?? []).map(t => ({ namespace: t.tag_namespace, value: t.tag_value }))}
+      />
+    </>
   )
 }
