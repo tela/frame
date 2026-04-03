@@ -67,6 +67,7 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("PATCH /api/v1/characters/{id}/images/{imageId}", a.updateCharacterImage)
 	mux.HandleFunc("DELETE /api/v1/characters/{id}/images/{imageId}", a.deleteCharacterImage)
 	mux.HandleFunc("PUT /api/v1/characters/{id}/images/bulk", a.bulkUpdateCharacterImages)
+	mux.HandleFunc("GET /api/v1/characters/{id}/images/stats", a.getImageStats)
 	mux.HandleFunc("GET /api/v1/characters/{id}/images/pending", a.listPendingImages)
 	mux.HandleFunc("GET /api/v1/characters/{id}/avatar", a.getCharacterAvatar)
 
