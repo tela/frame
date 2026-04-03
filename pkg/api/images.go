@@ -95,6 +95,20 @@ func (a *API) handleIngest(w http.ResponseWriter, r *http.Request, charID string
 	writeJSON(w, status, result)
 }
 
+func (a *API) getImageMeta(w http.ResponseWriter, r *http.Request) {
+	imageID := r.PathValue("id")
+	img, err := a.Images.Get(imageID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if img == nil {
+		writeError(w, http.StatusNotFound, "image not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, img)
+}
+
 func (a *API) getImage(w http.ResponseWriter, r *http.Request) {
 	imageID := r.PathValue("id")
 	a.serveImageFile(w, r, imageID, false)

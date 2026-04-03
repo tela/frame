@@ -91,7 +91,8 @@ func (a *API) Register(mux *http.ServeMux) {
 	// Image search
 	mux.HandleFunc("GET /api/v1/images/search", a.searchImages)
 
-	// Image serving
+	// Image serving & metadata
+	mux.HandleFunc("GET /api/v1/images/{id}/meta", a.getImageMeta)
 	mux.HandleFunc("GET /api/v1/images/{id}", a.getImage)
 	mux.HandleFunc("GET /api/v1/images/{id}/thumb", a.getImageThumb)
 
