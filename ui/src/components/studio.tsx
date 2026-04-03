@@ -1,5 +1,5 @@
 import { useParams, useSearch } from '@tanstack/react-router'
-import { useCharacter, useGenerate, useBifrostStatus, useLoras, thumbUrl } from '@/lib/api'
+import { useCharacter, useGenerate, useBifrostStatus, useLoras, useDeleteCharacterImage, useToggleFavorite, thumbUrl, imageUrl } from '@/lib/api'
 import type { LoRA } from '@/lib/api'
 import { useState, useEffect, useRef } from 'react'
 import { ImagePickerModal } from '@/components/image-picker-modal'
@@ -310,7 +310,7 @@ export function Studio() {
                 updated[placeholderIdx] = {
                   ...updated[placeholderIdx],
                   id: data.images[i].image_id,
-                  url: thumbUrl(data.images[i].image_id),
+                  url: imageUrl(data.images[i].image_id),
                   status: 'complete',
                 }
               }
@@ -705,7 +705,11 @@ export function Studio() {
               <p className="text-sm">Generated images will appear here</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className={`grid gap-6 ${
+              sessionImages.length === 1 ? 'grid-cols-1 max-w-[500px] mx-auto' :
+              sessionImages.length <= 4 ? 'grid-cols-2' :
+              'grid-cols-2 xl:grid-cols-3'
+            }`}>
               {sessionImages.map((img) => (
                 <div key={img.id} className="aspect-[3/4] relative overflow-hidden border border-border-subtle group cursor-pointer bg-background">
                   {img.status === 'generating' ? (
