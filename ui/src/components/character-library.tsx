@@ -123,10 +123,11 @@ function CharacterCard({ character }: { character: Character }) {
       params={{ characterId: character.id }}
       className="group cursor-pointer flex flex-col gap-4"
     >
-      <div className="w-full aspect-[3/4] bg-surface-low overflow-hidden rounded relative">
+      <div className="w-full aspect-[3/4] bg-surface-low overflow-hidden rounded relative flex items-center justify-center">
+        <span className="material-symbols-outlined text-5xl text-muted/20 absolute">person</span>
         <img
           alt={`Portrait of ${character.display_name || character.name}`}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover relative z-[1]"
           src={avatarUrl(character.id)}
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = 'none'
