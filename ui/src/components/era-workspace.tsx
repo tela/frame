@@ -62,7 +62,7 @@ export function EraWorkspace() {
     return <div className="p-12 text-muted text-[15px]">Era not found</div>
   }
 
-  const pendingCount = 0 // TODO: derive from image query
+  const pendingCount = (eraImages ?? []).filter(ci => ci.triage_status === 'pending').length
 
   const handleFileDrop = (files: File[]) => {
     setUploadStatus(`Uploading ${files.length} file(s)...`)
