@@ -220,7 +220,30 @@ export function useToggleFavorite() {
   return useMutation({
     mutationFn: ({ characterId, imageId, favorited }: { characterId: string; imageId: string; favorited: boolean }) =>
       postJSON<{ favorited: boolean }>(`/api/v1/characters/${characterId}/images/${imageId}/favorite`, { favorited }),
-    onSuccess: (_, vars) => {
+    onMutate: async (vars) => {
+      const key = ['characters', vars.characterId, 'favorites']
+      await qc.cancelQueries({ queryKey: key })
+      const previous = qc.getQueryData<CharacterImage[]>(key)
+      if (vars.favorited) {
+        // Optimistic add: get the image from the images query and prepend
+        const allImages = qc.getQueryData<CharacterImage[]>(['characters', vars.characterId, 'images']) ?? []
+        const image = allImages.find(i => i.image_id === vars.imageId)
+        if (image) {
+          qc.setQueryData<CharacterImage[]>(key, [image, ...(previous ?? [])])
+        }
+      } else {
+        // Optimistic remove
+        qc.setQueryData<CharacterImage[]>(key, (previous ?? []).filter(i => i.image_id !== vars.imageId))
+      }
+      return { previous }
+    },
+    onError: (_err, vars, context) => {
+      // Roll back on error
+      if (context?.previous) {
+        qc.setQueryData(['characters', vars.characterId, 'favorites'], context.previous)
+      }
+    },
+    onSettled: (_, _err, vars) => {
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'favorites'] })
     },
   })
