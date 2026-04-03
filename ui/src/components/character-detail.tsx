@@ -325,14 +325,34 @@ function ProspectView({ characterId, characterName, status, defaultEraId, eras }
               <span className="text-[10px] font-bold uppercase tracking-widest">Develop Character</span>
             </button>
           )}
-          <Link
-            to="/characters/$characterId/eras/$eraId/studio"
-            params={{ characterId, eraId: defaultEraId ?? 'default' }}
-            className="flex-1 md:flex-none flex items-center justify-center gap-3 px-8 py-3 bg-on-surface text-background hover:opacity-90 transition-opacity"
-          >
-            <span className="material-symbols-outlined text-lg">auto_awesome</span>
-            <span className="text-[10px] font-bold uppercase tracking-widest">Generate</span>
-          </Link>
+          <div className="flex-1 md:flex-none flex">
+            <Link
+              to="/characters/$characterId/eras/$eraId/studio"
+              params={{ characterId, eraId: defaultEraId ?? 'default' }}
+              search={{ intent: 'headshot' }}
+              className="flex items-center justify-center gap-2 px-5 py-3 bg-on-surface text-background hover:opacity-90 transition-opacity"
+            >
+              <span className="material-symbols-outlined text-[16px]">face</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest">Headshot</span>
+            </Link>
+            <Link
+              to="/characters/$characterId/eras/$eraId/studio"
+              params={{ characterId, eraId: defaultEraId ?? 'default' }}
+              search={{ intent: 'full_body' }}
+              className="flex items-center justify-center gap-2 px-5 py-3 bg-on-surface text-background hover:opacity-90 transition-opacity border-l border-background/20"
+            >
+              <span className="material-symbols-outlined text-[16px]">person</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest">Full Body</span>
+            </Link>
+            <Link
+              to="/characters/$characterId/eras/$eraId/studio"
+              params={{ characterId, eraId: defaultEraId ?? 'default' }}
+              className="flex items-center justify-center gap-2 px-5 py-3 bg-on-surface text-background hover:opacity-90 transition-opacity border-l border-background/20"
+            >
+              <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest">Studio</span>
+            </Link>
+          </div>
           <button
             onClick={() => setShowImport(true)}
             className="flex-1 md:flex-none flex items-center justify-center gap-3 px-8 py-3 outline outline-1 outline-border-subtle hover:bg-surface-low transition-colors text-on-surface"
@@ -471,14 +491,22 @@ function ProspectImageCard({ ci, characterId, defaultEraId, onToggleFavorite, is
             <span className="material-symbols-outlined text-on-surface text-base">label</span>
           </button>
         </div>
-        <div className="flex justify-center">
+        <div className="flex justify-center gap-2">
           <Link
             to="/characters/$characterId/eras/$eraId/studio"
             params={{ characterId, eraId: defaultEraId ?? 'default' }}
             search={{ intent: 'remix', source: ci.image_id }}
-            className="px-6 py-2 bg-white/90 backdrop-blur-sm rounded-full text-on-surface text-[10px] font-bold uppercase tracking-widest hover:bg-white transition-colors"
+            className="px-4 py-1.5 bg-white/90 backdrop-blur-sm rounded-full text-on-surface text-[10px] font-bold uppercase tracking-widest hover:bg-white transition-colors"
           >
             Remix
+          </Link>
+          <Link
+            to="/characters/$characterId/eras/$eraId/studio"
+            params={{ characterId, eraId: defaultEraId ?? 'default' }}
+            search={{ intent: 'upscale', source: ci.image_id }}
+            className="px-4 py-1.5 bg-white/90 backdrop-blur-sm rounded-full text-on-surface text-[10px] font-bold uppercase tracking-widest hover:bg-white transition-colors"
+          >
+            Upscale
           </Link>
         </div>
       </div>

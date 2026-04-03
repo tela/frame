@@ -152,11 +152,6 @@ const GENERATE_WORKFLOWS: Workflow[] = ['text-to-image', 'sdxl_text2img', 'sdxl_
 const REFINE_WORKFLOWS: Workflow[] = ['sdxl_img2img', 'sdxl_clothing_swap', 'sdxl_pose_transfer', 'kontext']
 const PROCESS_WORKFLOWS: Workflow[] = ['sdxl_quality_postprocess']
 
-function _modeForWorkflow(w: Workflow): StudioMode {
-  if (REFINE_WORKFLOWS.includes(w)) return 'refine'
-  if (PROCESS_WORKFLOWS.includes(w)) return 'process'
-  return 'generate'
-}
 
 function defaultWorkflowForMode(mode: StudioMode): Workflow {
   if (mode === 'refine') return 'sdxl_img2img'
