@@ -11,8 +11,12 @@ import (
 )
 
 type exportRequest struct {
-	OutputDir string `json:"output_dir"`
-	Format    string `json:"format,omitempty"` // original (default), png, jpg
+	OutputDir        string `json:"output_dir"`
+	Format           string `json:"format,omitempty"`            // "original" (default) — format conversion not yet supported
+	UseCharCaptions  bool   `json:"use_char_captions,omitempty"` // fall back to character_images.caption if dataset caption is empty
+	NamingConvention string `json:"naming,omitempty"`            // "id" (default), "sequential"
+	RepeatCount      int    `json:"repeat_count,omitempty"`      // Kohya repeat count — creates {n}_{classtoken} subfolder
+	ClassToken       string `json:"class_token,omitempty"`       // Kohya class token, e.g. "sks woman"
 }
 
 type exportResult struct {
@@ -21,6 +25,7 @@ type exportResult struct {
 	Exported  int    `json:"exported"`
 	Skipped   int    `json:"skipped"`
 	Errors    int    `json:"errors"`
+	Captions  int    `json:"captions"`
 }
 
 func (a *API) exportDataset(w http.ResponseWriter, r *http.Request) {
@@ -34,9 +39,6 @@ func (a *API) exportDataset(w http.ResponseWriter, r *http.Request) {
 	if req.OutputDir == "" {
 		writeError(w, http.StatusBadRequest, "output_dir is required")
 		return
-	}
-	if req.Format == "" {
-		req.Format = "original"
 	}
 
 	// Verify dataset exists
@@ -57,17 +59,24 @@ func (a *API) exportDataset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create output directory
-	if err := os.MkdirAll(req.OutputDir, 0755); err != nil {
+	// Determine output directory — Kohya format uses {n}_{class} subfolder
+	outputDir := req.OutputDir
+	if req.RepeatCount > 0 && req.ClassToken != "" {
+		subdir := fmt.Sprintf("%d_%s", req.RepeatCount, req.ClassToken)
+		outputDir = filepath.Join(req.OutputDir, subdir)
+	}
+
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Sprintf("create output dir: %v", err))
 		return
 	}
 
 	result := exportResult{
 		DatasetID: dsID,
-		OutputDir: req.OutputDir,
+		OutputDir: outputDir,
 	}
 
+	seqNum := 0
 	for _, dsImg := range images {
 		if !dsImg.Included {
 			result.Skipped++
@@ -89,12 +98,15 @@ func (a *API) exportDataset(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Determine output filename
-		baseName := dsImg.ImageID
-		ext := "." + img.Format
-		if req.Format != "original" {
-			ext = "." + req.Format
+		seqNum++
+		var baseName string
+		if req.NamingConvention == "sequential" {
+			baseName = fmt.Sprintf("%04d", seqNum)
+		} else {
+			baseName = dsImg.ImageID
 		}
-		outPath := filepath.Join(req.OutputDir, baseName+ext)
+		ext := "." + img.Format
+		outPath := filepath.Join(outputDir, baseName+ext)
 
 		// Copy the file
 		if err := copyFile(srcPath, outPath); err != nil {
@@ -102,11 +114,24 @@ func (a *API) exportDataset(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		// Write caption sidecar if caption exists
+		// Resolve caption: dataset caption > character caption > none
+		caption := ""
 		if dsImg.Caption != nil && *dsImg.Caption != "" {
-			captionPath := filepath.Join(req.OutputDir, baseName+".txt")
-			if err := os.WriteFile(captionPath, []byte(*dsImg.Caption), 0644); err != nil {
+			caption = *dsImg.Caption
+		} else if req.UseCharCaptions {
+			ci, _ := a.Images.GetCharacterImage(dsImg.ImageID)
+			if ci != nil && ci.Caption != nil && *ci.Caption != "" {
+				caption = *ci.Caption
+			}
+		}
+
+		// Write caption sidecar
+		if caption != "" {
+			captionPath := filepath.Join(outputDir, baseName+".txt")
+			if err := os.WriteFile(captionPath, []byte(caption), 0644); err != nil {
 				// Non-fatal — image was exported, caption failed
+			} else {
+				result.Captions++
 			}
 		}
 
@@ -115,7 +140,7 @@ func (a *API) exportDataset(w http.ResponseWriter, r *http.Request) {
 
 	if a.Audit != nil {
 		a.Audit.Log("dataset", dsID, "exported", nil, nil, nil,
-			map[string]string{"output_dir": req.OutputDir, "exported": fmt.Sprintf("%d", result.Exported)})
+			map[string]string{"output_dir": outputDir, "exported": fmt.Sprintf("%d", result.Exported)})
 	}
 
 	writeJSON(w, http.StatusOK, result)
@@ -138,7 +163,6 @@ func (a *API) resolveImagePath(imageID, format string) string {
 func copyFile(src, dst string) error {
 	// If src doesn't exist, check without extension variants
 	if _, err := os.Stat(src); os.IsNotExist(err) {
-		// Try common extensions
 		dir := filepath.Dir(src)
 		base := strings.TrimSuffix(filepath.Base(src), filepath.Ext(src))
 		for _, ext := range []string{".png", ".jpg", ".jpeg", ".webp"} {
