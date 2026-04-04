@@ -1,6 +1,7 @@
 import { Outlet } from '@tanstack/react-router'
 import { NavSidebar } from '@/components/nav-sidebar'
 import { StylistDrawerProvider } from '@/components/stylist-drawer'
+import { ToastContainer } from '@/components/toast'
 
 export function RootLayout() {
   return (
@@ -11,6 +12,7 @@ export function RootLayout() {
           <Outlet />
         </main>
       </div>
+      <ToastContainer />
     </StylistDrawerProvider>
   )
 }
