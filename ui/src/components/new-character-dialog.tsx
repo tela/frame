@@ -4,118 +4,18 @@ import { useCreateCharacter, useIngestImage, useGenerate, useDeleteCharacterImag
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import type { Character } from '@/lib/types'
+import {
+  EYE_COLORS, ETHNICITIES, HAIR_TEXTURES, HAIR_COLORS, GENDERS, ERA_PRESETS,
+  generateRandomName, randomFrom,
+} from '@/components/character-name-data'
 
 interface Props {
   open: boolean
   onClose: () => void
 }
 
-const FEMALE_NAMES = [
-  // Classic / European
-  'Celeste', 'Isolde', 'Vesper', 'Freya', 'Aurelie', 'Esme', 'Neve', 'Seraphina',
-  'Ingrid', 'Aria', 'Lyra', 'Petra', 'Elowen', 'Ophelia', 'Cressida', 'Evangeline',
-  'Genevieve', 'Isadora', 'Leontine', 'Margaux', 'Cosette', 'Vivienne', 'Odette',
-  'Sabine', 'Astrid', 'Elara', 'Dahlia', 'Coralie', 'Lucienne', 'Mirabelle',
-  'Theodora', 'Cassiopeia', 'Delphine', 'Fiora', 'Giselle', 'Helena', 'Juliette',
-  // Modern / Unisex-leaning
-  'Marlowe', 'Wren', 'Lark', 'Maren', 'Sutton', 'Briar', 'Sloane', 'Lennon',
-  'Rowan', 'Sable', 'Tatum', 'Blaise', 'Remi', 'Zoey', 'Harlow', 'Piper',
-  // East Asian
-  'Mei', 'Yuna', 'Sakura', 'Hana', 'Suki', 'Rin', 'Kaede', 'Aiko', 'Mina',
-  // South Asian
-  'Priya', 'Ananya', 'Kavya', 'Zara', 'Meera', 'Devi', 'Nisha', 'Saanvi',
-  // Latin / Mediterranean
-  'Valentina', 'Catalina', 'Paloma', 'Marisol', 'Solana', 'Ximena', 'Camila', 'Lúcia',
-  // African
-  'Amara', 'Zuri', 'Nia', 'Ayo', 'Imani', 'Kaya', 'Adaeze', 'Makena',
-  // Middle Eastern / North African
-  'Layla', 'Yasmin', 'Soraya', 'Farah', 'Nadira', 'Amira', 'Samira', 'Leila',
-  // Eastern European
-  'Katya', 'Milena', 'Anya', 'Dagny', 'Ilona', 'Mila', 'Sasha', 'Natasha',
-  // Nordic / Celtic
-  'Sigrid', 'Eira', 'Saoirse', 'Niamh', 'Brigid', 'Runa', 'Thora', 'Solveig',
-]
-
-const MALE_NAMES = [
-  'Elias', 'Soren', 'Caspian', 'Orion', 'Stellan', 'Dashiell', 'Theron', 'Lennox',
-  'Callum', 'Rhys', 'Felix', 'Hugo', 'Silas', 'Jasper', 'Kael', 'Atticus',
-  'Bastian', 'Cassian', 'Dorian', 'Emeric', 'Finnian', 'Gideon', 'Hadrian',
-  'Idris', 'Julian', 'Kai', 'Leander', 'Milo', 'Nikolai', 'Oskar', 'Rafael',
-  'Severin', 'Tobias', 'Valor', 'Xavier', 'Yves', 'Zephyr', 'Ronan', 'Tarquin',
-  'Alaric', 'Dante', 'Lysander', 'Phineas', 'Theo', 'Arlo', 'Remy', 'Lucian',
-]
-
-const ALL_FIRST_NAMES = [...FEMALE_NAMES, ...MALE_NAMES]
-
-const LAST_NAMES = [
-  'Noir', 'Vance', 'Thorne', 'Ashford', 'Blackwell', 'Crane', 'Mercer', 'Sterling',
-  'Volkov', 'Delacroix', 'Graves', 'Hartwell', 'Langley', 'Mortimer', 'Sinclair', 'Wren',
-  'Beaumont', 'Castellano', 'Fairfax', 'Holloway', 'Kingsley', 'Navarro', 'Prescott', 'Ravenswood',
-  'Sato', 'Thornberry', 'Whitmore', 'Yi', 'Zoltan', 'Okafor', 'Chen', 'Moreau',
-]
-
-const EYE_COLORS = ['Amber', 'Blue', 'Brown', 'Gray', 'Green', 'Hazel', 'Dark Brown', 'Black']
-
-const ETHNICITIES = [
-  'East Asian', 'Southeast Asian', 'South Asian', 'Central Asian',
-  'Middle Eastern', 'North African', 'West African', 'East African', 'Southern African',
-  'Northern European', 'Southern European', 'Eastern European', 'Western European',
-  'Indigenous American', 'Latin American', 'Caribbean',
-  'Pacific Islander', 'Aboriginal Australian',
-  'Mixed / Multiracial',
-]
-
-const HAIR_TEXTURES = [
-  { value: 'straight', label: 'Straight (Type 1)' },
-  { value: 'wavy', label: 'Wavy (Type 2)' },
-  { value: 'curly', label: 'Curly (Type 3)' },
-  { value: 'coily', label: 'Coily (Type 4)' },
-  { value: 'shaven', label: 'Alopecia / Shaven' },
-]
-
-const HAIR_COLORS = [
-  'Black', 'Dark Brown', 'Medium Brown', 'Light Brown', 'Auburn',
-  'Red', 'Strawberry Blonde', 'Blonde', 'Platinum Blonde', 'Gray', 'White',
-]
-
-const GENDERS = ['Female', 'Male', 'Non-Binary', 'Fluid'] as const
-
-const ERA_PRESETS = [
-  { label: 'Young Child', ageRange: '8-9' },
-  { label: 'Older Child', ageRange: '10-11' },
-  { label: 'Early Teen', ageRange: '12-13' },
-  { label: 'Mid Teen', ageRange: '14-15' },
-  { label: 'Teen', ageRange: '16-17' },
-  { label: 'Late Teen', ageRange: '18-20' },
-  { label: 'Young Adult', ageRange: '21-25' },
-  { label: 'Early Prime', ageRange: '26-32' },
-  { label: 'Late Prime', ageRange: '33-40' },
-  { label: 'Midlife', ageRange: '41-50' },
-  { label: 'Senior', ageRange: '51-65' },
-  { label: 'Elder', ageRange: '66+' },
-] as const
-
-function randomFrom(arr: string[], used?: Set<string>): string {
-  if (used) {
-    const available = arr.filter(n => !used.has(n))
-    if (available.length === 0) {
-      used.clear()
-      return arr[Math.floor(Math.random() * arr.length)]
-    }
-    const pick = available[Math.floor(Math.random() * available.length)]
-    used.add(pick)
-    return pick
-  }
-  return arr[Math.floor(Math.random() * arr.length)]
-}
-
-const usedFirstNames = new Set<string>()
-
-function firstNamesForGender(gender: string): string[] {
-  if (gender === 'Female') return FEMALE_NAMES
-  if (gender === 'Male') return MALE_NAMES
-  return ALL_FIRST_NAMES
-}
+// Name data and constants extracted to character-name-data.ts
+// to reduce this file from 900+ lines
 
 type Step = 'identity' | 'physical' | 'firstlook'
 
@@ -335,7 +235,7 @@ export function NewCharacterDialog({ open, onClose }: Props) {
     setDisplayNameOverride(false)
     setGender('Female')
     setSelectedEra(0)
-    usedFirstNames.clear()
+    // Name generation state is in character-name-data module
     setHasRefImages(false)
     setFiles([])
     setEthnicity('')
@@ -433,7 +333,7 @@ export function NewCharacterDialog({ open, onClose }: Props) {
                       />
                       <button
                         type="button"
-                        onClick={() => setFirstName(randomFrom(firstNamesForGender(gender), usedFirstNames))}
+                        onClick={() => { const n = generateRandomName(gender); setFirstName(n.first) }}
                         className="absolute right-0 bottom-2 material-symbols-outlined text-muted/40 hover:text-primary text-[18px] transition-colors"
                         title="Generate random first name"
                       >
