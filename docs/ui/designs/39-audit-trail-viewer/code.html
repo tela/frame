@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Audit Trail Viewer | Editorial Archive</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Instrument+Sans:ital,wght@0,400..700;1,400..700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface-variant": "#5b605f",
+                    "surface-dim": "#d6dbda",
+                    "surface-container-high": "#e6e9e8",
+                    "tertiary": "#486272",
+                    "error": "#9f403d",
+                    "error-container": "#fe8983",
+                    "on-error-container": "#752121",
+                    "on-tertiary-fixed-variant": "#486272",
+                    "secondary": "#5f5f5d",
+                    "primary-container": "#e5e2e1",
+                    "on-tertiary-container": "#3e5868",
+                    "surface-container": "#edeeed",
+                    "secondary-dim": "#535352",
+                    "secondary-container": "#e3e2e0",
+                    "outline": "#777c7b",
+                    "primary": "#5f5e5e",
+                    "inverse-on-surface": "#9d9d9c",
+                    "secondary-fixed-dim": "#d5d4d2",
+                    "error-dim": "#4e0309",
+                    "surface-container-highest": "#dfe3e2",
+                    "on-secondary": "#faf9f6",
+                    "on-secondary-container": "#515250",
+                    "primary-fixed": "#e5e2e1",
+                    "on-primary": "#faf7f6",
+                    "on-background": "#2f3333",
+                    "on-primary-fixed": "#403f3f",
+                    "on-secondary-fixed": "#3f3f3e",
+                    "on-error": "#fff7f6",
+                    "background": "#faf9f8",
+                    "secondary-fixed": "#e3e2e0",
+                    "on-secondary-fixed-variant": "#5b5c5a",
+                    "on-tertiary-fixed": "#2c4655",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-container": "#525151",
+                    "on-tertiary": "#f4faff",
+                    "surface": "#faf9f8",
+                    "on-primary-fixed-variant": "#5c5b5b",
+                    "inverse-primary": "#ffffff",
+                    "tertiary-fixed": "#d0ecff",
+                    "tertiary-container": "#d0ecff",
+                    "surface-bright": "#faf9f8",
+                    "inverse-surface": "#0d0e0e",
+                    "primary-fixed-dim": "#d7d4d3",
+                    "surface-variant": "#dfe3e2",
+                    "on-surface": "#2f3333",
+                    "tertiary-dim": "#3c5666",
+                    "surface-tint": "#5f5e5e",
+                    "primary-dim": "#535252",
+                    "outline-variant": "#aeb3b2",
+                    "tertiary-fixed-dim": "#c2def0",
+                    "surface-container-low": "#f3f4f3"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Newsreader"],
+                    "body": ["Instrument Sans"],
+                    "label": ["Instrument Sans"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+            font-size: 20px;
+        }
+        body {
+            font-family: 'Instrument Sans', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        h1, h2, h3, .serif-italic {
+            font-family: 'Newsreader', serif;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen">
+<!-- TopNavBar -->
+<nav class="flex justify-between items-center w-full px-8 h-20 sticky top-0 z-50 backdrop-blur-md bg-opacity-80 bg-[#FAF9F8] border-b border-opacity-10 font-['Newsreader'] tracking-tight">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-serif italic text-[#2F3333]">Editorial Archive</span>
+<div class="hidden md:flex gap-6">
+<a class="text-[#8C8C8A] hover:text-[#2F3333] transition-colors duration-300" href="#">Dashboard</a>
+<a class="text-[#8C8C8A] hover:text-[#2F3333] transition-colors duration-300" href="#">Analytics</a>
+<a class="text-[#2F3333] border-b-2 border-[#2F3333] pb-1" href="#">Archive</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-[#5F5E5E] hover:text-[#2F3333] transition-all" data-icon="settings">settings</button>
+<button class="material-symbols-outlined text-[#5F5E5E] hover:text-[#2F3333] transition-all" data-icon="help_outline">help_outline</button>
+<div class="w-8 h-8 rounded-full bg-surface-container overflow-hidden">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="close up minimalist portrait of a professional curator in a high-end art gallery setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuATZWqwEfuQIXkYFXBKMTmTXZUqzpC62nyWAdrQSUOahoA4DMcS7sbRAivACX1lo3qPkeNgXlaxJNn7TMCfUHVlZYTY9bf74WL2EKK4mXnX1OPT5ljMv2vKN_tkrYsB-O9bVreQYhiOxkDIuh8K4geDBsg74xIQLydK9ZEDUdMqMDOnaZsSDjQVBUMPmLO_eI1WmqD-5nQmmgFnNYFEUAuXO54xBxoy6V6lAe_HOaQztIKd4Euk6-kytZXpWdHrHMZY_QK9KYAyMjQ"/>
+</div>
+</div>
+</nav>
+<div class="flex">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-20 bottom-0 flex flex-col py-10 bg-[#FAF9F8] border-r border-opacity-5 w-64 font-['Instrument_Sans'] text-sm uppercase tracking-widest hidden md:flex">
+<div class="px-5 mb-10">
+<h3 class="font-serif text-lg text-[#2F3333] normal-case tracking-normal">Audit Trail</h3>
+<p class="text-[10px] text-[#8C8C8A]">System Integrity</p>
+</div>
+<nav class="flex-1 space-y-2">
+<a class="flex items-center gap-4 text-[#8C8C8A] pl-5 py-2 hover:bg-[#EDEEED] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span>All Events</span>
+</a>
+<a class="flex items-center gap-4 text-[#2F3333] font-bold border-l-4 border-[#2F3333] pl-4 py-2 hover:bg-[#EDEEED] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="category">category</span>
+<span>Entity History</span>
+</a>
+<a class="flex items-center gap-4 text-[#8C8C8A] pl-5 py-2 hover:bg-[#EDEEED] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="shield">shield</span>
+<span>Security</span>
+</a>
+<a class="flex items-center gap-4 text-[#8C8C8A] pl-5 py-2 hover:bg-[#EDEEED] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="person_search">person_search</span>
+<span>User Logs</span>
+</a>
+<a class="flex items-center gap-4 text-[#8C8C8A] pl-5 py-2 hover:bg-[#EDEEED] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="ios_share">ios_share</span>
+<span>Export</span>
+</a>
+</nav>
+<div class="mt-auto px-5 pt-10 border-t border-surface-container">
+<button class="w-full py-3 bg-[#2F3333] text-white text-xs mb-6 hover:opacity-90 transition-all">Filter View</button>
+<div class="space-y-4">
+<a class="flex items-center gap-3 text-[#8C8C8A] text-xs" href="#">
+<span class="material-symbols-outlined scale-75" data-icon="menu_book">menu_book</span>
+<span>Documentation</span>
+</a>
+<a class="flex items-center gap-3 text-[#8C8C8A] text-xs" href="#">
+<span class="material-symbols-outlined scale-75" data-icon="support_agent">support_agent</span>
+<span>Support</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 md:ml-64 p-8 md:p-12 lg:p-16">
+<!-- Header Section -->
+<header class="flex justify-between items-end mb-16">
+<div>
+<h1 class="text-[48px] italic leading-tight text-[#5F5E5E]">Audit Trail</h1>
+<p class="text-[13px] text-[#8C8C8A] mt-2">Activity history across all entities</p>
+</div>
+<div class="text-right">
+<span class="block text-4xl font-serif text-[#2F3333]">1,402</span>
+<span class="text-[10px] uppercase tracking-widest text-[#8C8C8A]">Total Events Recorded</span>
+</div>
+</header>
+<!-- Filter Bar -->
+<section class="bg-[#F3F4F3] px-6 py-4 flex flex-wrap items-center gap-6 mb-12">
+<div class="flex flex-col gap-1">
+<label class="text-[10px] uppercase tracking-wider text-[#8C8C8A]">Entity Type</label>
+<select class="bg-transparent border-none focus:ring-0 text-sm font-medium p-0 text-[#2F3333]">
+<option>All Entities</option>
+<option>Character</option>
+<option>Image</option>
+<option>Dataset</option>
+</select>
+</div>
+<div class="w-px h-8 bg-surface-container"></div>
+<div class="flex flex-col gap-1">
+<label class="text-[10px] uppercase tracking-wider text-[#8C8C8A]">Action</label>
+<select class="bg-transparent border-none focus:ring-0 text-sm font-medium p-0 text-[#2F3333]">
+<option>All Actions</option>
+<option>Created</option>
+<option>Updated</option>
+<option>Deleted</option>
+</select>
+</div>
+<div class="w-px h-8 bg-surface-container"></div>
+<div class="flex flex-col gap-1">
+<label class="text-[10px] uppercase tracking-wider text-[#8C8C8A]">Date Range</label>
+<div class="flex items-center gap-2">
+<input class="bg-transparent border-none focus:ring-0 text-sm p-0 w-24 placeholder:text-[#8C8C8A]" placeholder="Start Date" type="text"/>
+<span class="text-[#8C8C8A]">—</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm p-0 w-24 placeholder:text-[#8C8C8A]" placeholder="End Date" type="text"/>
+</div>
+</div>
+<div class="ml-auto flex items-center bg-white/50 px-4 py-2 rounded-sm border border-black/5">
+<span class="material-symbols-outlined text-[#8C8C8A] mr-2" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm p-0 w-32 placeholder:text-[#8C8C8A]" placeholder="Search ID..." type="text"/>
+</div>
+</section>
+<!-- Event List -->
+<section class="space-y-0">
+<!-- Row 1 -->
+<div class="flex items-center py-4 border-b border-[#F3F4F3] group hover:bg-[#F3F4F3]/30 transition-colors">
+<div class="w-8 h-8 rounded-full bg-[#F3F4F3] flex items-center justify-center mr-6">
+<span class="material-symbols-outlined text-[#5F5E5E] !text-[18px]" data-icon="person">person</span>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-3">
+<h4 class="text-[13px] text-[#2F3333] font-medium">Updated on Character #CH-9021</h4>
+<div class="flex gap-2">
+<span class="bg-[#F3F4F3] px-2 py-0.5 text-[10px] text-[#8C8C8A]">Core Data</span>
+<span class="bg-[#F3F4F3] px-2 py-0.5 text-[10px] text-[#8C8C8A]">Production</span>
+</div>
+</div>
+<p class="text-[12px] text-[#8C8C8A] mt-0.5">biography: "The silent observer..." → "The architect of the..."</p>
+</div>
+<div class="text-right ml-4">
+<time class="text-[12px] text-[#8C8C8A]">2 hours ago</time>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="flex items-center py-4 border-b border-[#F3F4F3] group hover:bg-[#F3F4F3]/30 transition-colors">
+<div class="w-8 h-8 rounded-full bg-[#F3F4F3] flex items-center justify-center mr-6">
+<span class="material-symbols-outlined text-[#5F5E5E] !text-[18px]" data-icon="image">image</span>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-3">
+<h4 class="text-[13px] text-[#2F3333] font-medium">Created on Image #IMG-4420</h4>
+<div class="flex gap-2">
+<span class="bg-[#F3F4F3] px-2 py-0.5 text-[10px] text-[#8C8C8A]">High-Res</span>
+</div>
+</div>
+<p class="text-[12px] text-[#8C8C8A] mt-0.5">status: [null] → "Processing"</p>
+</div>
+<div class="text-right ml-4">
+<time class="text-[12px] text-[#8C8C8A]">5 hours ago</time>
+</div>
+</div>
+<!-- Row 3 -->
+<div class="flex items-center py-4 border-b border-[#F3F4F3] group hover:bg-[#F3F4F3]/30 transition-colors">
+<div class="w-8 h-8 rounded-full bg-[#F3F4F3] flex items-center justify-center mr-6">
+<span class="material-symbols-outlined text-[#5F5E5E] !text-[18px]" data-icon="folder">folder</span>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-3">
+<h4 class="text-[13px] text-[#2F3333] font-medium">Deleted on Dataset #DS-VINTAGE-01</h4>
+<div class="flex gap-2">
+<span class="bg-[#F3F4F3] px-2 py-0.5 text-[10px] text-[#8C8C8A]">Archive Path</span>
+<span class="bg-[#F3F4F3] px-2 py-0.5 text-[10px] text-[#8C8C8A]">Admin Only</span>
+</div>
+</div>
+<p class="text-[12px] text-[#8C8C8A] mt-0.5">lifecycle: "active" → "purged"</p>
+</div>
+<div class="text-right ml-4">
+<time class="text-[12px] text-[#8C8C8A]">Yesterday, 14:20</time>
+</div>
+</div>
+<!-- Row 4 -->
+<div class="flex items-center py-4 border-b border-[#F3F4F3] group hover:bg-[#F3F4F3]/30 transition-colors">
+<div class="w-8 h-8 rounded-full bg-[#F3F4F3] flex items-center justify-center mr-6">
+<span class="material-symbols-outlined text-[#5F5E5E] !text-[18px]" data-icon="person">person</span>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-3">
+<h4 class="text-[13px] text-[#2F3333] font-medium">Updated on Character #CH-7721</h4>
+<div class="flex gap-2">
+<span class="bg-[#F3F4F3] px-2 py-0.5 text-[10px] text-[#8C8C8A]">Visual Spec</span>
+</div>
+</div>
+<p class="text-[12px] text-[#8C8C8A] mt-0.5">primary_color: "#FFFFFF" → "#FAF9F8"</p>
+</div>
+<div class="text-right ml-4">
+<time class="text-[12px] text-[#8C8C8A]">2 days ago</time>
+</div>
+</div>
+<!-- Row 5 -->
+<div class="flex items-center py-4 border-b border-[#F3F4F3] group hover:bg-[#F3F4F3]/30 transition-colors">
+<div class="w-8 h-8 rounded-full bg-[#F3F4F3] flex items-center justify-center mr-6">
+<span class="material-symbols-outlined text-[#5F5E5E] !text-[18px]" data-icon="shield">shield</span>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-3">
+<h4 class="text-[13px] text-[#2F3333] font-medium">Security Policy Changed</h4>
+<div class="flex gap-2">
+<span class="bg-[#F3F4F3] px-2 py-0.5 text-[10px] text-[#8C8C8A]">System</span>
+</div>
+</div>
+<p class="text-[12px] text-[#8C8C8A] mt-0.5">auth_method: "single_factor" → "mfa_required"</p>
+</div>
+<div class="text-right ml-4">
+<time class="text-[12px] text-[#8C8C8A]">3 days ago</time>
+</div>
+</div>
+</section>
+<!-- Pagination -->
+<footer class="mt-20 flex items-center justify-between border-t border-[#F3F4F3] pt-8">
+<button class="text-sm font-medium text-[#8C8C8A] hover:text-[#2F3333] transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined scale-75" data-icon="arrow_back">arrow_back</span>
+                    Previous
+                </button>
+<div class="flex gap-4">
+<button class="w-8 h-8 flex items-center justify-center text-sm font-bold text-[#2F3333] bg-[#F3F4F3]">1</button>
+<button class="w-8 h-8 flex items-center justify-center text-sm font-medium text-[#8C8C8A] hover:bg-[#F3F4F3] transition-all">2</button>
+<button class="w-8 h-8 flex items-center justify-center text-sm font-medium text-[#8C8C8A] hover:bg-[#F3F4F3] transition-all">3</button>
+<span class="w-8 h-8 flex items-center justify-center text-[#8C8C8A]">...</span>
+<button class="w-8 h-8 flex items-center justify-center text-sm font-medium text-[#8C8C8A] hover:bg-[#F3F4F3] transition-all">142</button>
+</div>
+<button class="text-sm font-medium text-[#8C8C8A] hover:text-[#2F3333] transition-colors flex items-center gap-2">
+                    Next
+                    <span class="material-symbols-outlined scale-75" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</footer>
+</main>
+</div>
+<!-- Mobile Navigation Suppressed for this view as per focus/sub-page intent logic -->
+</body></html>
