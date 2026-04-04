@@ -847,8 +847,7 @@ export function useBulkUpdateCharacterImages() {
       }
       return { previous }
     },
-    onError: (_err, vars, context) => {
-      // Roll back on error
+    onError: (_err, _vars, context) => {
       if (context?.previous) {
         for (const [keyStr, data] of context.previous) {
           qc.setQueryData(JSON.parse(keyStr), data)
