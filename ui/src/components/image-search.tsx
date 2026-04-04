@@ -1,5 +1,6 @@
 import { useImageSearch, thumbUrl } from '@/lib/api'
 import { ImageSearchFilters, useSearchFilters } from '@/components/image-search-filters'
+import { SkeletonGrid } from '@/components/skeleton'
 import type { SearchResult } from '@/lib/types'
 
 export function ImageSearch() {
@@ -31,7 +32,7 @@ export function ImageSearch() {
 
         <div className="flex-1 overflow-y-auto p-8">
           {isLoading ? (
-            <p className="text-muted text-center py-12">Searching...</p>
+            <SkeletonGrid count={10} columns={5} />
           ) : (results?.images.length ?? 0) === 0 ? (
             <div className="text-muted text-center py-20">
               <span className="material-symbols-outlined text-[48px] text-muted/30 mb-4 block">image_search</span>

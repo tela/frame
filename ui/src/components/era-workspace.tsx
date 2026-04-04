@@ -1,6 +1,7 @@
 import { Link, useParams, useSearch, useNavigate } from '@tanstack/react-router'
 import { useCharacter, useReferencePackage, useIngestImage, useCharacterImages, useDeleteCharacterImage, useBulkUpdateCharacterImages, useShoots, useBulkAddShootImages, useShootImages, useCreateShoot, thumbUrl } from '@/lib/api'
 import { useState, useCallback, useMemo } from 'react'
+import { SkeletonGrid } from '@/components/skeleton'
 import { Dropzone } from '@/components/dropzone'
 import { TagPicker } from '@/components/tag-picker'
 import type { CharacterImage } from '@/lib/types'
@@ -51,7 +52,12 @@ export function EraWorkspace() {
   }, [eraImages, shootFilter, shootImageIds])
 
   if (charLoading) {
-    return <div className="p-12 text-muted text-[15px]">Loading...</div>
+    return (
+      <div className="px-12 py-20">
+        <div className="w-96 h-16 bg-surface-low animate-pulse rounded-sm mb-20" />
+        <SkeletonGrid count={6} columns={3} />
+      </div>
+    )
   }
 
   if (!character) {
