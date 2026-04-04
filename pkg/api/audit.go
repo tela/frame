@@ -3,27 +3,34 @@ package api
 import (
 	"net/http"
 	"strconv"
+
+	"github.com/tela/frame/pkg/audit"
 )
 
 func (a *API) queryAuditLog(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	entityType := q.Get("entity_type")
-	entityID := q.Get("entity_id")
 
-	limit := 50
+	params := &audit.QueryParams{
+		EntityType: q.Get("entity_type"),
+		EntityID:   q.Get("entity_id"),
+		Action:     q.Get("action"),
+		Search:     q.Get("q"),
+		DateFrom:   q.Get("date_from"),
+		DateTo:     q.Get("date_to"),
+	}
+
 	if l := q.Get("limit"); l != "" {
 		if v, err := strconv.Atoi(l); err == nil {
-			limit = v
+			params.Limit = v
 		}
 	}
-	offset := 0
 	if o := q.Get("offset"); o != "" {
 		if v, err := strconv.Atoi(o); err == nil {
-			offset = v
+			params.Offset = v
 		}
 	}
 
-	events, err := a.Audit.Query(entityType, entityID, limit, offset)
+	events, err := a.Audit.QueryFiltered(params)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return

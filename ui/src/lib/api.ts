@@ -586,17 +586,32 @@ export interface AuditEvent {
   created_at: string
 }
 
-export function useAuditLog(entityType?: string, entityId?: string) {
+export interface AuditQueryParams {
+  entity_type?: string
+  entity_id?: string
+  action?: string
+  q?: string
+  date_from?: string
+  date_to?: string
+  limit?: number
+  offset?: number
+}
+
+export function useAuditLog(params: AuditQueryParams = {}) {
   return useQuery({
-    queryKey: ['audit', entityType, entityId],
+    queryKey: ['audit', params],
     queryFn: () => {
-      const params = new URLSearchParams()
-      if (entityType) params.set('entity_type', entityType)
-      if (entityId) params.set('entity_id', entityId)
-      params.set('limit', '50')
-      return fetchJSON<{ events: AuditEvent[]; total: number }>(`/api/v1/audit?${params.toString()}`)
+      const qs = new URLSearchParams()
+      if (params.entity_type) qs.set('entity_type', params.entity_type)
+      if (params.entity_id) qs.set('entity_id', params.entity_id)
+      if (params.action) qs.set('action', params.action)
+      if (params.q) qs.set('q', params.q)
+      if (params.date_from) qs.set('date_from', params.date_from)
+      if (params.date_to) qs.set('date_to', params.date_to)
+      qs.set('limit', String(params.limit || 50))
+      if (params.offset) qs.set('offset', String(params.offset))
+      return fetchJSON<{ events: AuditEvent[]; total: number }>(`/api/v1/audit?${qs.toString()}`)
     },
-    enabled: !!(entityType || entityId),
   })
 }
 

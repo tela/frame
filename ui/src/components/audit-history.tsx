@@ -87,7 +87,7 @@ function groupByDate(events: AuditEvent[]): Map<string, AuditEvent[]> {
 }
 
 export function AuditHistory({ entityType, entityId }: AuditHistoryProps) {
-  const { data, isLoading } = useAuditLog(entityType, entityId)
+  const { data, isLoading } = useAuditLog({ entity_type: entityType, entity_id: entityId })
   const events = data?.events ?? []
   const grouped = groupByDate(events)
 

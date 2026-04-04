@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/tela/frame/pkg/id"
@@ -72,40 +73,73 @@ func (s *Store) LogFieldChange(entityType, entityID, action, field, oldValue, ne
 	return s.Log(entityType, entityID, action, &field, &oldValue, &newValue, context)
 }
 
-// Query returns audit events filtered by entity type and/or ID.
+// QueryParams defines filters for audit log queries.
+type QueryParams struct {
+	EntityType string
+	EntityID   string
+	Action     string
+	Search     string // LIKE search on entity_id
+	DateFrom   string
+	DateTo     string
+	Limit      int
+	Offset     int
+}
+
+// Query returns audit events filtered by the given parameters.
 func (s *Store) Query(entityType, entityID string, limit, offset int) (*EventList, error) {
-	if limit <= 0 {
-		limit = 50
+	return s.QueryFiltered(&QueryParams{
+		EntityType: entityType, EntityID: entityID, Limit: limit, Offset: offset,
+	})
+}
+
+// QueryFiltered returns audit events with full filter support.
+func (s *Store) QueryFiltered(params *QueryParams) (*EventList, error) {
+	if params.Limit <= 0 {
+		params.Limit = 50
 	}
 
-	// Build count query
-	countQuery := `SELECT COUNT(*) FROM audit_log WHERE 1=1`
+	var where []string
 	var args []any
-	if entityType != "" {
-		countQuery += ` AND entity_type = ?`
-		args = append(args, entityType)
+	if params.EntityType != "" {
+		where = append(where, "entity_type = ?")
+		args = append(args, params.EntityType)
 	}
-	if entityID != "" {
-		countQuery += ` AND entity_id = ?`
-		args = append(args, entityID)
+	if params.EntityID != "" {
+		where = append(where, "entity_id = ?")
+		args = append(args, params.EntityID)
+	}
+	if params.Action != "" {
+		where = append(where, "action LIKE ?")
+		args = append(args, "%"+params.Action+"%")
+	}
+	if params.Search != "" {
+		where = append(where, "entity_id LIKE ?")
+		args = append(args, "%"+params.Search+"%")
+	}
+	if params.DateFrom != "" {
+		where = append(where, "created_at >= ?")
+		args = append(args, params.DateFrom)
+	}
+	if params.DateTo != "" {
+		where = append(where, "created_at <= ?")
+		args = append(args, params.DateTo)
 	}
 
+	whereClause := ""
+	if len(where) > 0 {
+		whereClause = " WHERE " + strings.Join(where, " AND ")
+	}
+
+	// Count
 	var total int
-	if err := s.db.QueryRow(countQuery, args...).Scan(&total); err != nil {
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM audit_log"+whereClause, args...).Scan(&total); err != nil {
 		return nil, fmt.Errorf("count audit events: %w", err)
 	}
 
-	// Build data query
+	// Data
 	dataQuery := `SELECT id, entity_type, entity_id, action, field, old_value, new_value, context, created_at
-		FROM audit_log WHERE 1=1`
-	if entityType != "" {
-		dataQuery += ` AND entity_type = ?`
-	}
-	if entityID != "" {
-		dataQuery += ` AND entity_id = ?`
-	}
-	dataQuery += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`
-	args = append(args, limit, offset)
+		FROM audit_log` + whereClause + ` ORDER BY created_at DESC LIMIT ? OFFSET ?`
+	args = append(args, params.Limit, params.Offset)
 
 	rows, err := s.db.Query(dataQuery, args...)
 	if err != nil {
