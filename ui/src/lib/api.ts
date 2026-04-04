@@ -19,6 +19,9 @@ import type {
   DatasetWithStats,
   DatasetImage,
   Image,
+  TriageStatus,
+  SetType,
+  RefType,
 } from './types'
 import { SEED_CHARACTERS, SEED_MEDIA } from './seed-data'
 
@@ -822,10 +825,39 @@ export function useBulkUpdateCharacterImages() {
         return data as { affected: number }
       })
     },
-    onSuccess: (_, vars) => {
+    onMutate: async (vars) => {
+      // Optimistically update images in cache for instant UI feedback
+      const imageKeys = qc.getQueriesData<CharacterImage[]>({ queryKey: ['characters', vars.characterId, 'images'] })
+      const previous = new Map<string, CharacterImage[]>()
+      const idSet = new Set(vars.imageIds)
+
+      for (const [key, data] of imageKeys) {
+        if (!data) continue
+        const keyStr = JSON.stringify(key)
+        previous.set(keyStr, data)
+        qc.setQueryData<CharacterImage[]>(key, data.map(ci => {
+          if (!idSet.has(ci.image_id)) return ci
+          const updated = { ...ci }
+          if (vars.update.rating !== undefined) updated.rating = vars.update.rating
+          if (vars.update.triage_status !== undefined) updated.triage_status = vars.update.triage_status as TriageStatus
+          if (vars.update.set_type !== undefined) updated.set_type = vars.update.set_type as SetType
+          if (vars.update.ref_type !== undefined) updated.ref_type = (vars.update.ref_type || null) as RefType | null
+          return updated
+        }))
+      }
+      return { previous }
+    },
+    onError: (_err, vars, context) => {
+      // Roll back on error
+      if (context?.previous) {
+        for (const [keyStr, data] of context.previous) {
+          qc.setQueryData(JSON.parse(keyStr), data)
+        }
+      }
+    },
+    onSettled: (_, _err, vars) => {
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'images'] })
       qc.invalidateQueries({ queryKey: ['characters', vars.characterId, 'images', 'pending'] })
-      // Only invalidate eras if ref_type changed (affects reference_package_ready)
       if (vars.update.ref_type !== undefined) {
         qc.invalidateQueries({ queryKey: ['characters', vars.characterId] })
       }
