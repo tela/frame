@@ -1,7 +1,7 @@
 import type { Character, EraWithStats, Workflow, Tier, ContentRating } from '@/lib/types'
 export type { Workflow, Tier, ContentRating }
 
-export type StudioMode = 'generate' | 'refine' | 'process'
+export type StudioMode = 'generate' | 'refine' | 'process' | 'video'
 export type StudioIntent = 'headshot' | 'consistent' | 'portrait' | 'full_body' | 'full_body_nude' | 'remix' | 'upscale' | 'clothing_swap'
 
 export interface IntentConfig {
@@ -21,6 +21,7 @@ export interface GeneratedImage {
   prompt: string
   timestamp: string
   status: 'generating' | 'complete'
+  isVideo?: boolean
 }
 
 // Job category → Studio mode mapping
@@ -58,6 +59,7 @@ export const WORKFLOWS: { value: Workflow; label: string; description: string }[
   { value: 'sdxl_img2img', label: 'Image Refinement', description: 'Refine an existing image (~63s)' },
   { value: 'sdxl_quality_postprocess', label: 'Quality Upscale', description: 'Upscale + enhance detail (~648s)' },
   { value: 'kontext', label: 'Flux Kontext', description: 'Prompt-based image editing (~3s)' },
+  { value: 'video_img2vid', label: 'Image to Video', description: 'Generate video clip from image (~30-60s)' },
 ]
 
 export const TIERS: { value: Tier; label: string }[] = [
@@ -77,15 +79,29 @@ export const BATCH_SIZES = [1, 2, 4, 8]
 export const GENERATE_WORKFLOWS: Workflow[] = ['text-to-image', 'sdxl_text2img', 'sdxl_character_gen', 'sdxl_multi_ref', 'sdxl_pose_transfer']
 export const REFINE_WORKFLOWS: Workflow[] = ['sdxl_img2img', 'sdxl_clothing_swap', 'kontext']
 export const PROCESS_WORKFLOWS: Workflow[] = ['sdxl_quality_postprocess']
+export const VIDEO_WORKFLOWS: Workflow[] = ['video_img2vid']
+
+export const CAMERA_MOTIONS = [
+  { value: 'static', label: 'Static' },
+  { value: 'pan_left', label: 'Slow Pan Left' },
+  { value: 'pan_right', label: 'Slow Pan Right' },
+  { value: 'dolly_in', label: 'Dolly In' },
+  { value: 'dolly_out', label: 'Dolly Out' },
+  { value: 'orbit', label: 'Orbit' },
+  { value: 'drift', label: 'Gentle Drift' },
+]
+
+export const VIDEO_DURATIONS = ['3s', '4s', '5s']
 
 export function defaultWorkflowForMode(mode: StudioMode): Workflow {
+  if (mode === 'video') return 'video_img2vid'
   if (mode === 'refine') return 'sdxl_img2img'
   if (mode === 'process') return 'sdxl_quality_postprocess'
   return 'text-to-image'
 }
 
 export function workflowsForMode(mode: StudioMode) {
-  const allowed = mode === 'refine' ? REFINE_WORKFLOWS : mode === 'process' ? PROCESS_WORKFLOWS : GENERATE_WORKFLOWS
+  const allowed = mode === 'video' ? VIDEO_WORKFLOWS : mode === 'refine' ? REFINE_WORKFLOWS : mode === 'process' ? PROCESS_WORKFLOWS : GENERATE_WORKFLOWS
   return WORKFLOWS.filter(w => allowed.includes(w.value))
 }
 

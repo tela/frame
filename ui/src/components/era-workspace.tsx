@@ -51,27 +51,9 @@ export function EraWorkspace() {
     return images.filter(ci => idSet.has(ci.image_id))
   }, [eraImages, shootFilter, shootImageIds])
 
-  if (charLoading) {
-    return (
-      <div className="px-12 py-20">
-        <div className="w-96 h-16 bg-surface-low animate-pulse rounded-sm mb-20" />
-        <SkeletonGrid count={6} columns={3} />
-      </div>
-    )
-  }
-
-  if (!character) {
-    return <div className="p-12 text-muted text-[15px]">Character not found</div>
-  }
-
-  const era = character.eras.find((e) => e.id === eraId)
-  if (!era) {
-    return <div className="p-12 text-muted text-[15px]">Era not found</div>
-  }
-
   const pendingCount = (eraImages ?? []).filter(ci => ci.triage_status === 'pending').length
 
-  const handleFileDrop = (files: File[]) => {
+  const handleFileDrop = useCallback((files: File[]) => {
     setUploadStatus(`Uploading ${files.length} file(s)...`)
     let completed = 0
     for (const file of files) {
@@ -95,7 +77,7 @@ export function EraWorkspace() {
         }
       )
     }
-  }
+  }, [characterId, eraId, ingestImage])
 
   const toggleSelect = useCallback((imageId: string) => {
     setSelectedImages((prev) => {
@@ -150,6 +132,25 @@ export function EraWorkspace() {
       }
     )
   }, [newShootName, characterId, selectedImages, createShoot, bulkAddShoot])
+
+  // Early returns AFTER all hooks
+  if (charLoading) {
+    return (
+      <div className="px-12 py-20">
+        <div className="w-96 h-16 bg-surface-low animate-pulse rounded-sm mb-20" />
+        <SkeletonGrid count={6} columns={3} />
+      </div>
+    )
+  }
+
+  if (!character) {
+    return <div className="p-12 text-muted text-[15px]">Character not found</div>
+  }
+
+  const era = character.eras.find((e) => e.id === eraId)
+  if (!era) {
+    return <div className="p-12 text-muted text-[15px]">Era not found</div>
+  }
 
   const handleShootFilterChange = (shootId: string) => {
     navigate({
