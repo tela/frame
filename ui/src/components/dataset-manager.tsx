@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { useDatasets, useCreateDataset, useCreateDatasetFromSearch, useImageSearch } from '@/lib/api'
+import { useDatasets, useCreateDataset, useCreateDatasetFromSearch, useImageSearch, useCharacters } from '@/lib/api'
 import { ImageSearchFilters, useSearchFilters } from '@/components/image-search-filters'
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
