@@ -6,18 +6,20 @@ Spec for character image generation workflows in Frame. Covers the full pipeline
 
 ## 1. Default Era
 
-Every character gets a **Standard** era at age **20** as their baseline. All initial reference image generation uses this era. Additional eras (younger, older) are built later with adjusted prompts and potentially era-specific LoRAs.
+Every character gets a **Late Teen** era (age **18-20**) as their baseline when created. All initial reference image generation uses this era. Additional eras (younger, older) can be added later with adjusted prompts and era-specific physical attributes.
 
-When a character is created without an explicit era, Frame auto-creates the Standard era:
+When a character is created without an explicit era, Frame auto-creates the Late Teen era:
 ```json
 {
-  "label": "Standard",
-  "age_range": "20",
+  "label": "Late Teen",
+  "age_range": "18-20",
   "time_period": "Present day",
   "description": "Baseline visual identity",
   "sort_order": 0
 }
 ```
+
+See [Era Presets](./era-presets.md) for the full preset system (12 options from Young Child to Elder).
 
 ---
 
