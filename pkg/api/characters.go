@@ -381,6 +381,34 @@ func (a *API) updateEra(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate numeric fields
+	for _, numField := range []string{"height_cm", "weight_kg"} {
+		if v, ok := fields[numField]; ok && v != nil {
+			n, nOK := v.(float64)
+			if !nOK {
+				writeError(w, http.StatusBadRequest, fmt.Sprintf("%s must be a number", numField))
+				return
+			}
+			if n < 0 || n > 300 {
+				writeError(w, http.StatusBadRequest, fmt.Sprintf("%s must be between 0 and 300", numField))
+				return
+			}
+		}
+	}
+	for _, ratioField := range []string{"waist_hip_ratio", "head_body_ratio", "leg_torso_ratio", "shoulder_hip_ratio"} {
+		if v, ok := fields[ratioField]; ok && v != nil {
+			n, nOK := v.(float64)
+			if !nOK {
+				writeError(w, http.StatusBadRequest, fmt.Sprintf("%s must be a number", ratioField))
+				return
+			}
+			if n < 0 || n > 3 {
+				writeError(w, http.StatusBadRequest, fmt.Sprintf("%s must be between 0 and 3", ratioField))
+				return
+			}
+		}
+	}
+
 	if err := a.Characters.UpdateEra(eraID, fields); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
