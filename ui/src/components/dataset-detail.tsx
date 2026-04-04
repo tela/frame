@@ -1,5 +1,6 @@
 import { useParams } from '@tanstack/react-router'
-import { useDataset, useExportDataset, useForkDataset, useAddDatasetImages, useImageSearch, useCharacters, thumbUrl } from '@/lib/api'
+import { useDataset, useExportDataset, useForkDataset, useAddDatasetImages, useImageSearch, thumbUrl } from '@/lib/api'
+import { ImageSearchFilters, useSearchFilters } from '@/components/image-search-filters'
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
@@ -230,22 +231,9 @@ function AddImagesModal({ open, onClose, onAdd }: {
   onClose: () => void
   onAdd: (imageIds: string[]) => void
 }) {
-  const { data: characters } = useCharacters()
-  const [characterFilter, setCharacterFilter] = useState('')
-  const [tagsInput, setTagsInput] = useState('')
-  const [ratingMin, setRatingMin] = useState<number | undefined>(undefined)
-  const [sourceFilter, setSourceFilter] = useState('')
+  const { filters, setFilter, addTag, removeTag, toSearchParams } = useSearchFilters()
   const [selected, setSelected] = useState<Set<string>>(new Set())
-
-  const searchParams = {
-    character: characterFilter || undefined,
-    tags: tagsInput.trim() ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : undefined,
-    rating_min: ratingMin,
-    source: sourceFilter || undefined,
-    limit: 100,
-  }
-
-  const { data: results } = useImageSearch(searchParams)
+  const { data: results } = useImageSearch(toSearchParams({ limit: 100 }))
 
   const toggle = (id: string) => {
     setSelected(prev => {
@@ -268,90 +256,64 @@ function AddImagesModal({ open, onClose, onAdd }: {
           <DialogTitle className="font-display text-2xl">Add Images from Search</DialogTitle>
         </DialogHeader>
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3 mt-2 pb-4 border-b border-border-subtle">
-          <select
-            value={characterFilter}
-            onChange={(e) => setCharacterFilter(e.target.value)}
-            className="border border-border-subtle bg-transparent py-1.5 px-3 text-[13px] focus:border-on-surface focus:ring-0 focus:outline-none"
-          >
-            <option value="">All Characters</option>
-            {(characters ?? []).map((c) => (
-              <option key={c.id} value={c.id}>{c.display_name || c.name}</option>
-            ))}
-          </select>
-          <input
-            value={tagsInput}
-            onChange={(e) => setTagsInput(e.target.value)}
-            className="border border-border-subtle bg-transparent py-1.5 px-3 text-[13px] focus:border-on-surface focus:ring-0 focus:outline-none w-48"
-            placeholder="Tags (comma separated)"
-          />
-          <select
-            value={ratingMin ?? ''}
-            onChange={(e) => setRatingMin(e.target.value ? Number(e.target.value) : undefined)}
-            className="border border-border-subtle bg-transparent py-1.5 px-3 text-[13px] focus:border-on-surface focus:ring-0 focus:outline-none"
-          >
-            <option value="">Any Rating</option>
-            {[1, 2, 3, 4, 5].map((r) => (
-              <option key={r} value={r}>{r}+ stars</option>
-            ))}
-          </select>
-          <select
-            value={sourceFilter}
-            onChange={(e) => setSourceFilter(e.target.value)}
-            className="border border-border-subtle bg-transparent py-1.5 px-3 text-[13px] focus:border-on-surface focus:ring-0 focus:outline-none"
-          >
-            <option value="">Any Source</option>
-            <option value="fig">Fig</option>
-            <option value="comfyui">ComfyUI</option>
-            <option value="manual">Manual</option>
-          </select>
-          <span className="text-meta text-muted self-center ml-auto">
-            {results?.total ?? 0} results · {selected.size} selected
-          </span>
+        <div className="flex gap-6 flex-1 min-h-0 mt-4">
+          {/* Filters sidebar */}
+          <div className="w-[220px] flex-shrink-0 overflow-y-auto pr-4 border-r border-border-subtle">
+            <ImageSearchFilters
+              filters={filters}
+              setFilter={setFilter}
+              addTag={addTag}
+              removeTag={removeTag}
+              compact
+            />
+          </div>
+
+          {/* Results grid */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-meta text-muted">
+                {results?.total ?? 0} results · {selected.size} selected
+              </span>
+            </div>
+            {(results?.images ?? []).length === 0 ? (
+              <div className="py-12 text-center text-muted text-[13px]">
+                <span className="material-symbols-outlined text-[48px] text-muted/20 block mb-4">search</span>
+                No images match the current filters.
+              </div>
+            ) : (
+              <div className="grid grid-cols-4 md:grid-cols-5 gap-2">
+                {(results?.images ?? []).map((img) => (
+                  <button
+                    key={img.id}
+                    onClick={() => toggle(img.id)}
+                    className={`relative aspect-square overflow-hidden border-2 transition-all ${
+                      selected.has(img.id) ? 'border-accent shadow-md' : 'border-transparent hover:border-border-subtle'
+                    }`}
+                  >
+                    <img
+                      src={thumbUrl(img.id)}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                    />
+                    {selected.has(img.id) && (
+                      <div className="absolute top-1 right-1 w-5 h-5 bg-accent rounded-full flex items-center justify-center">
+                        <span className="material-symbols-outlined text-white text-[14px]">check</span>
+                      </div>
+                    )}
+                    {img.character_name && (
+                      <div className="absolute bottom-1 left-1 bg-on-surface/60 text-background text-[8px] px-1 py-0.5 rounded-sm backdrop-blur-sm">
+                        {img.character_name}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Results grid */}
-        <div className="flex-1 overflow-y-auto min-h-0 mt-4">
-          {(results?.images ?? []).length === 0 ? (
-            <div className="py-12 text-center text-muted text-[13px]">
-              <span className="material-symbols-outlined text-[48px] text-muted/20 block mb-4">search</span>
-              No images match the current filters.
-            </div>
-          ) : (
-            <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
-              {(results?.images ?? []).map((img) => (
-                <button
-                  key={img.id}
-                  onClick={() => toggle(img.id)}
-                  className={`relative aspect-square overflow-hidden border-2 transition-all ${
-                    selected.has(img.id) ? 'border-accent shadow-md' : 'border-transparent hover:border-border-subtle'
-                  }`}
-                >
-                  <img
-                    src={thumbUrl(img.id)}
-                    alt=""
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                  />
-                  {selected.has(img.id) && (
-                    <div className="absolute top-1 right-1 w-5 h-5 bg-accent rounded-full flex items-center justify-center">
-                      <span className="material-symbols-outlined text-white text-[14px]">check</span>
-                    </div>
-                  )}
-                  {img.character_name && (
-                    <div className="absolute bottom-1 left-1 bg-on-surface/60 text-background text-[8px] px-1 py-0.5 rounded-sm backdrop-blur-sm">
-                      {img.character_name}
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
         <div className="flex justify-end gap-3 pt-4 border-t border-border-subtle mt-2">
           <button onClick={onClose} className="px-4 py-2 text-[11px] uppercase font-bold text-muted">Cancel</button>
           <button

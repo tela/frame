@@ -251,7 +251,7 @@ export function useToggleFavorite() {
 
 // ===== Image Search =====
 
-export function useImageSearch(params: {
+export interface ImageSearchParams {
   character?: string
   era?: string
   tags?: string[]
@@ -260,9 +260,15 @@ export function useImageSearch(params: {
   set_type?: string
   triage_status?: string
   has_character?: boolean
+  q?: string
+  date_from?: string
+  date_to?: string
+  sort?: string
   limit?: number
   offset?: number
-}) {
+}
+
+export function useImageSearch(params: ImageSearchParams) {
   const queryString = new URLSearchParams()
   if (params.character) queryString.set('character', params.character)
   if (params.era) queryString.set('era', params.era)
@@ -272,6 +278,10 @@ export function useImageSearch(params: {
   if (params.set_type) queryString.set('set_type', params.set_type)
   if (params.triage_status) queryString.set('triage_status', params.triage_status)
   if (params.has_character !== undefined) queryString.set('has_character', String(params.has_character))
+  if (params.q) queryString.set('q', params.q)
+  if (params.date_from) queryString.set('date_from', params.date_from)
+  if (params.date_to) queryString.set('date_to', params.date_to)
+  if (params.sort) queryString.set('sort', params.sort)
   if (params.limit) queryString.set('limit', String(params.limit))
   if (params.offset) queryString.set('offset', String(params.offset))
 
