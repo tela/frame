@@ -15,6 +15,7 @@ const (
 	StatusProspect    Status = "prospect"
 	StatusDevelopment Status = "development"
 	StatusCast        Status = "cast"
+	StatusArchived    Status = "archived"
 )
 
 // Character is a character record in Frame.

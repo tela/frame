@@ -272,6 +272,32 @@ type createEraRequest struct {
 	SortOrder              int    `json:"sort_order"`
 }
 
+func (a *API) deleteCharacter(w http.ResponseWriter, r *http.Request) {
+	charID := r.PathValue("id")
+
+	// Check character exists and is deletable
+	c, err := a.Characters.Get(charID)
+	if err != nil || c == nil {
+		writeError(w, http.StatusNotFound, "character not found")
+		return
+	}
+	if c.Status != character.StatusProspect {
+		writeError(w, http.StatusConflict, fmt.Sprintf("only prospect characters can be deleted; archive %s characters instead", c.Status))
+		return
+	}
+
+	if err := a.Characters.Delete(charID); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if a.Audit != nil {
+		a.Audit.LogSimple("character", charID, "deleted")
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (a *API) createEra(w http.ResponseWriter, r *http.Request) {
 	charID := r.PathValue("id")
 
@@ -370,9 +396,14 @@ var statusRank = map[character.Status]int{
 	character.StatusCast:        2,
 }
 
-// validStatusTransition returns true if moving from current to next is forward-only.
+// validStatusTransition returns true if moving from current to next is allowed.
+// Forward progression is always allowed. Archiving is allowed from any status.
 // Same-status is allowed (idempotent). Backward is rejected.
 func validStatusTransition(current, next character.Status) bool {
+	// Any status can be archived
+	if next == character.StatusArchived {
+		return true
+	}
 	cr, cOK := statusRank[current]
 	nr, nOK := statusRank[next]
 	if !cOK || !nOK {

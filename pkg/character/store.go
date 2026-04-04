@@ -137,6 +137,28 @@ func (s *Store) SetAvatarImage(id, imageID string) error {
 	return err
 }
 
+// Delete removes a prospect character and all associated data.
+// Only works for prospect status — development/cast characters must be archived.
+func (s *Store) Delete(id string) error {
+	// Verify the character is a prospect
+	c, err := s.Get(id)
+	if err != nil || c == nil {
+		return fmt.Errorf("character %s not found", id)
+	}
+	if c.Status != StatusProspect {
+		return fmt.Errorf("only prospect characters can be deleted; archive %s characters instead", c.Status)
+	}
+
+	// Cascade delete in dependency order
+	s.db.Exec(`DELETE FROM pose_set_images WHERE character_id = ?`, id)
+	s.db.Exec(`DELETE FROM character_looks WHERE character_id = ?`, id)
+	s.db.Exec(`DELETE FROM shoots WHERE character_id = ?`, id)
+	s.db.Exec(`DELETE FROM character_images WHERE character_id = ?`, id)
+	s.db.Exec(`DELETE FROM eras WHERE character_id = ?`, id)
+	_, err = s.db.Exec(`DELETE FROM characters WHERE id = ?`, id)
+	return err
+}
+
 // UpdateFigStatus sets the fig_published and fig_character_url fields.
 func (s *Store) UpdateFigStatus(id string, published bool, url string) error {
 	_, err := s.db.Exec(

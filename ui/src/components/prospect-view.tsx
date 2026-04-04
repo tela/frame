@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import { useCharacterImages, useFavorites, useToggleFavorite, useIngestImage, useDeleteCharacterImage, useUpdateCharacter, useImageTags, thumbUrl } from '@/lib/api'
+import { useNavigate } from '@tanstack/react-router'
+import { useCharacterImages, useFavorites, useToggleFavorite, useIngestImage, useDeleteCharacterImage, useDeleteCharacter, useUpdateCharacter, useImageTags, thumbUrl } from '@/lib/api'
 import { useState } from 'react'
 import { Dropzone } from '@/components/dropzone'
 import { ImportModal } from '@/components/import-modal'
@@ -20,9 +21,12 @@ export function ProspectView({ characterId, characterName, status, defaultEraId,
   const deleteImage = useDeleteCharacterImage()
   const ingestImage = useIngestImage()
   const updateCharacter = useUpdateCharacter()
+  const deleteCharacter = useDeleteCharacter()
+  const navigate = useNavigate()
   const [showImport, setShowImport] = useState(false)
   const [uploadStatus, setUploadStatus] = useState<string | null>(null)
   const [showDevelopConfirm, setShowDevelopConfirm] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [lightboxId, setLightboxId] = useState<string | null>(null)
 
   const images = activeTab === 'lookbook' ? (favorites ?? []) : (allImages ?? [])
@@ -125,12 +129,21 @@ export function ProspectView({ characterId, characterName, status, defaultEraId,
             Import
           </button>
           {status === 'prospect' && (
-            <button
-              onClick={() => setShowDevelopConfirm(true)}
-              className="flex-1 md:flex-none h-10 px-8 flex items-center justify-center border border-primary text-on-surface hover:bg-on-surface hover:text-background transition-colors text-[11px] font-bold uppercase tracking-widest"
-            >
-              Develop
-            </button>
+            <>
+              <button
+                onClick={() => setShowDevelopConfirm(true)}
+                className="flex-1 md:flex-none h-10 px-8 flex items-center justify-center border border-primary text-on-surface hover:bg-on-surface hover:text-background transition-colors text-[11px] font-bold uppercase tracking-widest"
+              >
+                Develop
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex-none h-10 px-4 flex items-center justify-center border border-border-subtle text-muted hover:border-red-500 hover:text-red-500 transition-colors"
+                title="Delete prospect"
+              >
+                <span className="material-symbols-outlined text-[18px]">delete</span>
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -195,6 +208,36 @@ export function ProspectView({ characterId, characterName, status, defaultEraId,
         onConfirm={handleDevelop}
         isPending={updateCharacter.isPending}
       />
+
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="bg-background border-border-subtle max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg">Delete Prospect?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted mt-2">
+            This will permanently delete this character and all associated images, eras, and references. This cannot be undone.
+          </p>
+          <div className="flex justify-end gap-4 mt-6">
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              className="text-[13px] text-muted hover:text-on-surface transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                deleteCharacter.mutate(characterId, {
+                  onSuccess: () => navigate({ to: '/characters' }),
+                })
+              }}
+              disabled={deleteCharacter.isPending}
+              className="bg-red-600 text-white px-6 py-2 text-[13px] font-medium disabled:opacity-50 hover:bg-red-700 transition-colors"
+            >
+              {deleteCharacter.isPending ? 'Deleting...' : 'Delete Forever'}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dropzone>
   )
 }

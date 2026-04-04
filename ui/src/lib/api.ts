@@ -146,6 +146,24 @@ export function useUpdateCharacter() {
   })
 }
 
+export function useDeleteCharacter() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (characterId: string) =>
+      fetch(`/api/v1/characters/${characterId}`, { method: 'DELETE' })
+        .then(async (r) => {
+          if (!r.ok) {
+            const data = await r.json().catch(() => ({ error: r.statusText }))
+            throw new Error(data.error || r.statusText)
+          }
+          return null
+        }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['characters'], exact: true })
+    },
+  })
+}
+
 export function useUpdateEra() {
   const qc = useQueryClient()
   return useMutation({
