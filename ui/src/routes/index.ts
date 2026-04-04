@@ -23,6 +23,7 @@ import { Wardrobe } from '@/components/wardrobe'
 import { HairCatalog } from '@/components/hair-catalog'
 import { ReferenceBuilder } from '@/components/reference-builder'
 import { Captioning } from '@/components/captioning'
+import { AuditTrail } from '@/components/audit-trail'
 
 // Root
 const rootRoute = createRootRoute({
@@ -144,6 +145,13 @@ const datasetDetailRoute = createRoute({
   component: DatasetDetail,
 })
 
+// Audit
+const auditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/audit',
+  component: AuditTrail,
+})
+
 // Import
 const importRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -183,6 +191,7 @@ const routeTree = rootRoute.addChildren([
   tagsRoute,
   datasetsRoute,
   datasetDetailRoute,
+  auditRoute,
   importRoute,
   preprocessRoute,
   imageDetailRoute,
