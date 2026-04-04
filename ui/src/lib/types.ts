@@ -103,7 +103,7 @@ export type SetType = 'staging' | 'reference' | 'curated' | 'training' | 'archiv
 export type TriageStatus = 'pending' | 'approved' | 'rejected' | 'archived'
 
 // Generation
-export type Workflow = 'text-to-image' | 'sdxl_text2img' | 'sdxl_character_gen' | 'sdxl_multi_ref' | 'sdxl_clothing_swap' | 'sdxl_pose_transfer' | 'sdxl_img2img' | 'sdxl_quality_postprocess' | 'kontext'
+export type Workflow = 'text-to-image' | 'sdxl_text2img' | 'sdxl_character_gen' | 'sdxl_multi_ref' | 'sdxl_clothing_swap' | 'sdxl_pose_transfer' | 'sdxl_img2img' | 'sdxl_quality_postprocess' | 'kontext' | 'video_img2vid'
 export type Tier = 'cheap' | 'complex' | 'frontier'
 export type ContentRating = 'sfw' | 'nsfw'
 

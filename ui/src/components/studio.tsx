@@ -9,7 +9,7 @@ import type {
 } from '@/components/studio-types'
 import {
   JOB_MODE_MAP, JOB_CATEGORY_LABELS, JOB_CATEGORY_ORDER,
-  WORKFLOWS, TIERS, DIMENSIONS, BATCH_SIZES,
+  WORKFLOWS, TIERS, DIMENSIONS, BATCH_SIZES, CAMERA_MOTIONS, VIDEO_DURATIONS,
   INTENT_CONFIGS, INTENT_JOB_MAP,
   defaultWorkflowForMode, workflowsForMode, buildIdentityFallback,
 } from '@/components/studio-types'
@@ -37,6 +37,8 @@ export function Studio() {
   const [selectedLora, setSelectedLora] = useState<string>('')
   const [loraStrength, setLoraStrength] = useState(0.7)
   const [denoiseStrength, setDenoiseStrength] = useState(0.6)
+  const [cameraMotion, setCameraMotion] = useState('static')
+  const [videoDuration, setVideoDuration] = useState('3s')
   const [showParams, setShowParams] = useState(false)
   const [sessionImages, setSessionImages] = useState<GeneratedImage[]>([])
   const [panelOpen, setPanelOpen] = useState(true)
@@ -98,7 +100,7 @@ export function Studio() {
   }, [character, era]) // eslint-disable-line react-hooks/exhaustive-deps
   const dim = DIMENSIONS[dimensions]
   const activeLora = (loras ?? []).find((l: LoRA) => l.id === selectedLora)
-  const needsSource = mode === 'refine' || mode === 'process'
+  const needsSource = mode === 'refine' || mode === 'process' || mode === 'video'
   const needsRefs = ['sdxl_multi_ref', 'sdxl_character_gen', 'sdxl_pose_transfer'].includes(workflow)
   const availableWorkflows = workflowsForMode(mode)
 
@@ -117,13 +119,15 @@ export function Studio() {
   const handleGenerate = () => {
     if (!prompt.trim()) return
 
-    const placeholders: GeneratedImage[] = Array.from({ length: batchSize }, () => ({
+    const isVideoMode = mode === 'video'
+    const placeholders: GeneratedImage[] = Array.from({ length: isVideoMode ? 1 : batchSize }, () => ({
       id: crypto.randomUUID(),
       url: '',
       seed: Math.floor(Math.random() * 100000),
       prompt: prompt,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       status: 'generating' as const,
+      isVideo: isVideoMode,
     }))
     setSessionImages((prev) => [...placeholders.reverse(), ...prev])
 
@@ -221,6 +225,7 @@ export function Studio() {
             { value: 'generate' as StudioMode, label: 'Generate', icon: 'auto_awesome' },
             { value: 'refine' as StudioMode, label: 'Refine', icon: 'tune' },
             { value: 'process' as StudioMode, label: 'Process', icon: 'construction' },
+            { value: 'video' as StudioMode, label: 'Video', icon: 'movie' },
           ]).map((m) => (
             <button
               key={m.value}
@@ -364,37 +369,102 @@ export function Studio() {
             </div>
           )}
 
-          {/* Prompt + Negative — not in process mode */}
+          {/* Prompt / Motion — not in process mode */}
           {mode !== 'process' && (
             <>
               <div className="flex flex-col gap-2">
                 <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted flex justify-between">
-                  Prompt
+                  {mode === 'video' ? 'Motion' : 'Prompt'}
                   <span className="tracking-normal lowercase tabular-nums">{prompt.length}/1000</span>
                 </label>
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  className="w-full h-[140px] resize-none bg-surface border border-border-subtle p-3 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
-                  placeholder="Describe the subject, environment, lighting..."
+                  className={`w-full resize-none bg-surface border border-border-subtle p-3 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50 ${mode === 'video' ? 'h-[200px]' : 'h-[140px]'}`}
+                  placeholder={mode === 'video'
+                    ? "Describe the movement: slowly turns head toward camera, hair moves with the turn, subtle smile forms..."
+                    : "Describe the subject, environment, lighting..."
+                  }
                 />
               </div>
+              {mode !== 'video' && (
+                <div className="flex flex-col gap-2">
+                  <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Negative Prompt</label>
+                  <textarea
+                    value={negativePrompt}
+                    onChange={(e) => setNegativePrompt(e.target.value)}
+                    className="w-full h-[60px] resize-none bg-surface border border-border-subtle p-3 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
+                    placeholder="What to exclude..."
+                  />
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Video-specific controls */}
+          {mode === 'video' && (
+            <>
               <div className="flex flex-col gap-2">
-                <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Negative Prompt</label>
-                <textarea
-                  value={negativePrompt}
-                  onChange={(e) => setNegativePrompt(e.target.value)}
-                  className="w-full h-[60px] resize-none bg-surface border border-border-subtle p-3 font-body text-sm leading-relaxed text-primary focus:outline-none focus:border-primary placeholder:text-muted/50"
-                  placeholder="What to exclude..."
-                />
+                <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Camera</label>
+                <div className="relative">
+                  <select
+                    value={cameraMotion}
+                    onChange={(e) => setCameraMotion(e.target.value)}
+                    className="w-full appearance-none bg-transparent border border-border-subtle py-2.5 px-3 text-sm focus:outline-none focus:border-primary cursor-pointer"
+                  >
+                    {CAMERA_MOTIONS.map(cm => (
+                      <option key={cm.value} value={cm.value}>{cm.label}</option>
+                    ))}
+                  </select>
+                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted text-[18px]">expand_more</span>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="flex flex-col gap-2 flex-1">
+                  <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Duration</label>
+                  <div className="flex gap-1">
+                    {VIDEO_DURATIONS.map(d => (
+                      <button
+                        key={d}
+                        onClick={() => setVideoDuration(d)}
+                        className={`flex-1 py-2 text-[11px] uppercase font-bold border transition-colors ${
+                          videoDuration === d ? 'bg-on-surface text-background border-on-surface' : 'text-muted border-border-subtle hover:border-on-surface'
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 flex-1">
+                  <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Quality</label>
+                  <div className="flex gap-1">
+                    {TIERS.map((t) => (
+                      <button
+                        key={t.value}
+                        onClick={() => setTier(t.value)}
+                        className={`flex-1 py-2 text-[11px] uppercase font-bold border transition-colors ${
+                          tier === t.value ? 'bg-on-surface text-background border-on-surface' : 'text-muted border-border-subtle hover:border-on-surface'
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </>
           )}
 
-          {/* Source Image (for refine/process modes) */}
+          {/* Source Image / Starting Frame */}
           {needsSource && (
             <div className="flex flex-col gap-2">
-              <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">Source Image</label>
+              <label className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted">
+                {mode === 'video' ? 'Starting Frame' : 'Source Image'}
+              </label>
+              {mode === 'video' && (
+                <p className="text-[11px] text-muted -mt-1">Select the image to animate. The video will start from this frame.</p>
+              )}
               {sourceImageId ? (
                 <div className="relative w-20 h-20 border border-border-subtle overflow-hidden group">
                   <img src={thumbUrl(sourceImageId)} alt="" className="w-full h-full object-cover" />
@@ -628,9 +698,10 @@ export function Studio() {
             className="w-full bg-accent text-white py-4 font-medium tracking-ui hover:bg-accent/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-              {mode === 'generate' ? 'auto_awesome' : mode === 'refine' ? 'tune' : 'construction'}
+              {mode === 'video' ? 'movie' : mode === 'generate' ? 'auto_awesome' : mode === 'refine' ? 'tune' : 'construction'}
             </span>
-            {generate.isPending ? 'Processing...' :
+            {generate.isPending ? (mode === 'video' ? 'Generating video...' : 'Processing...') :
+              mode === 'video' ? 'Generate Video' :
               mode === 'generate' ? `Generate${batchSize > 1 ? ` (${batchSize})` : ''}` :
               mode === 'refine' ? 'Refine' : 'Process'}
           </button>

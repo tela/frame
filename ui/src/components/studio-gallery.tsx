@@ -61,12 +61,33 @@ export function StudioGallery({ characterId, sessionImages, setSessionImages, on
                   </>
                 ) : (
                   <>
-                    <img
-                      alt="Generated image"
-                      className="w-full h-full object-cover cursor-pointer"
-                      src={img.url}
-                      onClick={() => setLightboxId(img.id)}
-                    />
+                    {img.isVideo ? (
+                      <video
+                        src={img.url}
+                        className="w-full h-full object-cover cursor-pointer"
+                        loop
+                        muted
+                        playsInline
+                        onMouseEnter={(e) => (e.target as HTMLVideoElement).play()}
+                        onMouseLeave={(e) => { const v = e.target as HTMLVideoElement; v.pause(); v.currentTime = 0 }}
+                        poster={img.url}
+                      />
+                    ) : (
+                      <img
+                        alt="Generated image"
+                        className="w-full h-full object-cover cursor-pointer"
+                        src={img.url}
+                        onClick={() => setLightboxId(img.id)}
+                      />
+                    )}
+                    {/* Play button for video (visible when not hovering) */}
+                    {img.isVideo && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-0 transition-opacity">
+                        <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
+                          <span className="material-symbols-outlined text-on-surface text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>play_arrow</span>
+                        </div>
+                      </div>
+                    )}
                     <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-4">
                       <div className="flex justify-end gap-2">
                         <button
@@ -93,11 +114,13 @@ export function StudioGallery({ characterId, sessionImages, setSessionImages, on
                           onClick={() => onRefineImage(img.id)}
                           className="px-4 py-1.5 bg-white/90 backdrop-blur-sm rounded-full text-on-surface text-[10px] font-bold uppercase tracking-widest hover:bg-white transition-colors"
                         >
-                          Refine
+                          {img.isVideo ? 'Re-generate' : 'Refine'}
                         </button>
                       </div>
                       <div className="text-white">
-                        <div className="text-xs font-body opacity-80 mb-1">{img.timestamp} · Seed: {img.seed}</div>
+                        <div className="text-xs font-body opacity-80 mb-1">
+                          {img.timestamp} · {img.isVideo ? 'Video' : `Seed: ${img.seed}`}
+                        </div>
                         <div className="text-sm line-clamp-2 leading-tight">{img.prompt}</div>
                       </div>
                     </div>
