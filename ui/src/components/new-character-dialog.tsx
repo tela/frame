@@ -81,12 +81,17 @@ const HAIR_COLORS = [
 const GENDERS = ['Female', 'Male', 'Non-Binary', 'Fluid'] as const
 
 const ERA_PRESETS = [
+  { label: 'Young Child', ageRange: '8-9' },
+  { label: 'Older Child', ageRange: '10-11' },
+  { label: 'Early Teen', ageRange: '12-13' },
+  { label: 'Mid Teen', ageRange: '14-15' },
+  { label: 'Teen', ageRange: '16-17' },
   { label: 'Late Teen', ageRange: '18-20' },
   { label: 'Young Adult', ageRange: '21-25' },
-  { label: 'Prime', ageRange: '26-32' },
-  { label: 'Mature', ageRange: '33-40' },
-  { label: 'Mid-Life', ageRange: '41-50' },
-  { label: 'Silver', ageRange: '51-65' },
+  { label: 'Early Prime', ageRange: '26-32' },
+  { label: 'Late Prime', ageRange: '33-40' },
+  { label: 'Midlife', ageRange: '41-50' },
+  { label: 'Senior', ageRange: '51-65' },
   { label: 'Elder', ageRange: '66+' },
 ] as const
 
@@ -134,7 +139,7 @@ export function NewCharacterDialog({ open, onClose }: Props) {
   const [displayName, setDisplayName] = useState('')
   const [displayNameOverride, setDisplayNameOverride] = useState(false)
   const [gender, setGender] = useState('Female')
-  const [selectedEra, setSelectedEra] = useState(0)
+  const [selectedEra, setSelectedEra] = useState(6) // Default to "Late Teen" (18-20)
   const [hasRefImages, setHasRefImages] = useState(false)
   const [files, setFiles] = useState<File[]>([])
   const [ethnicity, setEthnicity] = useState('')
@@ -495,26 +500,81 @@ export function NewCharacterDialog({ open, onClose }: Props) {
                 </div>
 
                 {/* Era Assignment */}
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-primary-dim">
-                    Initial Era
+                    Initial Era Assignment
                   </label>
-                  <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
-                    {ERA_PRESETS.map((era, i) => (
-                      <button
-                        key={era.label}
-                        type="button"
-                        onClick={() => setSelectedEra(i)}
-                        className={`py-2.5 px-2 border text-center transition-colors ${
-                          selectedEra === i
-                            ? 'border-on-surface bg-on-surface text-background'
-                            : 'border-outline-variant text-on-surface hover:bg-surface-high'
-                        }`}
-                      >
-                        <div className="text-[11px] font-bold uppercase tracking-wider">{era.label}</div>
-                        <div className={`text-[10px] mt-0.5 ${selectedEra === i ? 'text-background/70' : 'text-muted'}`}>{era.ageRange}</div>
-                      </button>
-                    ))}
+                  
+                  {/* Childhood Eras */}
+                  <div className="space-y-2">
+                    <span className="font-headline text-[11px] italic text-outline uppercase tracking-wider">Childhood Eras</span>
+                    <div className="grid grid-cols-5 gap-2">
+                      {ERA_PRESETS.slice(0, 5).map((era, i) => (
+                        <button
+                          key={era.label}
+                          type="button"
+                          onClick={() => setSelectedEra(i)}
+                          className={`flex flex-col items-center justify-center p-2 border transition-colors ${
+                            selectedEra === i
+                              ? 'border-on-surface bg-on-surface text-background'
+                              : 'border-outline-variant hover:bg-surface-high'
+                          }`}
+                        >
+                          <span className="text-[10px] font-bold uppercase tracking-tighter">{era.label}</span>
+                          <span className={`text-[9px] ${selectedEra === i ? 'opacity-70' : 'text-outline-variant'}`}>{era.ageRange}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Early Adulthood */}
+                  <div className="space-y-2">
+                    <span className="font-headline text-[11px] italic text-outline uppercase tracking-wider">Early Adulthood</span>
+                    <div className="grid grid-cols-4 gap-2">
+                      {ERA_PRESETS.slice(5, 9).map((era, i) => {
+                        const actualIndex = i + 5
+                        return (
+                          <button
+                            key={era.label}
+                            type="button"
+                            onClick={() => setSelectedEra(actualIndex)}
+                            className={`flex flex-col items-center justify-center p-2 border transition-colors ${
+                              selectedEra === actualIndex
+                                ? 'border-on-surface bg-on-surface text-background'
+                                : 'border-outline-variant hover:bg-surface-high'
+                            }`}
+                          >
+                            <span className="text-[10px] font-bold uppercase tracking-tighter">{era.label}</span>
+                            <span className={`text-[9px] ${selectedEra === actualIndex ? 'opacity-70' : 'text-outline-variant'}`}>{era.ageRange}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Later Years */}
+                  <div className="space-y-2">
+                    <span className="font-headline text-[11px] italic text-outline uppercase tracking-wider">Later Years</span>
+                    <div className="grid grid-cols-3 gap-2">
+                      {ERA_PRESETS.slice(9, 12).map((era, i) => {
+                        const actualIndex = i + 9
+                        return (
+                          <button
+                            key={era.label}
+                            type="button"
+                            onClick={() => setSelectedEra(actualIndex)}
+                            className={`flex flex-col items-center justify-center p-2 border transition-colors ${
+                              selectedEra === actualIndex
+                                ? 'border-on-surface bg-on-surface text-background'
+                                : 'border-outline-variant hover:bg-surface-high'
+                            }`}
+                          >
+                            <span className="text-[10px] font-bold uppercase tracking-tighter">{era.label}</span>
+                            <span className={`text-[9px] ${selectedEra === actualIndex ? 'opacity-70' : 'text-outline-variant'}`}>{era.ageRange}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
                 </div>
 
