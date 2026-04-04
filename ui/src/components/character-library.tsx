@@ -10,6 +10,7 @@ const STATUS_OPTIONS: { value: CharacterStatus | 'all'; label: string }[] = [
   { value: 'prospect', label: 'Prospects' },
   { value: 'development', label: 'Development' },
   { value: 'cast', label: 'Cast' },
+  { value: 'archived', label: 'Archived' },
 ]
 
 export function CharacterLibrary() {
@@ -19,6 +20,8 @@ export function CharacterLibrary() {
   const [showNewChar, setShowNewChar] = useState(false)
 
   const filtered = (characters ?? []).filter((c) => {
+    // Hide archived unless explicitly filtering for them
+    if (statusFilter === 'all' && c.status === 'archived') return false
     if (statusFilter !== 'all' && c.status !== statusFilter) return false
     if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.display_name.toLowerCase().includes(search.toLowerCase())) return false
     return true

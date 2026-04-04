@@ -55,6 +55,7 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/characters", a.listCharacters)
 	mux.HandleFunc("GET /api/v1/characters/{id}", a.getCharacter)
 	mux.HandleFunc("PATCH /api/v1/characters/{id}", a.updateCharacter)
+	mux.HandleFunc("DELETE /api/v1/characters/{id}", a.deleteCharacter)
 
 	// Eras
 	mux.HandleFunc("POST /api/v1/characters/{id}/eras", a.createEra)
