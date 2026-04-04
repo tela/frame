@@ -22,6 +22,9 @@ import type {
   TriageStatus,
   SetType,
   RefType,
+  Workflow,
+  Tier,
+  ContentRating,
 } from './types'
 import { SEED_CHARACTERS, SEED_MEDIA } from './seed-data'
 
@@ -445,9 +448,9 @@ export interface GenerateRequest {
   seed?: number
   lora_adapter?: string
   lora_strength?: number
-  content_rating?: string
-  tier?: string
-  workflow?: string
+  content_rating?: ContentRating
+  tier?: Tier
+  workflow?: Workflow
   provider_name?: string
   include_refs?: boolean
   ref_image_ids?: string[]
@@ -518,7 +521,7 @@ export interface ComposeRequest {
   character_id: string
   era_id?: string
   job_name: string
-  content_rating?: string
+  content_rating?: ContentRating
   setting?: string
   lighting?: string
   props?: string
@@ -540,8 +543,8 @@ export interface ComposeJobInfo {
   name: string
   display_name: string
   category: string
-  content_rating: string
-  workflow: string
+  content_rating: ContentRating
+  workflow: Workflow
 }
 
 export interface ComposeResponse {

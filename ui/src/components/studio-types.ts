@@ -1,8 +1,6 @@
-import type { Character, EraWithStats } from '@/lib/types'
+import type { Character, EraWithStats, Workflow, Tier, ContentRating } from '@/lib/types'
+export type { Workflow, Tier, ContentRating }
 
-export type Workflow = 'text-to-image' | 'sdxl_text2img' | 'sdxl_character_gen' | 'sdxl_multi_ref' | 'sdxl_clothing_swap' | 'sdxl_pose_transfer' | 'sdxl_img2img' | 'sdxl_quality_postprocess' | 'kontext'
-export type Tier = 'cheap' | 'complex' | 'frontier'
-export type ContentRating = 'sfw' | 'nsfw'
 export type StudioMode = 'generate' | 'refine' | 'process'
 export type StudioIntent = 'headshot' | 'consistent' | 'portrait' | 'full_body' | 'full_body_nude' | 'remix' | 'upscale' | 'clothing_swap'
 
