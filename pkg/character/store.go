@@ -33,6 +33,11 @@ func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
+// Ping checks database connectivity.
+func (s *Store) Ping() error {
+	return s.db.Ping()
+}
+
 // Create inserts a new character. Sets FolderName automatically if empty.
 func (s *Store) Create(c *Character) error {
 	if c.FolderName == "" {
