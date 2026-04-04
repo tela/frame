@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 
@@ -54,6 +55,12 @@ func (a *API) handleIngest(w http.ResponseWriter, r *http.Request, charID string
 		return
 	}
 	defer file.Close()
+
+	// Check file size (50MB limit per file)
+	if header.Size > 50<<20 {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("file too large: %dMB (max 50MB)", header.Size>>20))
+		return
+	}
 
 	data, err := io.ReadAll(file)
 	if err != nil {

@@ -1,6 +1,7 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, MutationCache } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 import { router } from '@/routes'
+import { toastStore } from '@/components/toast'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -9,6 +10,12 @@ const queryClient = new QueryClient({
       retry: 1,
     },
   },
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'An unexpected error occurred'
+      toastStore.error(message)
+    },
+  }),
 })
 
 function App() {

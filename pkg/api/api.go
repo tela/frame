@@ -50,6 +50,9 @@ type API struct {
 
 // Register mounts all API routes on the given mux.
 func (a *API) Register(mux *http.ServeMux) {
+	// Health
+	mux.HandleFunc("GET /api/v1/health", a.handleHealth)
+
 	// Characters
 	mux.HandleFunc("POST /api/v1/characters", a.createCharacter)
 	mux.HandleFunc("GET /api/v1/characters", a.listCharacters)
