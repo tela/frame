@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { useCharacters, avatarUrl } from '@/lib/api'
 import { useState } from 'react'
 import { NewCharacterDialog } from '@/components/new-character-dialog'
+import { SkeletonGrid } from '@/components/skeleton'
 import type { Character, CharacterStatus } from '@/lib/types'
 
 const STATUS_OPTIONS: { value: CharacterStatus | 'all'; label: string }[] = [
@@ -74,7 +75,7 @@ export function CharacterLibrary() {
         </div>
 
         {isLoading ? (
-          <div className="text-muted text-[15px]">Loading...</div>
+          <SkeletonGrid count={6} columns={3} aspectRatio="portrait" />
         ) : filtered.length === 0 ? (
           <div className="py-20 text-center">
             <span className="material-symbols-outlined text-[48px] text-muted/30 mb-4 block">group</span>

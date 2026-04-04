@@ -5,6 +5,7 @@ import { PoseSetDashboard } from '@/components/pose-set-dashboard'
 import { GoSeeLooks } from '@/components/go-see-looks'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { CharacterHero } from '@/components/character-hero'
+import { SkeletonHero, SkeletonGrid } from '@/components/skeleton'
 import { ProspectView } from '@/components/prospect-view'
 import { ShootsSection } from '@/components/shoots-section'
 import type { EraWithStats } from '@/lib/types'
@@ -25,7 +26,14 @@ export function CharacterDetail() {
   const [newEraDescription, setNewEraDescription] = useState('')
 
   if (isLoading) {
-    return <div className="p-12 text-muted text-[15px]">Loading...</div>
+    return (
+      <div className="px-8 md:px-20 lg:px-40 flex flex-1 justify-center py-5">
+        <div className="flex flex-col max-w-[1200px] flex-1 w-full">
+          <SkeletonHero />
+          <SkeletonGrid count={4} />
+        </div>
+      </div>
+    )
   }
 
   if (!character) {
