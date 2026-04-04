@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { useNavigate } from '@tanstack/react-router'
 import { useCharacterImages, useFavorites, useToggleFavorite, useIngestImage, useDeleteCharacterImage, useDeleteCharacter, useUpdateCharacter, useImageTags, thumbUrl } from '@/lib/api'
+import { toastStore } from '@/components/toast'
 import { useState } from 'react'
 import { Dropzone } from '@/components/dropzone'
 import { ImportModal } from '@/components/import-modal'
@@ -227,7 +228,10 @@ export function ProspectView({ characterId, characterName, status, defaultEraId,
             <button
               onClick={() => {
                 deleteCharacter.mutate(characterId, {
-                  onSuccess: () => navigate({ to: '/characters' }),
+                  onSuccess: () => {
+                    toastStore.success('Character deleted')
+                    navigate({ to: '/characters' })
+                  },
                 })
               }}
               disabled={deleteCharacter.isPending}
