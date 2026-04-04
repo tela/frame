@@ -16,6 +16,10 @@ type SearchParams struct {
 	SetType      string   // filter by set type (empty = all)
 	TriageStatus string   // filter by triage status (empty = all)
 	HasCharacter *bool    // nil = all, true = character images only, false = standalone only
+	Query        string   // free-text search on caption and original_filename
+	DateFrom     string   // filter ingested_at >= (RFC3339 or date string)
+	DateTo       string   // filter ingested_at <= (RFC3339 or date string)
+	SortBy       string   // "newest" (default), "oldest", "rating", "filename"
 	Limit        int      // max results (default 50)
 	Offset       int      // pagination offset
 }
@@ -93,6 +97,19 @@ func (s *Store) Search(params *SearchParams) (*SearchResults, error) {
 			where = append(where, "ci.character_id IS NULL")
 		}
 	}
+	if params.Query != "" {
+		where = append(where, "(i.original_filename LIKE ? OR ci.caption LIKE ?)")
+		q := "%" + params.Query + "%"
+		args = append(args, q, q)
+	}
+	if params.DateFrom != "" {
+		where = append(where, "i.ingested_at >= ?")
+		args = append(args, params.DateFrom)
+	}
+	if params.DateTo != "" {
+		where = append(where, "i.ingested_at <= ?")
+		args = append(args, params.DateTo)
+	}
 
 	// Tag filtering: each tag requires a matching row in image_tags (AND logic)
 	for i, tagStr := range params.Tags {
@@ -142,8 +159,19 @@ func (s *Store) Search(params *SearchParams) (*SearchResults, error) {
 		return nil, fmt.Errorf("count search results: %w", err)
 	}
 
+	// Sort order
+	orderBy := "i.ingested_at DESC"
+	switch params.SortBy {
+	case "oldest":
+		orderBy = "i.ingested_at ASC"
+	case "rating":
+		orderBy = "ci.rating DESC NULLS LAST, i.ingested_at DESC"
+	case "filename":
+		orderBy = "i.original_filename ASC"
+	}
+
 	// Main query with pagination
-	fullQuery := baseQuery + whereClause + " GROUP BY i.id ORDER BY i.ingested_at DESC LIMIT ? OFFSET ?"
+	fullQuery := baseQuery + whereClause + " GROUP BY i.id ORDER BY " + orderBy + " LIMIT ? OFFSET ?"
 	args = append(args, params.Limit, params.Offset)
 
 	rows, err := s.db.Query(fullQuery, args...)

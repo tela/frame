@@ -17,6 +17,10 @@ func (a *API) searchImages(w http.ResponseWriter, r *http.Request) {
 		Source:       q.Get("source"),
 		SetType:      q.Get("set_type"),
 		TriageStatus: q.Get("triage_status"),
+		Query:        q.Get("q"),
+		DateFrom:     q.Get("date_from"),
+		DateTo:       q.Get("date_to"),
+		SortBy:       q.Get("sort"),
 	}
 
 	if tags := q.Get("tags"); tags != "" {
