@@ -16,9 +16,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/tela/frame/pkg/audit"
 	"github.com/tela/frame/pkg/character"
 	"github.com/tela/frame/pkg/config"
 	"github.com/tela/frame/pkg/database"
+	"github.com/tela/frame/pkg/dataset"
 	"github.com/tela/frame/pkg/garment"
 	"github.com/tela/frame/pkg/hairstyle"
 	"github.com/tela/frame/pkg/id"
@@ -26,12 +28,21 @@ import (
 	"github.com/tela/frame/pkg/look"
 	"github.com/tela/frame/pkg/lora"
 	"github.com/tela/frame/pkg/media"
+	"github.com/tela/frame/pkg/shoot"
 )
 
 type seedCharacter struct {
 	name        string
 	displayName string
 	status      character.Status
+	gender      string
+	ethnicity   string
+	skinTone    string
+	eyeColor    string
+	eyeShape    string
+	hairColor   string
+	hairTexture string
+	features    string
 	eras        []seedEra
 }
 
@@ -39,6 +50,12 @@ type seedEra struct {
 	label      string
 	ageRange   string
 	timePeriod string
+	build      string
+	heightCM   int
+	hairColor  string
+	hairLength string
+	faceShape  string
+	jawDef     string
 }
 
 func cmdSeed() {
@@ -88,23 +105,30 @@ func cmdSeed() {
 	characters := []seedCharacter{
 		{
 			name: "Elara Voss", displayName: "Elara", status: character.StatusCast,
+			gender: "female", ethnicity: "Northern European", skinTone: "fair",
+			eyeColor: "green", eyeShape: "almond", hairColor: "dark brown", hairTexture: "wavy",
+			features: "faint freckles across nose",
 			eras: []seedEra{
-				{label: "Late Teen", ageRange: "18-20", timePeriod: "Present day"},
-				{label: "Young Adult", ageRange: "21-25", timePeriod: "Present day"},
-				{label: "Late Prime", ageRange: "33-40", timePeriod: "Present day"},
+				{label: "Late Teen", ageRange: "18-20", timePeriod: "Present day", build: "slim", heightCM: 168, hairColor: "dark brown", hairLength: "shoulder", faceShape: "oval", jawDef: "soft"},
+				{label: "Young Adult", ageRange: "21-25", timePeriod: "Present day", build: "athletic", heightCM: 170, hairColor: "dark brown", hairLength: "mid-back", faceShape: "oval", jawDef: "moderate"},
+				{label: "Late Prime", ageRange: "33-40", timePeriod: "Present day", build: "athletic", heightCM: 170, hairColor: "dark brown", hairLength: "shoulder", faceShape: "oval", jawDef: "defined"},
 			},
 		},
 		{
 			name: "Nyx Ashford", displayName: "Nyx", status: character.StatusDevelopment,
+			gender: "female", ethnicity: "East Asian", skinTone: "tan",
+			eyeColor: "dark brown", eyeShape: "monolid", hairColor: "black", hairTexture: "straight",
 			eras: []seedEra{
-				{label: "Teen", ageRange: "16-17", timePeriod: "Present day"},
-				{label: "Late Teen", ageRange: "18-20", timePeriod: "Present day"},
+				{label: "Teen", ageRange: "16-17", timePeriod: "Present day", build: "petite", heightCM: 160, hairColor: "black", hairLength: "long", faceShape: "heart", jawDef: "soft"},
+				{label: "Late Teen", ageRange: "18-20", timePeriod: "Present day", build: "slim", heightCM: 163, hairColor: "black with red highlights", hairLength: "mid-back", faceShape: "heart", jawDef: "soft"},
 			},
 		},
 		{
 			name: "Celeste Moreau", displayName: "Celeste", status: character.StatusProspect,
+			gender: "female", ethnicity: "Southern European", skinTone: "olive",
+			eyeColor: "hazel", eyeShape: "round", hairColor: "auburn", hairTexture: "curly",
 			eras: []seedEra{
-				{label: "Late Teen", ageRange: "18-20", timePeriod: "Present day"},
+				{label: "Late Teen", ageRange: "18-20", timePeriod: "Present day", build: "curvy", heightCM: 165, hairColor: "auburn", hairLength: "long", faceShape: "round", jawDef: "soft"},
 			},
 		},
 	}
@@ -116,13 +140,21 @@ func cmdSeed() {
 	for _, sc := range characters {
 		charID := id.New()
 		c := &character.Character{
-			ID:          charID,
-			Name:        sc.name,
-			DisplayName: sc.displayName,
-			Status:      sc.status,
-			Source:      "frame",
-			CreatedAt:   now,
-			UpdatedAt:   now,
+			ID:                     charID,
+			Name:                   sc.name,
+			DisplayName:            sc.displayName,
+			Status:                 sc.status,
+			Source:                 "frame",
+			Gender:                 sc.gender,
+			Ethnicity:              sc.ethnicity,
+			SkinTone:               sc.skinTone,
+			EyeColor:               sc.eyeColor,
+			EyeShape:               sc.eyeShape,
+			NaturalHairColor:       sc.hairColor,
+			NaturalHairTexture:     sc.hairTexture,
+			DistinguishingFeatures: sc.features,
+			CreatedAt:              now,
+			UpdatedAt:              now,
 		}
 		if err := charStore.Create(c); err != nil {
 			fmt.Printf("  skip %s (already exists?): %v\n", sc.name, err)
@@ -136,6 +168,7 @@ func cmdSeed() {
 			if i == 0 {
 				firstEraID = eraID
 			}
+			h := se.heightCM
 			era := &character.Era{
 				ID:               eraID,
 				CharacterID:      charID,
@@ -145,22 +178,39 @@ func cmdSeed() {
 				Description:      fmt.Sprintf("%s at %s", sc.displayName, se.ageRange),
 				PipelineSettings: "{}",
 				SortOrder:        i,
+				Build:            se.build,
+				HeightCM:         &h,
+				HairColor:        se.hairColor,
+				HairLength:       se.hairLength,
+				FaceShape:        se.faceShape,
+				JawDefinition:    se.jawDef,
 				CreatedAt:        now,
 				UpdatedAt:        now,
 			}
 			charStore.CreateEra(era)
-			fmt.Printf("    era: %s (%s)\n", se.label, se.ageRange)
+			fmt.Printf("    era: %s (%s, %s, %dcm)\n", se.label, se.ageRange, se.build, se.heightCM)
 		}
 
-		// Ingest test images for the first era (5 per character)
-		charOffset += 70 // shift colors so each character has unique hashes
-		for j := 0; j < 5; j++ {
-			png := makeSeedPNG(byte(j*40+10)+charOffset, byte(j*30+20)+charOffset, byte(j*20+30)+charOffset)
+		// Ingest test images for the first era (8 per character)
+		charOffset += 70
+		var charImageIDs []string
+		captions := []string{
+			fmt.Sprintf("front-facing headshot of %s, neutral expression, studio lighting", sc.displayName),
+			fmt.Sprintf("three-quarter portrait of %s, soft natural lighting", sc.displayName),
+			fmt.Sprintf("full body standing pose of %s, clean background", sc.displayName),
+			"",
+			"",
+			fmt.Sprintf("%s in casual outfit, natural daylight, candid", sc.displayName),
+			"",
+			"",
+		}
+		for j := 0; j < 8; j++ {
+			png := makeSeedPNG(byte(j*30+10)+charOffset, byte(j*25+20)+charOffset, byte(j*15+30)+charOffset)
 			eraPtr := &firstEraID
 			result, err := ingester.Ingest(&image.IngestRequest{
 				Filename:      fmt.Sprintf("seed_%s_%d.png", sc.displayName, j),
 				Data:          png,
-				Source:        image.SourceManual,
+				Source:        image.SourceComfyUI,
 				CharacterID:   charID,
 				CharacterSlug: c.Slug(),
 				EraID:         eraPtr,
@@ -168,29 +218,114 @@ func cmdSeed() {
 			if err != nil {
 				continue
 			}
-			// Mark first two as face refs, third as body ref
-			if j == 0 || j == 1 {
-				imgStore.UpdateCharacterImage(result.ImageID, charID, &image.CharacterImageUpdate{
-					RefType:      strp("face"),
-					RefRank:      intp(j + 1),
-					SetType:      setTypePtr(image.SetReference),
-					TriageStatus: triagePtr(image.TriageApproved),
-				})
-			} else if j == 2 {
-				imgStore.UpdateCharacterImage(result.ImageID, charID, &image.CharacterImageUpdate{
-					RefType:      strp("body"),
-					RefRank:      intp(1),
-					SetType:      setTypePtr(image.SetReference),
-					TriageStatus: triagePtr(image.TriageApproved),
-				})
-			} else {
-				imgStore.UpdateCharacterImage(result.ImageID, charID, &image.CharacterImageUpdate{
-					TriageStatus: triagePtr(image.TriageApproved),
-					SetType:      setTypePtr(image.SetCurated),
-				})
+			charImageIDs = append(charImageIDs, result.ImageID)
+
+			update := &image.CharacterImageUpdate{}
+			switch {
+			case j == 0 || j == 1:
+				// Face refs — approved, reference set
+				update.RefType = strp("face")
+				update.RefRank = intp(j + 1)
+				update.SetType = setTypePtr(image.SetReference)
+				update.TriageStatus = triagePtr(image.TriageApproved)
+			case j == 2:
+				// Body ref
+				update.RefType = strp("body")
+				update.RefRank = intp(1)
+				update.SetType = setTypePtr(image.SetReference)
+				update.TriageStatus = triagePtr(image.TriageApproved)
+			case j == 3 || j == 4:
+				// Curated + approved
+				update.SetType = setTypePtr(image.SetCurated)
+				update.TriageStatus = triagePtr(image.TriageApproved)
+				r := 4
+				update.Rating = &r
+			case j == 5:
+				// Curated + approved with rating
+				update.SetType = setTypePtr(image.SetCurated)
+				update.TriageStatus = triagePtr(image.TriageApproved)
+				r := 5
+				update.Rating = &r
+			default:
+				// Pending triage — no set type change, stays staging/pending
 			}
+			if captions[j] != "" {
+				update.Caption = &captions[j]
+			}
+			imgStore.UpdateCharacterImage(result.ImageID, charID, update)
 		}
-		fmt.Printf("    images: 5 ingested (2 face ref, 1 body ref, 2 curated)\n")
+
+		// Favorite the first image (headshot) — sets avatar
+		if len(charImageIDs) > 0 {
+			imgStore.ToggleFavorite(charImageIDs[0], charID, true)
+			charStore.SetAvatarImage(charID, charImageIDs[0])
+		}
+
+		fmt.Printf("    images: 8 ingested (2 face ref, 1 body ref, 3 curated, 2 pending)\n")
+		fmt.Printf("    captions: %d set, 1 favorited\n", len(captions)-countEmpty(captions))
+	}
+
+	// Create shoots, datasets, and audit events for first character (Elara)
+	shootStore := shoot.NewStore(db.DB)
+	datasetStore := dataset.NewStore(db.DB)
+	auditStore := audit.NewStore(db.DB)
+
+	chars, _ := charStore.List()
+	var elaraID string
+	var elaraImageIDs []string
+	for _, c := range chars {
+		if c.DisplayName == "Elara" {
+			elaraID = c.ID
+			images, _ := imgStore.ListByCharacter(c.ID, nil)
+			for _, img := range images {
+				elaraImageIDs = append(elaraImageIDs, img.ImageID)
+			}
+			break
+		}
+	}
+
+	if elaraID != "" {
+		// Shoots
+		s1 := &shoot.Shoot{ID: id.New(), CharacterID: elaraID, Name: "Editorial Session", SortOrder: 0, CreatedAt: now}
+		s2 := &shoot.Shoot{ID: id.New(), CharacterID: elaraID, Name: "Outdoor Natural", SortOrder: 1, CreatedAt: now}
+		shootStore.Create(s1)
+		shootStore.Create(s2)
+		if len(elaraImageIDs) >= 4 {
+			shootStore.AddImages(s1.ID, elaraImageIDs[:3])
+			shootStore.AddImages(s2.ID, elaraImageIDs[3:5])
+		}
+		fmt.Println("  shoots: Editorial Session (3 images), Outdoor Natural (2 images)")
+
+		// Dataset
+		ds := &dataset.Dataset{
+			ID: id.New(), Name: "Elara LoRA v1", Description: "Training data for Elara character LoRA",
+			Type: dataset.TypeLoRA, CharacterID: &elaraID,
+			SourceQuery: "{}", ExportConfig: "{}",
+			CreatedAt: now, UpdatedAt: now,
+		}
+		if err := datasetStore.Create(ds); err == nil {
+			trainIDs := elaraImageIDs
+			if len(trainIDs) > 6 {
+				trainIDs = trainIDs[:6]
+			}
+			datasetStore.AddImages(ds.ID, trainIDs)
+			// Set captions on dataset images
+			for i, imgID := range trainIDs {
+				cap := fmt.Sprintf("photo of sks woman, %s pose, studio lighting", []string{"headshot", "portrait", "full body", "casual", "editorial", "natural"}[i%6])
+				datasetStore.UpdateImage(ds.ID, imgID, &cap, nil, nil)
+			}
+			fmt.Printf("  dataset: %s (%d images with captions)\n", ds.Name, len(trainIDs))
+		}
+
+		// Audit events
+		auditStore.LogSimple("character", elaraID, "created")
+		auditStore.LogFieldChange("character", elaraID, "status_changed", "status", "prospect", "development", map[string]string{"character_id": elaraID})
+		auditStore.LogFieldChange("character", elaraID, "status_changed", "status", "development", "cast", map[string]string{"character_id": elaraID})
+		if len(elaraImageIDs) > 0 {
+			auditStore.LogSimple("image", elaraImageIDs[0], "face_ref_promoted")
+			auditStore.LogFieldChange("image", elaraImageIDs[0], "rating_changed", "rating", "—", "5", map[string]string{"character_id": elaraID})
+		}
+		fmt.Println("  audit: 5 events logged")
 	}
 
 	// Legacy wardrobe media items (for backward compat with media library)
@@ -271,24 +406,15 @@ func cmdSeed() {
 	}
 
 	// Character affinity — assign some garments and hairstyles to Elara
-	chars, _ := charStore.List()
-	var elaraID string
-	for _, c := range chars {
-		if c.DisplayName == "Elara" {
-			elaraID = c.ID
-			// Assign first 4 garments to Elara
-			for i := 0; i < 4 && i < len(garmentIDs); i++ {
-				garmentStore.AddAffinity(garmentIDs[i], c.ID)
-			}
-			// Assign first 3 hairstyles to Elara
-			for i := 0; i < 3 && i < len(hairstyleIDs); i++ {
-				hairstyleStore.AddAffinity(hairstyleIDs[i], c.ID)
-			}
-			fmt.Printf("  affinity: 4 garments + 3 hairstyles → %s\n", c.DisplayName)
-			break
+	if elaraID != "" {
+		for i := 0; i < 4 && i < len(garmentIDs); i++ {
+			garmentStore.AddAffinity(garmentIDs[i], elaraID)
 		}
+		for i := 0; i < 3 && i < len(hairstyleIDs); i++ {
+			hairstyleStore.AddAffinity(hairstyleIDs[i], elaraID)
+		}
+		fmt.Println("  affinity: 4 garments + 3 hairstyles → Elara")
 	}
-	_ = elaraID
 
 	// LoRAs
 	loras := []struct {
@@ -577,7 +703,17 @@ func writePNGChunk(buf *bytes.Buffer, chunkType string, data []byte) {
 	buf.Write(crcBytes[:])
 }
 
-func strp(s string) *string          { return &s }
-func intp(i int) *int                { return &i }
-func setTypePtr(s image.SetType) *image.SetType       { return &s }
+func strp(s string) *string                              { return &s }
+func intp(i int) *int                                    { return &i }
+func setTypePtr(s image.SetType) *image.SetType          { return &s }
 func triagePtr(s image.TriageStatus) *image.TriageStatus { return &s }
+
+func countEmpty(ss []string) int {
+	n := 0
+	for _, s := range ss {
+		if s == "" {
+			n++
+		}
+	}
+	return n
+}
