@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import { useDatasets, useCreateDataset, useCreateDatasetFromSearch, useImageSearch, useCharacters } from '@/lib/api'
+import { useDatasets, useCreateDataset, useCreateDatasetFromSearch, useImageSearch } from '@/lib/api'
+import { ImageSearchFilters, useSearchFilters } from '@/components/image-search-filters'
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import type { DatasetType, DatasetWithStats } from '@/lib/types'
@@ -233,46 +234,21 @@ export function DatasetManager() {
 }
 
 function CreateFromSearchDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { data: characters } = useCharacters()
   const createFromSearch = useCreateDatasetFromSearch()
+  const { filters, setFilter, addTag, removeTag, reset, toSearchParams } = useSearchFilters()
   const [name, setName] = useState('')
-  const [characterFilter, setCharacterFilter] = useState('')
-  const [tagsInput, setTagsInput] = useState('')
-  const [ratingMin, setRatingMin] = useState<number | undefined>(undefined)
-  const [sourceFilter, setSourceFilter] = useState('')
-  const [setTypeFilter, setSetTypeFilter] = useState('')
-
-  const searchParams = {
-    character: characterFilter || undefined,
-    tags: tagsInput.trim() ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : undefined,
-    rating_min: ratingMin,
-    source: sourceFilter || undefined,
-    set_type: setTypeFilter || undefined,
-    limit: 1, // just need the count
-  }
-
-  const { data: preview } = useImageSearch(searchParams)
+  const { data: preview } = useImageSearch(toSearchParams({ limit: 1 }))
 
   const handleCreate = () => {
     if (!name.trim()) return
-    const search: Record<string, unknown> = {}
-    if (characterFilter) search.character = characterFilter
-    if (tagsInput.trim()) search.tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean)
-    if (ratingMin) search.rating_min = ratingMin
-    if (sourceFilter) search.source = sourceFilter
-    if (setTypeFilter) search.set_type = setTypeFilter
-
+    const search = toSearchParams() as Record<string, unknown>
     createFromSearch.mutate(
       { name: name.trim(), search },
       {
         onSuccess: () => {
           onClose()
           setName('')
-          setCharacterFilter('')
-          setTagsInput('')
-          setRatingMin(undefined)
-          setSourceFilter('')
-          setSetTypeFilter('')
+          reset()
         },
       }
     )
@@ -280,7 +256,7 @@ function CreateFromSearchDialog({ open, onClose }: { open: boolean; onClose: () 
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
-      <DialogContent className="bg-background border-border-subtle max-w-lg">
+      <DialogContent className="bg-background border-border-subtle max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">Create Dataset from Search</DialogTitle>
         </DialogHeader>
@@ -296,74 +272,14 @@ function CreateFromSearchDialog({ open, onClose }: { open: boolean; onClose: () 
             />
           </div>
 
-          <div>
-            <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Character</label>
-            <select
-              value={characterFilter}
-              onChange={(e) => setCharacterFilter(e.target.value)}
-              className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
-            >
-              <option value="">All Characters</option>
-              {(characters ?? []).map((c) => (
-                <option key={c.id} value={c.id}>{c.display_name || c.name}</option>
-              ))}
-            </select>
-          </div>
+          <ImageSearchFilters
+            filters={filters}
+            setFilter={setFilter}
+            addTag={addTag}
+            removeTag={removeTag}
+            compact
+          />
 
-          <div>
-            <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Tags</label>
-            <input
-              value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
-              className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
-              placeholder="Comma-separated tags"
-            />
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Min Rating</label>
-              <select
-                value={ratingMin ?? ''}
-                onChange={(e) => setRatingMin(e.target.value ? Number(e.target.value) : undefined)}
-                className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
-              >
-                <option value="">Any</option>
-                {[1, 2, 3, 4, 5].map((r) => (
-                  <option key={r} value={r}>{r}+</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Source</label>
-              <select
-                value={sourceFilter}
-                onChange={(e) => setSourceFilter(e.target.value)}
-                className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
-              >
-                <option value="">Any</option>
-                <option value="fig">Fig</option>
-                <option value="comfyui">ComfyUI</option>
-                <option value="manual">Manual</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Set Type</label>
-              <select
-                value={setTypeFilter}
-                onChange={(e) => setSetTypeFilter(e.target.value)}
-                className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none"
-              >
-                <option value="">Any</option>
-                <option value="reference">Reference</option>
-                <option value="curated">Curated</option>
-                <option value="training">Training</option>
-                <option value="archive">Archive</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Preview count */}
           <div className="bg-surface-low p-3 text-[13px]">
             <span className="text-muted">This search matches </span>
             <span className="text-on-surface font-bold tabular-nums">{preview?.total ?? 0}</span>
