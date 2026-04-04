@@ -286,6 +286,11 @@ func (s *Store) BulkUpdateCharacterImages(characterID string, imageIDs []string,
 			return 0, err
 		}
 	}
+	if update.Caption != nil {
+		if err := applyBulk("caption", *update.Caption); err != nil {
+			return 0, err
+		}
+	}
 	return len(imageIDs), nil
 }
 
