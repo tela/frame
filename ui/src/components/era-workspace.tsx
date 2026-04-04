@@ -238,6 +238,14 @@ export function EraWorkspace() {
           <span className="material-symbols-outlined text-[18px]">collections</span>
           Ref Builder
         </Link>
+        <Link
+          to="/characters/$characterId/eras/$eraId/captions"
+          params={{ characterId, eraId }}
+          className="text-ui text-[13px] text-muted hover:text-primary transition-colors flex items-center gap-2"
+        >
+          <span className="material-symbols-outlined text-[18px]">edit_note</span>
+          Captions
+        </Link>
         {/* Shoot filter dropdown */}
         <div className="ml-auto flex items-center gap-4">
           <select
@@ -456,18 +464,6 @@ function EraImageCard({ ci, characterId, eraId, isSelected, onToggleSelect, onUp
 
   return (
     <div className={`masonry-item relative group overflow-hidden ${isSelected ? 'ring-2 ring-on-surface ring-offset-4' : ''}`}>
-      {/* Selection checkbox */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onToggleSelect() }}
-        className={`absolute top-2 left-2 z-20 w-6 h-6 rounded-sm flex items-center justify-center border transition-all ${
-          isSelected
-            ? 'bg-accent border-accent text-white'
-            : 'bg-background/80 border-border-subtle text-transparent group-hover:text-muted hover:text-primary hover:border-primary'
-        }`}
-      >
-        <span className="material-symbols-outlined text-[16px]">check</span>
-      </button>
-
       {/* Shoot badge */}
       {shootName && (
         <div className="absolute top-2 left-10 z-20">
@@ -504,13 +500,24 @@ function EraImageCard({ ci, characterId, eraId, isSelected, onToggleSelect, onUp
               </button>
             ))}
           </div>
-          <button
-            onClick={onDelete}
-            className="w-7 h-7 rounded-full bg-background/20 flex items-center justify-center hover:bg-red-500/80 transition-colors"
-            title="Delete"
-          >
-            <span className="material-symbols-outlined text-[14px]">delete</span>
-          </button>
+          <div className="flex gap-1">
+            <button
+              onClick={onToggleSelect}
+              className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
+                isSelected ? 'bg-accent text-white' : 'bg-background/20 hover:bg-background/40'
+              }`}
+              title="Select"
+            >
+              <span className="material-symbols-outlined text-[14px]">check</span>
+            </button>
+            <button
+              onClick={onDelete}
+              className="w-7 h-7 rounded-full bg-background/20 flex items-center justify-center hover:bg-red-500/80 transition-colors"
+              title="Delete"
+            >
+              <span className="material-symbols-outlined text-[14px]">delete</span>
+            </button>
+          </div>
         </div>
 
         {/* Middle: triage + studio actions */}

@@ -815,6 +815,7 @@ export function useBulkUpdateCharacterImages() {
         ref_type?: string | null
         ref_rank?: number
         era_id?: string
+        caption?: string
       }
     }) => {
       const res = fetch(`/api/v1/characters/${characterId}/images/bulk`, {
@@ -845,6 +846,7 @@ export function useBulkUpdateCharacterImages() {
           if (vars.update.triage_status !== undefined) updated.triage_status = vars.update.triage_status as TriageStatus
           if (vars.update.set_type !== undefined) updated.set_type = vars.update.set_type as SetType
           if (vars.update.ref_type !== undefined) updated.ref_type = (vars.update.ref_type || null) as RefType | null
+          if (vars.update.caption !== undefined) updated.caption = vars.update.caption || null
           return updated
         }))
       }

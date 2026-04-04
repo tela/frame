@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Editorial Archive | Image Captioning</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "background": "#faf9f8",
+                        "on-error": "#fff7f6",
+                        "on-error-container": "#752121",
+                        "on-primary-container": "#525151",
+                        "primary-fixed-dim": "#d7d4d3",
+                        "outline-variant": "#aeb3b2",
+                        "primary": "#5f5e5e",
+                        "tertiary-dim": "#3c5666",
+                        "surface-container": "#edeeed",
+                        "surface-tint": "#5f5e5e",
+                        "tertiary-fixed": "#d0ecff",
+                        "surface-container-high": "#e6e9e8",
+                        "on-secondary": "#faf9f6",
+                        "error": "#9f403d",
+                        "secondary-fixed": "#e3e2e0",
+                        "surface": "#faf9f8",
+                        "secondary-dim": "#535352",
+                        "on-primary-fixed": "#403f3f",
+                        "tertiary-fixed-dim": "#c2def0",
+                        "on-secondary-container": "#515250",
+                        "on-surface-variant": "#5b605f",
+                        "on-secondary-fixed-variant": "#5b5c5a",
+                        "inverse-on-surface": "#9d9d9c",
+                        "on-secondary-fixed": "#3f3f3e",
+                        "surface-container-highest": "#dfe3e2",
+                        "secondary-fixed-dim": "#d5d4d2",
+                        "on-tertiary-fixed": "#2c4655",
+                        "error-container": "#fe8983",
+                        "surface-bright": "#faf9f8",
+                        "surface-container-low": "#f3f4f3",
+                        "tertiary-container": "#d0ecff",
+                        "tertiary": "#486272",
+                        "on-primary-fixed-variant": "#5c5b5b",
+                        "surface-variant": "#dfe3e2",
+                        "on-tertiary-fixed-variant": "#486272",
+                        "on-tertiary": "#f4faff",
+                        "secondary-container": "#e3e2e0",
+                        "secondary": "#5f5f5d",
+                        "surface-container-lowest": "#ffffff",
+                        "on-background": "#2f3333",
+                        "surface-dim": "#d6dbda",
+                        "primary-dim": "#535252",
+                        "inverse-surface": "#0d0e0e",
+                        "outline": "#777c7b",
+                        "error-dim": "#4e0309",
+                        "on-tertiary-container": "#3e5868",
+                        "on-surface": "#2f3333",
+                        "on-primary": "#faf7f6",
+                        "inverse-primary": "#ffffff",
+                        "primary-fixed": "#e5e2e1",
+                        "primary-container": "#e5e2e1"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Newsreader", "serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        .font-serif { font-family: 'Newsreader', serif; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #dfe3e2; border-radius: 2px; }
+    </style>
+</head>
+<body class="bg-background text-on-background selection:bg-primary-container selection:text-on-primary-container">
+<!-- Top Navigation Anchor -->
+<header class="fixed top-0 w-full z-50 bg-[#FAF9F8] dark:bg-[#1A1C1C] opacity-80 backdrop-blur-md shadow-sm shadow-[#2F3333]/5">
+<div class="flex justify-between items-center w-full px-8 py-4 max-w-[1920px] mx-auto">
+<div class="flex items-center gap-8">
+<span class="text-xl font-serif italic text-[#2F3333] dark:text-[#FAF9F8]">Editorial Archive</span>
+<nav class="hidden md:flex gap-6 items-center">
+<a class="text-[#8C8C8A] dark:text-[#8C8C8A] font-medium hover:text-[#111111] dark:hover:text-[#FFFFFF] transition-colors" href="#">Archive</a>
+<a class="text-[#2F3333] dark:text-[#FAF9F8] font-bold border-b-2 border-[#2F3333] dark:border-[#FAF9F8] pb-1" href="#">Tasks</a>
+<a class="text-[#8C8C8A] dark:text-[#8C8C8A] font-medium hover:text-[#111111] dark:hover:text-[#FFFFFF] transition-colors" href="#">Team</a>
+<a class="text-[#8C8C8A] dark:text-[#8C8C8A] font-medium hover:text-[#111111] dark:hover:text-[#FFFFFF] transition-colors" href="#">Guidelines</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-[#2F3333] dark:text-[#FAF9F8]">history</button>
+<button class="material-symbols-outlined text-[#2F3333] dark:text-[#FAF9F8]">settings</button>
+<div class="h-8 w-8 rounded-full bg-surface-container overflow-hidden">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="professional studio portrait of a museum curator in a minimal dark sweater against a neutral background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2nABhU2p5UQR4j104axjy78_rLccNY4w-S5nLhKBloTmJbKUgRJ8mbHdhhJR5kHEUQCAAxppMryIvjxcq3JatMcSLe9PVU2142Z9u01Z4GN5wv87kW2LSltFElYjmatEGtxa0dW1Zrr8GLGKSh2olLmtSdaaZ4RmMfc6cJzrRN0g7VtjIzlr2W0WMfDA9eAFfULzALpZgI7376OuWPboSEKBOe-2p8YRUBK_pytgm4Sn19mBRz8ugc0f_ubE018m7gzaNMmShXAE"/>
+</div>
+</div>
+</div>
+<div class="bg-[#F3F4F3] dark:bg-[#2F3333] h-[1px] w-full"></div>
+</header>
+<div class="flex min-h-screen pt-16">
+<!-- Sidebar Navigation Anchor -->
+<aside class="h-screen w-64 border-r border-[#EDEEED] dark:border-[#2F3333] bg-[#FAF9F8] dark:bg-[#1A1C1C] flex flex-col py-8 gap-6 fixed left-0">
+<div class="px-8">
+<h2 class="text-lg font-serif font-bold text-[#2F3333] dark:text-[#FAF9F8]">Project Alpha</h2>
+<p class="text-xs font-sans tracking-wide text-[#8C8C8A]">1950s Editorial</p>
+</div>
+<nav class="flex flex-col gap-1">
+<a class="text-[#8C8C8A] dark:text-[#8C8C8A] pl-5 flex items-center gap-3 py-3 hover:bg-[#F3F4F3] dark:hover:bg-[#2F3333] transition-all" href="#">
+<span class="material-symbols-outlined text-sm">edit_note</span>
+<span class="text-sm font-sans tracking-wide">Current Project</span>
+</a>
+<a class="text-[#8C8C8A] dark:text-[#8C8C8A] pl-5 flex items-center gap-3 py-3 hover:bg-[#F3F4F3] dark:hover:bg-[#2F3333] transition-all" href="#">
+<span class="material-symbols-outlined text-sm">history_edu</span>
+<span class="text-sm font-sans tracking-wide">Era Context</span>
+</a>
+<a class="text-[#2F3333] dark:text-[#FAF9F8] font-semibold border-l-4 border-[#111111] pl-4 flex items-center gap-3 py-3 bg-[#F3F4F3] dark:bg-[#2F3333]" href="#">
+<span class="material-symbols-outlined text-sm">account_circle</span>
+<span class="text-sm font-sans tracking-wide">Character Guide</span>
+</a>
+<a class="text-[#8C8C8A] dark:text-[#8C8C8A] pl-5 flex items-center gap-3 py-3 hover:bg-[#F3F4F3] dark:hover:bg-[#2F3333] transition-all" href="#">
+<span class="material-symbols-outlined text-sm">auto_awesome_motion</span>
+<span class="text-sm font-sans tracking-wide">Bulk Templates</span>
+</a>
+<a class="text-[#8C8C8A] dark:text-[#8C8C8A] pl-5 flex items-center gap-3 py-3 hover:bg-[#F3F4F3] dark:hover:bg-[#2F3333] transition-all" href="#">
+<span class="material-symbols-outlined text-sm">file_download</span>
+<span class="text-sm font-sans tracking-wide">Export</span>
+</a>
+</nav>
+<div class="mt-auto px-6">
+<button class="w-full py-3 bg-on-background text-inverse-primary text-sm font-medium rounded-[2px] transition-all active:scale-[0.98]">
+                    Finalize Batch
+                </button>
+</div>
+<div class="px-8 mt-4 border-t border-surface-container pt-6">
+<a class="text-xs text-[#8C8C8A] flex items-center gap-2 mb-3" href="#">
+<span class="material-symbols-outlined text-sm">help_outline</span> Support
+                </a>
+<a class="text-xs text-[#8C8C8A] flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-sm">policy</span> Archive Policy
+                </a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 ml-64 p-12 max-w-7xl">
+<!-- Header Section -->
+<section class="mb-16">
+<div class="flex items-baseline justify-between mb-8">
+<div>
+<h1 class="text-5xl font-headline font-light text-on-surface tracking-tight mb-2">Elowen Vance</h1>
+<p class="text-xl font-headline italic text-primary">Standard · 18-20</p>
+</div>
+<div class="text-right">
+<div class="text-sm font-label uppercase tracking-widest text-on-surface-variant mb-2">Completion Status</div>
+<div class="flex items-center gap-4">
+<span class="text-2xl font-headline font-medium">42 <span class="text-primary/40 font-light italic">of</span> 67</span>
+<div class="w-48 h-[1px] bg-surface-container relative">
+<div class="absolute left-0 top-0 h-[1px] bg-on-surface" style="width: 62%;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Template Controls -->
+<div class="flex items-center justify-between py-6 px-8 bg-surface-container-low rounded-lg border border-outline-variant/10">
+<div class="flex items-center gap-6">
+<div class="relative group">
+<label class="block text-[10px] uppercase tracking-tighter text-outline mb-1">Active Template</label>
+<select class="appearance-none bg-transparent border-none p-0 pr-8 text-sm font-medium text-on-surface focus:ring-0 cursor-pointer">
+<option>Detailed Narrative</option>
+<option>Basic Identity</option>
+<option>LoRA Training</option>
+</select>
+<span class="material-symbols-outlined absolute right-0 bottom-0 text-sm pointer-events-none">expand_more</span>
+</div>
+<div class="h-8 w-[1px] bg-outline-variant/20"></div>
+<div class="flex gap-4">
+<button class="px-4 py-2 bg-surface-container-lowest text-xs font-label uppercase tracking-widest border border-outline-variant/20 hover:border-on-surface transition-colors">Apply to Uncaptioned</button>
+<button class="px-4 py-2 bg-surface-container-lowest text-xs font-label uppercase tracking-widest border border-outline-variant/20 hover:border-on-surface transition-colors">Apply to All</button>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:text-on-surface">filter_list</button>
+<nav class="flex gap-2">
+<button class="px-3 py-1 text-xs font-label uppercase tracking-tighter bg-on-surface text-inverse-primary">All</button>
+<button class="px-3 py-1 text-xs font-label uppercase tracking-tighter text-on-surface-variant hover:bg-surface-variant">Captioned</button>
+<button class="px-3 py-1 text-xs font-label uppercase tracking-tighter text-on-surface-variant hover:bg-surface-variant">Uncaptioned</button>
+</nav>
+</div>
+</div>
+</section>
+<!-- Image Captioning List -->
+<section class="space-y-4">
+<!-- Row 1 -->
+<article class="group flex gap-8 p-6 bg-surface-container-lowest rounded-sm transition-shadow hover:shadow-[0_20px_40px_rgba(47,51,51,0.04)]">
+<div class="flex flex-col items-center gap-4">
+<input class="w-4 h-4 rounded-sm border-outline-variant text-on-surface focus:ring-on-surface/20" type="checkbox"/>
+<div class="w-16 h-16 rounded-[2px] overflow-hidden bg-surface-container ring-1 ring-inset ring-outline-variant/10">
+<img alt="Thumbnail 1" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" data-alt="Close up portrait of a character with ethereal lighting and soft film grain, emphasizing fine skin texture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAx7LBtn1ugNbLCse4SctnqxQYdsUO7GNCbwcS8b-9zU3_R8km8lyRxHyQlQ5UsI23befHNjnvCYQhW0ZgT-PjdUc1zF4Nopyn_9HTsQltXXAD296pcu9jjenltPCv38d4UdHIqquJsLqlVP-4IRLDwKrRRxj92PrsVpkK5G4tBjCtro-PGeuBRsFu4xuw1a38BJlIYKBAV2CcUAe-Ursa4y7Edf9XJ7QpJQvFiCxK6tqY4iJCdFljXDnNnPa_ydN66yRi36XiVfQU"/>
+</div>
+</div>
+<div class="flex-1 space-y-4">
+<div class="flex justify-between items-start">
+<div class="flex gap-4 text-[10px] uppercase tracking-widest text-outline">
+<span>ID: EV_042</span>
+<span>3200 × 4800 px</span>
+<span>Source: Studio_Session_A</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-label font-bold uppercase text-outline">184 / 200</span>
+<div class="w-2 h-2 rounded-full bg-on-surface"></div>
+</div>
+</div>
+<textarea class="w-full h-24 p-0 bg-transparent border-none focus:ring-0 text-[13px] font-body leading-relaxed text-on-surface placeholder:text-outline/40 resize-none" placeholder="Enter caption descriptive text...">A cinematic high-angle portrait of Elowen Vance, wearing a tailored charcoal wool coat with a high collar. Soft morning light from a side window highlights the sharp contours of her face. Neutral background, minimal color grading, medium film grain texture.</textarea>
+</div>
+<div class="flex flex-col gap-2 self-start opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="material-symbols-outlined text-primary p-2 hover:bg-surface-container rounded-sm">auto_fix</button>
+<button class="material-symbols-outlined text-primary p-2 hover:bg-surface-container rounded-sm">content_copy</button>
+</div>
+</article>
+<!-- Row 2 (Warning State) -->
+<article class="group flex gap-8 p-6 bg-surface-container-lowest rounded-sm border-l-2 border-error/20">
+<div class="flex flex-col items-center gap-4">
+<input class="w-4 h-4 rounded-sm border-outline-variant text-on-surface focus:ring-on-surface/20" type="checkbox"/>
+<div class="w-16 h-16 rounded-[2px] overflow-hidden bg-surface-container ring-1 ring-inset ring-outline-variant/10">
+<img alt="Thumbnail 2" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" data-alt="Medium shot of a woman in an archival setting, surrounded by vintage books and low ambient lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJwyx78IBU-Vl6CpCJMWgpoJ5Mr7L2dFwaAUAGnmSoP4S6pEY4ClHRpjp2A21MZzntFlV_XFDzFFKbRtTTSrNkLaRzetcrkDUPm7cEm9UGsk9f7U6TtxikZ-Scuf6-0-aAua-2OzRqwZm2zqK05HeWqsqa_krWMyGSGa1jSOeTKhn9WdNl2554nuVXpZPo2-BAmx04pmtjoxWz5W7bTFweqXDHCyTkKfbLYCK1wEU-Y4MyLu8HIk84TPLgjOslScERFQ6PyvPQ9uc"/>
+</div>
+</div>
+<div class="flex-1 space-y-4">
+<div class="flex justify-between items-start">
+<div class="flex gap-4 text-[10px] uppercase tracking-widest text-outline">
+<span>ID: EV_043</span>
+<span>2400 × 3600 px</span>
+<span>Source: Library_Exterior</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-label font-bold uppercase text-error">214 / 200</span>
+<div class="w-2 h-2 rounded-full bg-error"></div>
+</div>
+</div>
+<textarea class="w-full h-24 p-0 bg-transparent border-none focus:ring-0 text-[13px] font-body leading-relaxed text-on-surface resize-none">Elowen Vance standing amidst the mahogany shelves of the Central Archive. She is examining a ledger, her expression one of focused intensity. The lighting is dramatic, casting deep shadows across the room. Her attire is period-correct 1950s business wear, featuring a crisp white blouse and a dark pencil skirt. The camera is positioned at waist height, creating an authoritative perspective.</textarea>
+</div>
+<div class="flex flex-col gap-2 self-start opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="material-symbols-outlined text-primary p-2 hover:bg-surface-container rounded-sm">auto_fix</button>
+<button class="material-symbols-outlined text-primary p-2 hover:bg-surface-container rounded-sm">content_copy</button>
+</div>
+</article>
+<!-- Row 3 (Empty/Uncaptioned) -->
+<article class="group flex gap-8 p-6 bg-surface-container-low/50 rounded-sm italic">
+<div class="flex flex-col items-center gap-4">
+<input class="w-4 h-4 rounded-sm border-outline-variant text-on-surface focus:ring-on-surface/20" type="checkbox"/>
+<div class="w-16 h-16 rounded-[2px] overflow-hidden bg-surface-container-high ring-1 ring-inset ring-outline-variant/10">
+<img alt="Thumbnail 3" class="w-full h-full object-cover grayscale opacity-50 group-hover:opacity-100 transition-all duration-500" data-alt="Full body shot of a fashion model walking in a misty urban street, cinematic foggy atmosphere" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlL67AVDht0BwVW4tIj4SlzIYcuyT8JR17wf8ZYKHBQN3INmC6uhFuzDdx3JEjlFWFSHHqrJCDZkQiUC8pErHVfZ20vhRCtFkWpCyhCd9lxjZFx9y3xtrsbkaDeipKEX1MndF-jdNTCATQ02dzo2KkOtvIYw5yUr_fyApeYxKqlsJabLA5t1XvQ2F78bBRRJVwsgJAGYB_22YzYwKmPb-Xj-HSdxKJWgTxovQdy0cDVZLkDD9_iy6SA5TPOkqHFQl9FfibbDMqkH4"/>
+</div>
+</div>
+<div class="flex-1 space-y-4">
+<div class="flex justify-between items-start">
+<div class="flex gap-4 text-[10px] uppercase tracking-widest text-outline/40">
+<span>ID: EV_044</span>
+<span>3000 × 4500 px</span>
+<span>Source: Street_Exterior</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-label font-bold uppercase text-outline/40">0 / 200</span>
+<div class="w-2 h-2 rounded-full bg-outline-variant/20"></div>
+</div>
+</div>
+<textarea class="w-full h-24 p-0 bg-transparent border-none focus:ring-0 text-[13px] font-body leading-relaxed text-on-surface-variant placeholder:text-outline/30 resize-none" placeholder="Awaiting description..."></textarea>
+</div>
+</article>
+<!-- Row 4 -->
+<article class="group flex gap-8 p-6 bg-surface-container-lowest rounded-sm transition-shadow hover:shadow-[0_20px_40px_rgba(47,51,51,0.04)]">
+<div class="flex flex-col items-center gap-4">
+<input class="w-4 h-4 rounded-sm border-outline-variant text-on-surface focus:ring-on-surface/20" type="checkbox"/>
+<div class="w-16 h-16 rounded-[2px] overflow-hidden bg-surface-container ring-1 ring-inset ring-outline-variant/10">
+<img alt="Thumbnail 4" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" data-alt="Close-up of a vintage camera lens with a reflection of a female face, noir style lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCk-g8cWJtuSq1EHrXOEZlo871Li6HX8ORYdXedFfNvHlxpEFAMcHlwYlSNvPd2TG9mQtb3TRnmxUa4vRu-EbaxkyJK5m6pRr8DvPH9d9KaOf98OH9cMJgC1-fyO0qFOzeAMr0L_rMYHcSYwH48NP8TzKBTjbBw1d629E1aw5lNWSsDorOK27ZUdt7TuuD_GOcORDvujnUxy9uJUOjiYqqZLXqPXYRi5C3Wyj7yuuSvNZC8FSZ9dCZLA5uIYZG9SdNctNgOjAuoIxU"/>
+</div>
+</div>
+<div class="flex-1 space-y-4">
+<div class="flex justify-between items-start">
+<div class="flex gap-4 text-[10px] uppercase tracking-widest text-outline">
+<span>ID: EV_045</span>
+<span>4000 × 6000 px</span>
+<span>Source: Macro_Portrait</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-label font-bold uppercase text-on-surface">112 / 200</span>
+<div class="w-2 h-2 rounded-full bg-on-surface"></div>
+</div>
+</div>
+<textarea class="w-full h-24 p-0 bg-transparent border-none focus:ring-0 text-[13px] font-body leading-relaxed text-on-surface resize-none">Macro close-up focusing on Elowen's eye as she looks through a viewfinder. The skin texture is sharp and detailed. A single catchlight in the pupil. Cold, analytical atmosphere. Shallow depth of field with the background blurring into abstract dark shapes.</textarea>
+</div>
+<div class="flex flex-col gap-2 self-start opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="material-symbols-outlined text-primary p-2 hover:bg-surface-container rounded-sm">auto_fix</button>
+<button class="material-symbols-outlined text-primary p-2 hover:bg-surface-container rounded-sm">content_copy</button>
+</div>
+</article>
+</section>
+<!-- Bottom Pagination/Controls -->
+<footer class="mt-12 flex justify-center items-center gap-12 pt-12 border-t border-surface-container">
+<button class="flex items-center gap-2 text-xs font-label uppercase tracking-widest text-outline hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-sm">arrow_back</span> Previous Page
+                </button>
+<div class="flex gap-4">
+<span class="px-3 py-1 bg-on-surface text-inverse-primary text-xs font-label">1</span>
+<button class="px-3 py-1 text-xs font-label text-on-surface-variant hover:bg-surface-variant">2</button>
+<button class="px-3 py-1 text-xs font-label text-on-surface-variant hover:bg-surface-variant">3</button>
+<span class="px-3 py-1 text-xs font-label text-outline">...</span>
+<button class="px-3 py-1 text-xs font-label text-on-surface-variant hover:bg-surface-variant">12</button>
+</div>
+<button class="flex items-center gap-2 text-xs font-label uppercase tracking-widest text-on-surface-variant hover:text-on-surface transition-colors">
+                    Next Page <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</footer>
+</main>
+</div>
+<!-- Contextual FAB (Only visible on scroll/active task) -->
+<button class="fixed bottom-12 right-12 bg-on-surface text-inverse-primary p-4 shadow-2xl rounded-full flex items-center gap-3 transition-transform hover:scale-105 active:scale-95">
+<span class="material-symbols-outlined" data-weight="fill">save</span>
+<span class="text-xs font-label uppercase tracking-widest mr-2">Sync Changes</span>
+</button>
+</body></html>
