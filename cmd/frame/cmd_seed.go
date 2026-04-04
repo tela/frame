@@ -89,22 +89,22 @@ func cmdSeed() {
 		{
 			name: "Elara Voss", displayName: "Elara", status: character.StatusCast,
 			eras: []seedEra{
-				{label: "Standard", ageRange: "20", timePeriod: "Present day"},
-				{label: "Young Adult", ageRange: "18-24", timePeriod: "Present day"},
-				{label: "Mature", ageRange: "30-35", timePeriod: "Present day"},
+				{label: "Late Teen", ageRange: "18-20", timePeriod: "Present day"},
+				{label: "Young Adult", ageRange: "21-25", timePeriod: "Present day"},
+				{label: "Late Prime", ageRange: "33-40", timePeriod: "Present day"},
 			},
 		},
 		{
 			name: "Nyx Ashford", displayName: "Nyx", status: character.StatusDevelopment,
 			eras: []seedEra{
-				{label: "Standard", ageRange: "20", timePeriod: "Present day"},
-				{label: "Gothic Phase", ageRange: "19-22", timePeriod: "Present day"},
+				{label: "Teen", ageRange: "16-17", timePeriod: "Present day"},
+				{label: "Late Teen", ageRange: "18-20", timePeriod: "Present day"},
 			},
 		},
 		{
 			name: "Celeste Moreau", displayName: "Celeste", status: character.StatusProspect,
 			eras: []seedEra{
-				{label: "Standard", ageRange: "20", timePeriod: "Present day"},
+				{label: "Late Teen", ageRange: "18-20", timePeriod: "Present day"},
 			},
 		},
 	}
