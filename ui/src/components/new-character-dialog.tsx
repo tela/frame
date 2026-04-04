@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import type { Character } from '@/lib/types'
 import {
-  EYE_COLORS, ETHNICITIES, HAIR_TEXTURES, HAIR_COLORS, GENDERS, ERA_PRESETS,
+  EYE_COLORS, ETHNICITIES, HAIR_TEXTURES, HAIR_COLORS, GENDERS, ERA_PRESETS, LAST_NAMES,
   generateRandomName, randomFrom,
 } from '@/components/character-name-data'
 

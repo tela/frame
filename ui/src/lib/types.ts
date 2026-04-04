@@ -102,6 +102,11 @@ export type ImageSource = 'fig' | 'comfyui' | 'manual'
 export type SetType = 'staging' | 'reference' | 'curated' | 'training' | 'archive'
 export type TriageStatus = 'pending' | 'approved' | 'rejected' | 'archived'
 
+// Generation
+export type Workflow = 'text-to-image' | 'sdxl_text2img' | 'sdxl_character_gen' | 'sdxl_multi_ref' | 'sdxl_clothing_swap' | 'sdxl_pose_transfer' | 'sdxl_img2img' | 'sdxl_quality_postprocess' | 'kontext'
+export type Tier = 'cheap' | 'complex' | 'frontier'
+export type ContentRating = 'sfw' | 'nsfw'
+
 export interface Image {
   id: string
   hash: string
