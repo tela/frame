@@ -155,11 +155,8 @@ function StylistDrawerContent({ onClose }: { onClose: () => void }) {
     <>
       {/* Header */}
       <div className="p-6 pt-8 border-b border-surface-low">
-        <div className="flex justify-between items-start mb-1">
+        <div className="mb-1">
           <span className="text-ui text-[10px] font-bold tracking-[0.2em] text-on-surface">STYLIST</span>
-          <button onClick={onClose} className="text-muted hover:text-primary transition-colors">
-            <span className="material-symbols-outlined">close</span>
-          </button>
         </div>
         {characterName && (
           <div className="flex items-baseline gap-2">
@@ -236,10 +233,16 @@ function StylistDrawerContent({ onClose }: { onClose: () => void }) {
           {/* Bottom bar */}
           <div className="flex justify-between items-center px-1">
             <div className="flex gap-4">
-              <button className="text-muted hover:text-primary transition-colors">
+              <button
+                className="text-muted hover:text-primary transition-colors"
+                title="Share an image with the stylist for evaluation"
+              >
                 <span className="material-symbols-outlined text-[18px]">photo_camera</span>
               </button>
-              <button className="text-muted hover:text-primary transition-colors">
+              <button
+                className="text-muted hover:text-primary transition-colors"
+                title="Compose a shot using the visual brief editor"
+              >
                 <span className="material-symbols-outlined text-[18px]">draw</span>
               </button>
             </div>
@@ -252,9 +255,6 @@ function StylistDrawerContent({ onClose }: { onClose: () => void }) {
                   End Session
                 </button>
               )}
-              <span className="text-[10px] text-ui text-muted/50">
-                Agent Pending
-              </span>
             </div>
           </div>
         </div>
