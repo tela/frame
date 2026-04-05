@@ -11,6 +11,7 @@ import {
 } from '@/lib/api'
 import type { StylistMessage, StylistSessionContext } from '@/lib/types'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
+import { studioState } from '@/lib/studio-state'
 
 // ===== Context for global drawer state =====
 
@@ -74,6 +75,21 @@ function useRouteContext(): StylistSessionContext {
   return ctx
 }
 
+// Snapshot Studio state at send time (not on every render)
+function getStudioContext(ctx: StylistSessionContext): StylistSessionContext {
+  if (ctx.screen !== 'studio') return ctx
+  const state = studioState.getSnapshot()
+  if (!state) return ctx
+  return {
+    ...ctx,
+    studio_prompt: state.prompt,
+    studio_negative: state.negativePrompt,
+    studio_workflow: state.workflow,
+    studio_job: state.job,
+    studio_content_rating: state.contentRating,
+  }
+}
+
 // ===== Sheet wrapper =====
 
 function StylistDrawerSheet({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChange: (open: boolean) => void }) {
@@ -130,12 +146,12 @@ function StylistDrawerContent({ onClose: _onClose }: { onClose: () => void }) {
       // Start a new session then send.
       startSession.mutate(routeCtx, {
         onSuccess: (sess) => {
-          sendMessage.mutate({ sessionId: sess.id, content, context: routeCtx })
+          sendMessage.mutate({ sessionId: sess.id, content, context: getStudioContext(routeCtx) })
           setInput('')
         },
       })
     } else {
-      sendMessage.mutate({ sessionId: currentSession.id, content, context: routeCtx })
+      sendMessage.mutate({ sessionId: currentSession.id, content, context: getStudioContext(routeCtx) })
       setInput('')
     }
   }
