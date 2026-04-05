@@ -88,7 +88,7 @@ function StylistDrawerSheet({ isOpen, onOpenChange }: { isOpen: boolean; onOpenC
 
 // ===== Main drawer content =====
 
-function StylistDrawerContent({ onClose }: { onClose: () => void }) {
+function StylistDrawerContent({ onClose: _onClose }: { onClose: () => void }) {
   const routeCtx = useRouteContext()
   const { data: activeSession } = useActiveStylistSession()
   const sessionId = activeSession?.id ?? null
