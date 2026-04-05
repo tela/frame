@@ -268,13 +268,28 @@ func (s *testServer) ingestEraImage(charID, eraID string, color byte) string {
 	return r.ImageID
 }
 
-// writeTestImages creates a temp directory with N test PNG files and returns the path.
-func writeTestImages(t *testing.T, count int) string {
-	t.Helper()
-	dir := t.TempDir()
+// writeTestImages creates a directory with N test PNG files inside the
+// server's rootDir and returns its path. Using rootDir ensures the path
+// passes the allowed-roots check on import/export endpoints.
+func (s *testServer) writeTestImages(count int) string {
+	s.t.Helper()
+	dir, err := os.MkdirTemp(s.rootDir, "images-*")
+	if err != nil {
+		s.t.Fatal(err)
+	}
 	for i := 0; i < count; i++ {
 		png := testPNG(byte(i*10), byte(i*20), byte(i*30))
 		os.WriteFile(fmt.Sprintf("%s/img_%03d.png", dir, i), png, 0644)
+	}
+	return dir
+}
+
+// testOutputDir creates a directory inside the server's rootDir for export output.
+func (s *testServer) testOutputDir() string {
+	s.t.Helper()
+	dir, err := os.MkdirTemp(s.rootDir, "export-*")
+	if err != nil {
+		s.t.Fatal(err)
 	}
 	return dir
 }

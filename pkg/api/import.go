@@ -40,7 +40,17 @@ func (a *API) handleImportDirectory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	info, err := os.Stat(req.Path)
+	absPath, err := filepath.Abs(req.Path)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid path")
+		return
+	}
+	if !a.isAllowedBrowsePath(absPath) {
+		writeError(w, http.StatusForbidden, "path is outside allowed roots")
+		return
+	}
+
+	info, err := os.Stat(absPath)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, fmt.Sprintf("path not accessible: %s", err))
 		return
@@ -49,6 +59,7 @@ func (a *API) handleImportDirectory(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "path is not a directory")
 		return
 	}
+	req.Path = absPath
 
 	source := image.Source(req.Source)
 	if source == "" {

@@ -41,6 +41,28 @@ func (a *API) exportDataset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate output_dir is within allowed roots
+	absOutput, err := filepath.Abs(req.OutputDir)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid output_dir")
+		return
+	}
+	if !a.isAllowedBrowsePath(absOutput) {
+		writeError(w, http.StatusForbidden, "output_dir is outside allowed roots")
+		return
+	}
+	req.OutputDir = absOutput
+
+	// Sanitize ClassToken — strip path separators to prevent traversal
+	if req.ClassToken != "" {
+		req.ClassToken = strings.Map(func(r rune) rune {
+			if r == '/' || r == '\\' || r == '.' {
+				return '_'
+			}
+			return r
+		}, req.ClassToken)
+	}
+
 	// Verify dataset exists
 	ds, err := a.Datasets.Get(dsID)
 	if err != nil {
