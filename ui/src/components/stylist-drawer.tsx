@@ -130,12 +130,12 @@ function StylistDrawerContent({ onClose }: { onClose: () => void }) {
       // Start a new session then send.
       startSession.mutate(routeCtx, {
         onSuccess: (sess) => {
-          sendMessage.mutate({ sessionId: sess.id, content })
+          sendMessage.mutate({ sessionId: sess.id, content, context: routeCtx })
           setInput('')
         },
       })
     } else {
-      sendMessage.mutate({ sessionId: currentSession.id, content })
+      sendMessage.mutate({ sessionId: currentSession.id, content, context: routeCtx })
       setInput('')
     }
   }
@@ -173,11 +173,23 @@ function StylistDrawerContent({ onClose }: { onClose: () => void }) {
 
       {/* Conversation */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6">
-        {messages.length === 0 && !currentSession && (
+        {!currentSession && (
           <div className="text-center py-16">
             <span className="material-symbols-outlined text-[40px] text-muted/20 mb-4 block">auto_fix_high</span>
             <p className="text-sm text-muted mb-1">Start a conversation with the Stylist</p>
-            <p className="text-[11px] text-muted/60">Ask about looks, wardrobe, or generation workflows</p>
+            <p className="text-[11px] text-muted/60 mb-6">Ask about looks, wardrobe, or generation workflows</p>
+            <button
+              onClick={() => startSession.mutate(routeCtx)}
+              disabled={startSession.isPending}
+              className="bg-on-surface text-background px-6 py-2 text-[11px] uppercase font-bold tracking-widest hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              {startSession.isPending ? 'Starting...' : 'New Session'}
+            </button>
+          </div>
+        )}
+        {currentSession && messages.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-sm text-muted">Session started. What would you like to work on?</p>
           </div>
         )}
 
@@ -247,12 +259,21 @@ function StylistDrawerContent({ onClose }: { onClose: () => void }) {
               </button>
             </div>
             <div className="flex items-center gap-3">
-              {currentSession && (
+              {currentSession && !currentSession.ended_at && (
                 <button
                   onClick={() => endSession.mutate(currentSession.id)}
                   className="text-[10px] text-ui text-muted hover:text-accent transition-colors"
                 >
                   End Session
+                </button>
+              )}
+              {(!currentSession || currentSession.ended_at) && (
+                <button
+                  onClick={() => startSession.mutate(routeCtx)}
+                  disabled={startSession.isPending}
+                  className="text-[10px] text-ui text-muted hover:text-primary transition-colors"
+                >
+                  New Session
                 </button>
               )}
             </div>

@@ -67,7 +67,8 @@ func (a *API) sendStylistMessage(w http.ResponseWriter, r *http.Request) {
 	sessionID := r.PathValue("id")
 
 	var req struct {
-		Content string `json:"content"`
+		Content string                  `json:"content"`
+		Context *stylist.SessionContext  `json:"context,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON")
@@ -76,6 +77,11 @@ func (a *API) sendStylistMessage(w http.ResponseWriter, r *http.Request) {
 	if req.Content == "" {
 		writeError(w, http.StatusBadRequest, "content is required")
 		return
+	}
+
+	// Update session context if provided (tracks user's current location)
+	if req.Context != nil {
+		a.Stylist.UpdateContext(sessionID, *req.Context)
 	}
 
 	msg, err := a.Stylist.SendMessage(sessionID, req.Content)

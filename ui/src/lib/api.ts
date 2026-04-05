@@ -1600,8 +1600,8 @@ export function useEndStylistSession() {
 export function useSendStylistMessage() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ sessionId, content }: { sessionId: string; content: string }) =>
-      postJSON<StylistMessage>(`/api/v1/stylist/sessions/${sessionId}/messages`, { content }),
+    mutationFn: ({ sessionId, content, context }: { sessionId: string; content: string; context?: StylistSessionContext }) =>
+      postJSON<StylistMessage>(`/api/v1/stylist/sessions/${sessionId}/messages`, { content, context }),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['stylist', 'sessions', vars.sessionId] })
       qc.invalidateQueries({ queryKey: ['stylist', 'active'] })
