@@ -129,6 +129,19 @@ func (s *SessionStore) End(id string) error {
 	return nil
 }
 
+// UpdateContext updates the session's context (e.g., when user navigates).
+func (s *SessionStore) UpdateContext(sessionID string, ctx SessionContext) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	sess, ok := s.sessions[sessionID]
+	if !ok {
+		return
+	}
+	sess.Context = ctx
+	s.persist(sess)
+}
+
 // SendMessage adds a user message to the session.
 func (s *SessionStore) SendMessage(sessionID, content string) (*Message, error) {
 	s.mu.Lock()
