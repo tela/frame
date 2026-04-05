@@ -33,6 +33,10 @@ func Open(dbPath string) (*DB, error) {
 		return nil, fmt.Errorf("ping database: %w", err)
 	}
 
+	// SQLite only supports one writer at a time. Limiting to a single open
+	// connection serialises writes and avoids SQLITE_BUSY under concurrency.
+	db.SetMaxOpenConns(1)
+
 	// Configure SQLite pragmas
 	pragmas := []string{
 		"PRAGMA journal_mode=WAL",
