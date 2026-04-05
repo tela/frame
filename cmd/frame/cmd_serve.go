@@ -40,7 +40,6 @@ func cmdServe() {
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}
-	defer db.Close()
 
 	// Domain stores
 	charStore := character.NewStore(db.DB)
@@ -76,7 +75,6 @@ func cmdServe() {
 	if cfg.FigURL != "" {
 		figClient = fig.New(cfg.FigURL, cfg.FigSecret)
 		figClient.Start(5 * time.Second)
-		defer figClient.Stop()
 		log.Printf("fig client configured at %s", cfg.FigURL)
 	}
 
@@ -112,4 +110,16 @@ func cmdServe() {
 	if err := srv.ListenAndServe(cfg.Port); err != nil {
 		log.Fatalf("server: %v", err)
 	}
+
+	// Shutdown in dependency order:
+	// 1. Server already stopped accepting requests (ListenAndServe returned)
+	// 2. Wait for background goroutines (fig sync, stylist LLM) that may still
+	//    be using the database
+	a.Shutdown()
+	// 3. Stop Fig health polling
+	if figClient != nil {
+		figClient.Stop()
+	}
+	// 4. Close database last — after all goroutines are done
+	db.Close()
 }

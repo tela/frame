@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/tela/frame/pkg/audit"
 	"github.com/tela/frame/pkg/bifrost"
@@ -46,6 +47,15 @@ type API struct {
 	Fig         *fig.Client    // nil if Fig not configured
 	RootPath    string          // drive root for file serving
 	Port        int             // server port (for self-referencing URLs)
+
+	bgWg sync.WaitGroup // tracks fire-and-forget background goroutines
+}
+
+// Shutdown waits for all background goroutines (fig sync, stylist LLM
+// calls) to finish. Call this after the HTTP server has stopped accepting
+// new requests but before closing the database.
+func (a *API) Shutdown() {
+	a.bgWg.Wait()
 }
 
 // Register mounts all API routes on the given mux.
