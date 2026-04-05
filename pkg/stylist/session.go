@@ -3,6 +3,7 @@ package stylist
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -191,13 +192,17 @@ func (s *SessionStore) AddStylistMessage(sessionID, content string, images []Mes
 // persist writes a session to disk as JSON.
 func (s *SessionStore) persist(sess *Session) {
 	if err := os.MkdirAll(s.dataDir, 0o700); err != nil {
+		log.Printf("stylist: create session dir: %v", err)
 		return
 	}
 	data, err := json.MarshalIndent(sess, "", "  ")
 	if err != nil {
+		log.Printf("stylist: marshal session %s: %v", sess.ID, err)
 		return
 	}
-	_ = os.WriteFile(filepath.Join(s.dataDir, sess.ID+".json"), data, 0o600)
+	if err := os.WriteFile(filepath.Join(s.dataDir, sess.ID+".json"), data, 0o600); err != nil {
+		log.Printf("stylist: write session %s: %v", sess.ID, err)
+	}
 }
 
 // loadFromDisk reads persisted sessions from the data directory.
