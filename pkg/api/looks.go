@@ -42,9 +42,14 @@ func (a *API) createLook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idsJSON, _ := json.Marshal(req.WardrobeItemIDs)
-	if req.WardrobeItemIDs == nil {
-		idsJSON = []byte("[]")
+	idsJSON := []byte("[]")
+	if req.WardrobeItemIDs != nil {
+		b, err := json.Marshal(req.WardrobeItemIDs)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid wardrobe_item_ids")
+			return
+		}
+		idsJSON = b
 	}
 
 	l := &look.Look{
@@ -96,7 +101,11 @@ func (a *API) updateLook(w http.ResponseWriter, r *http.Request) {
 	}
 	idsJSON := ""
 	if req.WardrobeItemIDs != nil {
-		b, _ := json.Marshal(req.WardrobeItemIDs)
+		b, err := json.Marshal(req.WardrobeItemIDs)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid wardrobe_item_ids")
+			return
+		}
 		idsJSON = string(b)
 	}
 
@@ -156,7 +165,10 @@ func (a *API) generateLookTryOn(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Prompt string `json:"prompt,omitempty"`
 	}
-	json.NewDecoder(r.Body).Decode(&req)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
 
 	if req.Prompt == "" {
 		writeError(w, http.StatusBadRequest, "prompt is required")
@@ -165,7 +177,10 @@ func (a *API) generateLookTryOn(w http.ResponseWriter, r *http.Request) {
 
 	// Resolve garment images as references
 	var garmentIDs []string
-	json.Unmarshal([]byte(l.WardrobeItemIDs), &garmentIDs)
+	if err := json.Unmarshal([]byte(l.WardrobeItemIDs), &garmentIDs); err != nil {
+		writeError(w, http.StatusInternalServerError, "corrupt wardrobe_item_ids in look")
+		return
+	}
 
 	var refs []bifrost.ReferenceImage
 

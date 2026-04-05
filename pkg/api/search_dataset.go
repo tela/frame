@@ -36,7 +36,11 @@ func (a *API) createDatasetFromSearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Serialize search query as source_query
-	queryJSON, _ := json.Marshal(req.Search)
+	queryJSON, err := json.Marshal(req.Search)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to serialize search query")
+		return
+	}
 
 	dsType := dataset.Type(req.Type)
 	if dsType == "" {
