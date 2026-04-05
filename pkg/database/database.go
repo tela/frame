@@ -56,6 +56,10 @@ func Open(dbPath string) (*DB, error) {
 		return nil, fmt.Errorf("run migrations: %w", err)
 	}
 
+	// Checkpoint the WAL on startup to keep the -wal file small.
+	// Important on a thumb drive where space is limited.
+	d.Exec("PRAGMA wal_checkpoint(TRUNCATE)")
+
 	return d, nil
 }
 
