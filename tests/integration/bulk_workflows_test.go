@@ -98,7 +98,7 @@ func TestImportToShoot(t *testing.T) {
 	s.decode(body, &shoot)
 
 	// Create test images directory
-	dir := writeTestImages(t, 3)
+	dir := s.writeTestImages(3)
 
 	// Import with shoot_id
 	code, body = s.postJSON("/api/v1/import/directory", map[string]string{

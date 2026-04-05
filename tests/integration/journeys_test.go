@@ -99,7 +99,7 @@ func TestJourney_ImportForCharacter(t *testing.T) {
 	eraID := s.createEra(charID, "Young Adult")
 
 	// Create test images on disk
-	imgDir := writeTestImages(t, 10)
+	imgDir := s.writeTestImages(10)
 
 	// Import directory
 	code, body := s.postJSON("/api/v1/import/directory", map[string]any{
@@ -150,7 +150,7 @@ func TestJourney_ImportForCharacter(t *testing.T) {
 func TestJourney_ImportReferences(t *testing.T) {
 	s := newTestServer(t)
 
-	imgDir := writeTestImages(t, 5)
+	imgDir := s.writeTestImages(5)
 
 	code, body := s.postJSON("/api/v1/import/directory", map[string]any{
 		"path":   imgDir,

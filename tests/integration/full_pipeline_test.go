@@ -36,7 +36,7 @@ func TestJourney_FullPipeline(t *testing.T) {
 	s.decode(body, &shootResp)
 
 	// 4. Import images with shoot assignment
-	dir := writeTestImages(t, 5)
+	dir := s.writeTestImages(5)
 	code, body = s.postJSON("/api/v1/import/directory", map[string]any{
 		"path":         dir,
 		"character_id": charID,
@@ -127,7 +127,7 @@ func TestJourney_FullPipeline(t *testing.T) {
 	}
 
 	// 11. Export dataset
-	exportDir := t.TempDir()
+	exportDir := s.testOutputDir()
 	code, body = s.postJSON(fmt.Sprintf("/api/v1/datasets/%s/export", dsResp.Dataset.ID), map[string]string{
 		"output_dir": exportDir,
 	})
@@ -201,7 +201,7 @@ func TestDatasetExport(t *testing.T) {
 	})
 
 	// Export
-	exportDir := t.TempDir()
+	exportDir := s.testOutputDir()
 	code, body = s.postJSON(fmt.Sprintf("/api/v1/datasets/%s/export", ds.ID), map[string]string{
 		"output_dir": exportDir,
 	})

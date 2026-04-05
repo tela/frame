@@ -30,7 +30,7 @@ func TestExport_BasicExport(t *testing.T) {
 	})
 
 	// Export
-	outDir := t.TempDir()
+	outDir := s.testOutputDir()
 	code, body = s.postJSON("/api/v1/datasets/"+ds.ID+"/export", map[string]string{
 		"output_dir": outDir,
 	})
@@ -79,7 +79,7 @@ func TestExport_CaptionSidecars(t *testing.T) {
 	})
 
 	// Export
-	outDir := t.TempDir()
+	outDir := s.testOutputDir()
 	code, body = s.postJSON("/api/v1/datasets/"+ds.ID+"/export", map[string]string{
 		"output_dir": outDir,
 	})
@@ -129,7 +129,7 @@ func TestExport_CharacterCaptionFallback(t *testing.T) {
 	s.postJSON("/api/v1/datasets/"+ds.ID+"/images", map[string]any{"image_ids": []string{img1}})
 
 	// Export WITHOUT use_char_captions — should have 0 captions
-	outDir1 := t.TempDir()
+	outDir1 := s.testOutputDir()
 	code, body = s.postJSON("/api/v1/datasets/"+ds.ID+"/export", map[string]any{
 		"output_dir": outDir1,
 	})
@@ -143,7 +143,7 @@ func TestExport_CharacterCaptionFallback(t *testing.T) {
 	}
 
 	// Export WITH use_char_captions — should inherit character caption
-	outDir2 := t.TempDir()
+	outDir2 := s.testOutputDir()
 	code, body = s.postJSON("/api/v1/datasets/"+ds.ID+"/export", map[string]any{
 		"output_dir":         outDir2,
 		"use_char_captions": true,
@@ -180,7 +180,7 @@ func TestExport_KohyaSubfolder(t *testing.T) {
 	s.decode(body, &ds)
 	s.postJSON("/api/v1/datasets/"+ds.ID+"/images", map[string]any{"image_ids": []string{img1}})
 
-	outDir := t.TempDir()
+	outDir := s.testOutputDir()
 	code, body = s.postJSON("/api/v1/datasets/"+ds.ID+"/export", map[string]any{
 		"output_dir":    outDir,
 		"repeat_count":  10,
@@ -233,7 +233,7 @@ func TestExport_SequentialNaming(t *testing.T) {
 	}
 	s.postJSON("/api/v1/datasets/"+ds.ID+"/images", map[string]any{"image_ids": ids})
 
-	outDir := t.TempDir()
+	outDir := s.testOutputDir()
 	s.postJSON("/api/v1/datasets/"+ds.ID+"/export", map[string]any{
 		"output_dir": outDir,
 		"naming":     "sequential",

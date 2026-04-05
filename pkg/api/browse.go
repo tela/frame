@@ -123,16 +123,37 @@ func (a *API) defaultBrowseRoot() string {
 	return a.RootPath
 }
 
+// isWithinDir checks whether absPath is inside root after resolving symlinks.
+// Uses filepath.Rel instead of strings.HasPrefix to prevent prefix-spoofing
+// (e.g., /allowed-evil/../secret matching /allowed).
+func isWithinDir(absPath, root string) bool {
+	// Resolve symlinks for both paths so a symlink can't escape.
+	realPath, err := filepath.EvalSymlinks(absPath)
+	if err != nil {
+		realPath = absPath // path may not exist yet (export); fall back
+	}
+	realRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		realRoot = root
+	}
+	rel, err := filepath.Rel(realRoot, realPath)
+	if err != nil {
+		return false
+	}
+	// Rel returns ".." prefix if the path escapes root.
+	return !strings.HasPrefix(rel, "..")
+}
+
 func (a *API) isAllowedBrowsePath(absPath string) bool {
 	// Allow browsing within the root path
-	if strings.HasPrefix(absPath, a.RootPath) {
+	if isWithinDir(absPath, a.RootPath) {
 		return true
 	}
 	// Allow browsing the home directory imports folder (dev convenience)
 	home, err := os.UserHomeDir()
 	if err == nil {
 		devImports := filepath.Join(home, ".frame-dev", "imports")
-		if strings.HasPrefix(absPath, devImports) {
+		if isWithinDir(absPath, devImports) {
 			return true
 		}
 	}
