@@ -126,7 +126,7 @@ func (a *API) stylistAgentLoop(sessionID string) {
 	resp, err := a.Bifrost.Chat(chatReq)
 	if err != nil {
 		log.Printf("stylist agent error: %v", err)
-		a.Stylist.AddStylistMessage(sessionID, fmt.Sprintf("I'm having trouble connecting right now. Error: %s", err.Error()), nil)
+		a.Stylist.AddStylistMessage(sessionID, "The stylist is offline — the LLM provider isn't available right now. Check that LM Studio is running with a model loaded.", nil)
 		return
 	}
 

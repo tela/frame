@@ -188,7 +188,7 @@ function StylistDrawerContent({ onClose }: { onClose: () => void }) {
           <MessageBubble key={msg.id} message={msg} />
         ))}
 
-        {sendMessage.isPending && (
+        {(sendMessage.isPending || (messages.length > 0 && messages[messages.length - 1].role === 'user')) && (
           <ActivityIndicator text="Thinking..." />
         )}
       </div>
