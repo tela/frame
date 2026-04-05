@@ -74,6 +74,13 @@ func (d *DB) migrate() error {
 		return fmt.Errorf("create schema_migrations table: %w", err)
 	}
 
+	// Check for dirty (interrupted) migrations from a previous run.
+	var dirty string
+	err := d.QueryRow("SELECT filename FROM schema_migrations WHERE applied_at = 'dirty' LIMIT 1").Scan(&dirty)
+	if err == nil {
+		return fmt.Errorf("migration %s is dirty (interrupted during previous run) — database may be inconsistent, restore from backup", dirty)
+	}
+
 	// Collect migration files
 	entries, err := fs.ReadDir(migrationFS, "migrations")
 	if err != nil {
@@ -107,11 +114,17 @@ func (d *DB) migrate() error {
 
 		// Migrations that contain PRAGMA foreign_keys=OFF need to run
 		// outside a transaction (PRAGMA cannot be used in transactions).
+		// These are non-atomic, so we mark them as dirty first. If the
+		// process crashes mid-migration, the dirty marker tells us the
+		// database may be in an inconsistent state on next startup.
 		if strings.Contains(sql, "PRAGMA foreign_keys=OFF") {
-			if _, err := d.Exec(sql); err != nil {
-				return fmt.Errorf("exec migration %s: %w", name, err)
+			if _, err := d.Exec("INSERT OR REPLACE INTO schema_migrations (filename, applied_at) VALUES (?, 'dirty')", name); err != nil {
+				return fmt.Errorf("mark migration dirty %s: %w", name, err)
 			}
-			if _, err := d.Exec("INSERT INTO schema_migrations (filename) VALUES (?)", name); err != nil {
+			if _, err := d.Exec(sql); err != nil {
+				return fmt.Errorf("exec migration %s (database may be inconsistent — restore from backup): %w", name, err)
+			}
+			if _, err := d.Exec("UPDATE schema_migrations SET applied_at = datetime('now') WHERE filename = ?", name); err != nil {
 				return fmt.Errorf("record migration %s: %w", name, err)
 			}
 			continue
