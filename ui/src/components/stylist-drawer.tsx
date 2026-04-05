@@ -11,7 +11,7 @@ import {
 } from '@/lib/api'
 import type { StylistMessage, StylistSessionContext } from '@/lib/types'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
-import { useStudioState } from '@/lib/studio-state'
+import { studioState } from '@/lib/studio-state'
 
 // ===== Context for global drawer state =====
 
@@ -54,7 +54,6 @@ export function StylistDrawerProvider({ children }: { children: React.ReactNode 
 function useRouteContext(): StylistSessionContext {
   const routerState = useRouterState()
   const path = routerState.location.pathname
-  const studioStateData = useStudioState()
   const ctx: StylistSessionContext = {}
 
   // /characters/:id
@@ -73,16 +72,22 @@ function useRouteContext(): StylistSessionContext {
   else if (path.includes('/wardrobe')) ctx.screen = 'wardrobe'
   else ctx.screen = 'library'
 
-  // Inject Studio state when on the Studio page
-  if (ctx.screen === 'studio' && studioStateData) {
-    ctx.studio_prompt = studioStateData.prompt
-    ctx.studio_negative = studioStateData.negativePrompt
-    ctx.studio_workflow = studioStateData.workflow
-    ctx.studio_job = studioStateData.job
-    ctx.studio_content_rating = studioStateData.contentRating
-  }
-
   return ctx
+}
+
+// Snapshot Studio state at send time (not on every render)
+function getStudioContext(ctx: StylistSessionContext): StylistSessionContext {
+  if (ctx.screen !== 'studio') return ctx
+  const state = studioState.getSnapshot()
+  if (!state) return ctx
+  return {
+    ...ctx,
+    studio_prompt: state.prompt,
+    studio_negative: state.negativePrompt,
+    studio_workflow: state.workflow,
+    studio_job: state.job,
+    studio_content_rating: state.contentRating,
+  }
 }
 
 // ===== Sheet wrapper =====
@@ -141,12 +146,12 @@ function StylistDrawerContent({ onClose: _onClose }: { onClose: () => void }) {
       // Start a new session then send.
       startSession.mutate(routeCtx, {
         onSuccess: (sess) => {
-          sendMessage.mutate({ sessionId: sess.id, content, context: routeCtx })
+          sendMessage.mutate({ sessionId: sess.id, content, context: getStudioContext(routeCtx) })
           setInput('')
         },
       })
     } else {
-      sendMessage.mutate({ sessionId: currentSession.id, content, context: routeCtx })
+      sendMessage.mutate({ sessionId: currentSession.id, content, context: getStudioContext(routeCtx) })
       setInput('')
     }
   }
