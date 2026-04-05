@@ -95,12 +95,26 @@ func (d *DB) migrate() error {
 			return fmt.Errorf("read migration %s: %w", name, err)
 		}
 
+		sql := string(content)
+
+		// Migrations that contain PRAGMA foreign_keys=OFF need to run
+		// outside a transaction (PRAGMA cannot be used in transactions).
+		if strings.Contains(sql, "PRAGMA foreign_keys=OFF") {
+			if _, err := d.Exec(sql); err != nil {
+				return fmt.Errorf("exec migration %s: %w", name, err)
+			}
+			if _, err := d.Exec("INSERT INTO schema_migrations (filename) VALUES (?)", name); err != nil {
+				return fmt.Errorf("record migration %s: %w", name, err)
+			}
+			continue
+		}
+
 		tx, err := d.Begin()
 		if err != nil {
 			return fmt.Errorf("begin transaction for %s: %w", name, err)
 		}
 
-		if _, err := tx.Exec(string(content)); err != nil {
+		if _, err := tx.Exec(sql); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("exec migration %s: %w", name, err)
 		}

@@ -1,6 +1,8 @@
 -- Add 'archived' to character status CHECK constraint.
 -- SQLite doesn't support ALTER TABLE to modify CHECK constraints,
--- so we recreate the table.
+-- so we recreate the table with FK checks temporarily disabled.
+
+PRAGMA foreign_keys=OFF;
 
 CREATE TABLE characters_new (
     id              TEXT PRIMARY KEY,
@@ -32,3 +34,5 @@ FROM characters;
 
 DROP TABLE characters;
 ALTER TABLE characters_new RENAME TO characters;
+
+PRAGMA foreign_keys=ON;
