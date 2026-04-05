@@ -121,11 +121,13 @@ func (a *API) stylistAgentLoop(sessionID string) {
 	}
 
 	chatReq := &bifrost.ChatRequest{
+		Model:     "qwen3.5-9b-uncensored-hauhaucs-aggressive",
 		Messages:  messages,
 		MaxTokens: 2048,
 		Meta: bifrost.RequestMeta{
-			ContentRating: bifrost.ContentNSFW, // stylist works with full content range
-			Private:       true,                // don't cache conversations
+			ProviderName:  "local-lmstudio",
+			ContentRating: bifrost.ContentNSFW,
+			Private:       true,
 		},
 	}
 
