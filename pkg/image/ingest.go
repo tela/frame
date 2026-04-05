@@ -91,16 +91,16 @@ func (ing *Ingester) Ingest(req *IngestRequest) (*IngestResult, error) {
 		thumbDir = filepath.Join(ing.rootPath, "assets", "references", "thumbs")
 	}
 
-	// Write original to disk
+	// Write original to disk (atomic: write temp, rename into place)
 	if err := os.MkdirAll(origDir, 0755); err != nil {
 		return nil, fmt.Errorf("create original dir: %w", err)
 	}
 	origFile := filepath.Join(origDir, imageID+"."+format)
-	if err := os.WriteFile(origFile, req.Data, 0644); err != nil {
+	if err := atomicWriteFile(origFile, req.Data, 0644); err != nil {
 		return nil, fmt.Errorf("write original: %w", err)
 	}
 
-	// Generate thumbnail
+	// Generate thumbnail (atomic: write temp, rename into place)
 	if err := os.MkdirAll(thumbDir, 0755); err != nil {
 		return nil, fmt.Errorf("create thumb dir: %w", err)
 	}
@@ -218,6 +218,31 @@ func guessFormat(data []byte) string {
 	return "unknown"
 }
 
+// atomicWriteFile writes data to a temp file then renames it into place,
+// so the destination never contains a partial write.
+func atomicWriteFile(path string, data []byte, perm os.FileMode) error {
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		os.Remove(tmpPath)
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmpPath)
+		return err
+	}
+	if err := os.Chmod(tmpPath, perm); err != nil {
+		os.Remove(tmpPath)
+		return err
+	}
+	return os.Rename(tmpPath, path)
+}
+
 func generateThumbnail(data []byte, outPath string) error {
 	img, err := imaging.Decode(bytes.NewReader(data))
 	if err != nil {
@@ -226,11 +251,26 @@ func generateThumbnail(data []byte, outPath string) error {
 
 	thumb := imaging.Resize(img, thumbnailWidth, 0, imaging.Lanczos)
 
-	ext := strings.ToLower(filepath.Ext(outPath))
-	switch ext {
-	case ".jpg", ".jpeg":
-		return imaging.Save(thumb, outPath, imaging.JPEGQuality(85))
-	default:
-		return imaging.Save(thumb, outPath)
+	// Write to temp file (preserving extension for format detection)
+	// then rename for atomicity.
+	dir := filepath.Dir(outPath)
+	ext := filepath.Ext(outPath)
+	tmp, err := os.CreateTemp(dir, ".tmp-*"+ext)
+	if err != nil {
+		return err
 	}
+	tmpPath := tmp.Name()
+	tmp.Close()
+
+	switch strings.ToLower(ext) {
+	case ".jpg", ".jpeg":
+		err = imaging.Save(thumb, tmpPath, imaging.JPEGQuality(85))
+	default:
+		err = imaging.Save(thumb, tmpPath)
+	}
+	if err != nil {
+		os.Remove(tmpPath)
+		return err
+	}
+	return os.Rename(tmpPath, outPath)
 }
