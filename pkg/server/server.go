@@ -48,8 +48,11 @@ func (s *Server) DB() *database.DB {
 func (s *Server) ListenAndServe(port int) error {
 	addr := fmt.Sprintf(":%d", port)
 	srv := &http.Server{
-		Addr:    addr,
-		Handler: withRecovery(s.mux),
+		Addr:         addr,
+		Handler:      withRecovery(s.mux),
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 60 * time.Second,
+		IdleTimeout:  120 * time.Second,
 	}
 
 	// Channel to capture server errors
