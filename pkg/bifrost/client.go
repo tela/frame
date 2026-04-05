@@ -134,6 +134,47 @@ func (c *Client) GenerateImageBytes(req *ImageGenRequest) ([]byte, string, error
 	return nil, "", fmt.Errorf("bifrost image has no base64 or URL data")
 }
 
+// Chat sends a chat completion request to Bifrost's LLM endpoint.
+func (c *Client) Chat(req *ChatRequest) (*ChatResponse, error) {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("marshal chat request: %w", err)
+	}
+
+	httpReq, err := http.NewRequest("POST", c.baseURL+"/v1/chat/completions", bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("create chat request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("X-Bifrost-Client", c.clientName)
+
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("bifrost chat request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read chat response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp ErrorResponse
+		if json.Unmarshal(respBody, &errResp) == nil && errResp.Error.Message != "" {
+			return nil, fmt.Errorf("bifrost chat error: %s", errResp.Error.Message)
+		}
+		return nil, fmt.Errorf("bifrost chat error: status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var chatResp ChatResponse
+	if err := json.Unmarshal(respBody, &chatResp); err != nil {
+		return nil, fmt.Errorf("unmarshal chat response: %w", err)
+	}
+
+	return &chatResp, nil
+}
+
 // ListProviders returns all configured providers and their state.
 func (c *Client) ListProviders() ([]ProviderInfo, error) {
 	resp, err := c.httpClient.Get(c.baseURL + "/v1/providers")

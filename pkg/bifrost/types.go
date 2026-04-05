@@ -91,3 +91,73 @@ const (
 	ContentSFW  = "sfw"
 	ContentNSFW = "nsfw"
 )
+
+// ===== Chat / LLM Types =====
+
+// ChatRequest is the request body for POST /v1/chat/completions.
+type ChatRequest struct {
+	Model       string        `json:"model,omitempty"`
+	Messages    []ChatMessage `json:"messages"`
+	Tools       []Tool        `json:"tools,omitempty"`
+	MaxTokens   int           `json:"max_tokens,omitempty"`
+	Temperature *float64      `json:"temperature,omitempty"`
+	Stream      bool          `json:"stream,omitempty"`
+	Meta        RequestMeta   `json:"meta,omitempty"`
+}
+
+// ChatMessage is a single message in a chat conversation.
+type ChatMessage struct {
+	Role       string     `json:"role"`                  // system, user, assistant, tool
+	Content    string     `json:"content,omitempty"`
+	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
+	ToolCallID string     `json:"tool_call_id,omitempty"`
+}
+
+// ToolCall is a tool invocation requested by the model.
+type ToolCall struct {
+	ID       string       `json:"id"`
+	Type     string       `json:"type"` // "function"
+	Function FunctionCall `json:"function"`
+}
+
+// FunctionCall is the function name and arguments from a tool call.
+type FunctionCall struct {
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"` // JSON string
+}
+
+// Tool defines a tool the model can call.
+type Tool struct {
+	Type     string       `json:"type"` // "function"
+	Function ToolFunction `json:"function"`
+}
+
+// ToolFunction defines a function tool.
+type ToolFunction struct {
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	Parameters  interface{} `json:"parameters"` // JSON Schema
+}
+
+// ChatResponse is the response from POST /v1/chat/completions.
+type ChatResponse struct {
+	ID      string       `json:"id"`
+	Object  string       `json:"object"` // "chat.completion"
+	Model   string       `json:"model"`
+	Choices []ChatChoice `json:"choices"`
+	Usage   ChatUsage    `json:"usage"`
+}
+
+// ChatChoice is a single completion choice.
+type ChatChoice struct {
+	Index        int         `json:"index"`
+	Message      ChatMessage `json:"message"`
+	FinishReason string      `json:"finish_reason"` // stop, tool_calls, length
+}
+
+// ChatUsage tracks token usage.
+type ChatUsage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+	TotalTokens      int `json:"total_tokens"`
+}
