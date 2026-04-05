@@ -388,6 +388,12 @@ export interface StylistSessionContext {
   screen?: string
   character_id?: string
   era_id?: string
+  // Studio state — sent when user is on the Studio page
+  studio_prompt?: string
+  studio_negative?: string
+  studio_workflow?: string
+  studio_job?: string
+  studio_content_rating?: string
 }
 
 export interface StylistMessage {

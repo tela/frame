@@ -11,6 +11,7 @@ import {
 } from '@/lib/api'
 import type { StylistMessage, StylistSessionContext } from '@/lib/types'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
+import { useStudioState } from '@/lib/studio-state'
 
 // ===== Context for global drawer state =====
 
@@ -53,6 +54,7 @@ export function StylistDrawerProvider({ children }: { children: React.ReactNode 
 function useRouteContext(): StylistSessionContext {
   const routerState = useRouterState()
   const path = routerState.location.pathname
+  const studioStateData = useStudioState()
   const ctx: StylistSessionContext = {}
 
   // /characters/:id
@@ -70,6 +72,15 @@ function useRouteContext(): StylistSessionContext {
   else if (charMatch) ctx.screen = 'character_detail'
   else if (path.includes('/wardrobe')) ctx.screen = 'wardrobe'
   else ctx.screen = 'library'
+
+  // Inject Studio state when on the Studio page
+  if (ctx.screen === 'studio' && studioStateData) {
+    ctx.studio_prompt = studioStateData.prompt
+    ctx.studio_negative = studioStateData.negativePrompt
+    ctx.studio_workflow = studioStateData.workflow
+    ctx.studio_job = studioStateData.job
+    ctx.studio_content_rating = studioStateData.contentRating
+  }
 
   return ctx
 }

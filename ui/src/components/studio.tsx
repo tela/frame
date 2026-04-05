@@ -4,6 +4,7 @@ import type { LoRA, ComposeJobInfo } from '@/lib/api'
 import { useState, useEffect, useRef } from 'react'
 import { ImagePickerModal } from '@/components/image-picker-modal'
 import { StudioGallery } from '@/components/studio-gallery'
+import { studioState } from '@/lib/studio-state'
 import type {
   Workflow, Tier, ContentRating, StudioMode, StudioIntent, GeneratedImage,
 } from '@/components/studio-types'
@@ -98,6 +99,19 @@ export function Studio() {
       }
     }
   }, [character, era]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Publish Studio state for the stylist drawer
+  useEffect(() => {
+    studioState.set({
+      prompt,
+      negativePrompt,
+      workflow,
+      job: selectedJob,
+      contentRating,
+    })
+    return () => studioState.clear()
+  }, [prompt, negativePrompt, workflow, selectedJob, contentRating])
+
   const dim = DIMENSIONS[dimensions]
   const activeLora = (loras ?? []).find((l: LoRA) => l.id === selectedLora)
   const needsSource = mode === 'refine' || mode === 'process' || mode === 'video'

@@ -16,6 +16,12 @@ type SessionContext struct {
 	Screen      string `json:"screen,omitempty"`
 	CharacterID string `json:"character_id,omitempty"`
 	EraID       string `json:"era_id,omitempty"`
+	// Studio state — populated when user is on the Studio page
+	StudioPrompt        string `json:"studio_prompt,omitempty"`
+	StudioNegative      string `json:"studio_negative,omitempty"`
+	StudioWorkflow      string `json:"studio_workflow,omitempty"`
+	StudioJob           string `json:"studio_job,omitempty"`
+	StudioContentRating string `json:"studio_content_rating,omitempty"`
 }
 
 // Message is a single turn in the conversation.
