@@ -154,12 +154,7 @@ func (s *Store) Delete(id string) error {
 		return fmt.Errorf("only prospect characters can be deleted; archive %s characters instead", c.Status)
 	}
 
-	// Cascade delete in dependency order
-	s.db.Exec(`DELETE FROM pose_set_images WHERE character_id = ?`, id)
-	s.db.Exec(`DELETE FROM character_looks WHERE character_id = ?`, id)
-	s.db.Exec(`DELETE FROM shoots WHERE character_id = ?`, id)
-	s.db.Exec(`DELETE FROM character_images WHERE character_id = ?`, id)
-	s.db.Exec(`DELETE FROM eras WHERE character_id = ?`, id)
+	// FK cascades handle dependent rows (eras, character_images, shoots, etc.)
 	_, err = s.db.Exec(`DELETE FROM characters WHERE id = ?`, id)
 	return err
 }
