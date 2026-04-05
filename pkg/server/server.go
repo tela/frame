@@ -49,7 +49,7 @@ func (s *Server) ListenAndServe(port int) error {
 	addr := fmt.Sprintf(":%d", port)
 	srv := &http.Server{
 		Addr:    addr,
-		Handler: s.mux,
+		Handler: withRecovery(s.mux),
 	}
 
 	// Channel to capture server errors
@@ -83,6 +83,21 @@ func (s *Server) ListenAndServe(port int) error {
 	}
 
 	return nil
+}
+
+// withRecovery wraps an HTTP handler with panic recovery. If a handler
+// panics (e.g., crypto/rand failure in id.New()), the panic is logged
+// and a 500 is returned instead of crashing the connection.
+func withRecovery(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if v := recover(); v != nil {
+				log.Printf("panic: %s %s: %v", r.Method, r.URL.Path, v)
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
