@@ -149,7 +149,11 @@ func (a *API) sendStylistMessage(w http.ResponseWriter, r *http.Request) {
 
 	// Trigger LLM response in background
 	if a.Bifrost != nil {
-		go a.stylistAgentLoop(sessionID)
+		a.bgWg.Add(1)
+		go func() {
+			defer a.bgWg.Done()
+			a.stylistAgentLoop(sessionID)
+		}()
 	}
 
 	writeJSON(w, http.StatusCreated, msg)

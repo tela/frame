@@ -45,6 +45,7 @@ type Client struct {
 
 	stopOnce sync.Once
 	stop     chan struct{}
+	done     chan struct{} // closed when pollLoop exits
 }
 
 // New creates a Fig client. Call Start() to begin health polling.
@@ -57,6 +58,7 @@ func New(baseURL, secret string) *Client {
 		},
 		state: Unavailable,
 		stop:  make(chan struct{}),
+		done:  make(chan struct{}),
 	}
 }
 
@@ -65,9 +67,10 @@ func (c *Client) Start(interval time.Duration) {
 	go c.pollLoop(interval)
 }
 
-// Stop terminates the health polling goroutine.
+// Stop terminates the health polling goroutine and waits for it to exit.
 func (c *Client) Stop() {
 	c.stopOnce.Do(func() { close(c.stop) })
+	<-c.done
 }
 
 // State returns the current connection state.
@@ -85,6 +88,7 @@ func (c *Client) IsAvailable() bool {
 // --- Health Polling ---
 
 func (c *Client) pollLoop(interval time.Duration) {
+	defer close(c.done)
 	c.checkHealth()
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()

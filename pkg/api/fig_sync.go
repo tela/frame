@@ -95,7 +95,9 @@ func (a *API) figSyncStatus(characterID, status string) {
 	if a.Fig == nil || !a.Fig.IsAvailable() {
 		return
 	}
+	a.bgWg.Add(1)
 	go func() {
+		defer a.bgWg.Done()
 		if err := a.Fig.UpdateCharacterStatus(characterID, status); err != nil {
 			log.Printf("fig: sync status %s → %s: %v", characterID, status, err)
 		}
@@ -107,7 +109,9 @@ func (a *API) figSyncEra(characterID string, era fig.Era) {
 	if a.Fig == nil || !a.Fig.IsAvailable() {
 		return
 	}
+	a.bgWg.Add(1)
 	go func() {
+		defer a.bgWg.Done()
 		if err := a.Fig.PushEra(characterID, era); err != nil {
 			log.Printf("fig: sync era %s/%s: %v", characterID, era.ID, err)
 		}
@@ -119,7 +123,9 @@ func (a *API) figSyncMedia(contentType, id, name string) {
 	if a.Fig == nil || !a.Fig.IsAvailable() {
 		return
 	}
+	a.bgWg.Add(1)
 	go func() {
+		defer a.bgWg.Done()
 		if err := a.Fig.RegisterMedia(contentType, id, name); err != nil {
 			log.Printf("fig: sync media %s/%s: %v", contentType, id, err)
 		}
