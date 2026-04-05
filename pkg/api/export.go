@@ -128,7 +128,7 @@ func (a *API) exportDataset(w http.ResponseWriter, r *http.Request) {
 		// Write caption sidecar
 		if caption != "" {
 			captionPath := filepath.Join(outputDir, baseName+".txt")
-			if err := os.WriteFile(captionPath, []byte(caption), 0644); err != nil {
+			if err := atomicWriteFile(captionPath, []byte(caption), 0644); err != nil {
 				// Non-fatal — image was exported, caption failed
 			} else {
 				result.Captions++
@@ -160,6 +160,31 @@ func (a *API) resolveImagePath(imageID, format string) string {
 	return a.Ingester.ReferenceOriginalPath(imageID, format)
 }
 
+// atomicWriteFile writes data to a temp file then renames it into place,
+// so the destination never contains a partial write.
+func atomicWriteFile(path string, data []byte, perm os.FileMode) error {
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		os.Remove(tmpPath)
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmpPath)
+		return err
+	}
+	if err := os.Chmod(tmpPath, perm); err != nil {
+		os.Remove(tmpPath)
+		return err
+	}
+	return os.Rename(tmpPath, path)
+}
+
 func copyFile(src, dst string) error {
 	// If src doesn't exist, check without extension variants
 	if _, err := os.Stat(src); os.IsNotExist(err) {
@@ -180,12 +205,22 @@ func copyFile(src, dst string) error {
 	}
 	defer in.Close()
 
-	out, err := os.Create(dst)
+	// Write to temp file in same dir, then atomic rename.
+	// This avoids leaving a corrupt partial file at dst on failure.
+	tmp, err := os.CreateTemp(filepath.Dir(dst), ".tmp-*")
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	tmpPath := tmp.Name()
 
-	_, err = io.Copy(out, in)
-	return err
+	if _, err = io.Copy(tmp, in); err != nil {
+		tmp.Close()
+		os.Remove(tmpPath)
+		return err
+	}
+	if err = tmp.Close(); err != nil {
+		os.Remove(tmpPath)
+		return err
+	}
+	return os.Rename(tmpPath, dst)
 }
