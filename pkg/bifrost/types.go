@@ -47,6 +47,33 @@ type GeneratedImage struct {
 	URL         string `json:"url,omitempty"`
 }
 
+// VideoGenRequest is the request body for POST /v1/videos/generate.
+type VideoGenRequest struct {
+	Prompt          string           `json:"prompt"`
+	NegativePrompt  string           `json:"negative_prompt,omitempty"`
+	Model           string           `json:"model,omitempty"`
+	Width           int              `json:"width,omitempty"`
+	Height          int              `json:"height,omitempty"`
+	Steps           int              `json:"steps,omitempty"`
+	ReferenceImages []ReferenceImage `json:"reference_images,omitempty"`
+	CameraMotion    string           `json:"camera_motion,omitempty"` // static, pan_left, pan_right, dolly_in, dolly_out, orbit, drift
+	Duration        string           `json:"duration,omitempty"`      // 3s, 4s, 5s
+	Meta            RequestMeta      `json:"meta"`
+}
+
+// VideoGenResponse is the response from POST /v1/videos/generate.
+type VideoGenResponse struct {
+	Video GeneratedVideo `json:"video"`
+	Model string         `json:"model"`
+}
+
+// GeneratedVideo is a single generated video.
+type GeneratedVideo struct {
+	Base64      string `json:"base64,omitempty"`
+	ContentType string `json:"content_type,omitempty"` // e.g., "video/mp4"
+	URL         string `json:"url,omitempty"`
+}
+
 // ErrorResponse is the error format from Bifrost.
 type ErrorResponse struct {
 	Error struct {

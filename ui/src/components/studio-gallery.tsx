@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useDeleteCharacterImage, useToggleFavorite, useImageTags } from '@/lib/api'
+import { useDeleteCharacterImage, useToggleFavorite, useImageTags, thumbUrl } from '@/lib/api'
 import { TagPicker } from '@/components/tag-picker'
 import { Lightbox } from '@/components/lightbox'
 import type { GeneratedImage } from '@/components/studio-types'
@@ -70,7 +70,7 @@ export function StudioGallery({ characterId, sessionImages, setSessionImages, on
                         playsInline
                         onMouseEnter={(e) => (e.target as HTMLVideoElement).play()}
                         onMouseLeave={(e) => { const v = e.target as HTMLVideoElement; v.pause(); v.currentTime = 0 }}
-                        poster={img.url}
+                        poster={img.id ? thumbUrl(img.id) : undefined}
                       />
                     ) : (
                       <img

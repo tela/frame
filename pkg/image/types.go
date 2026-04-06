@@ -84,7 +84,7 @@ type Tag struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
-// IngestRequest contains the parameters for ingesting an image.
+// IngestRequest contains the parameters for ingesting an image or video.
 type IngestRequest struct {
 	Filename      string
 	Data          []byte
@@ -93,6 +93,7 @@ type IngestRequest struct {
 	CharacterSlug string  // filesystem folder name, e.g. "esme-a7f3b2c"
 	EraID         *string
 	FeatureFolder string  // for non-character images, e.g. "faces-a7f3b2c"
+	ThumbnailData []byte  // optional: pre-generated thumbnail (used for video ingest)
 }
 
 // IngestResult is returned after successful ingestion.

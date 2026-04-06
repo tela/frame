@@ -477,6 +477,8 @@ export interface GenerateRequest {
   denoise_strength?: number
   pose_id?: string
   outfit_id?: string
+  camera_motion?: string
+  duration?: string
 }
 
 export interface GenerateImageResult {
@@ -484,6 +486,7 @@ export interface GenerateImageResult {
   width: number
   height: number
   format: string
+  is_video?: boolean
 }
 
 export interface GenerateResponse {

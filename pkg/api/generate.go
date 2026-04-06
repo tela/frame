@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/tela/frame/pkg/bifrost"
@@ -29,7 +30,11 @@ const (
 	WorkflowSDXLImg2Img      = "sdxl_img2img"           // Refinement (~63s)
 	WorkflowSDXLPostprocess  = "sdxl_quality_postprocess" // Upscale + detail (~648s)
 	WorkflowKontext          = "kontext"                // Flux Kontext editing (~3s)
+	WorkflowVideoImg2Vid    = "video_img2vid"          // Wan 2.1 image-to-video (~60-120s)
 )
+
+// Video provider name.
+const providerWan = "runpod-serverless-wan"
 
 type generateRequest struct {
 	CharacterID     string   `json:"character_id"`
@@ -55,6 +60,8 @@ type generateRequest struct {
 	DenoiseStrength float64  `json:"denoise_strength,omitempty"`
 	PoseID          string   `json:"pose_id,omitempty"`
 	OutfitID        string   `json:"outfit_id,omitempty"`
+	CameraMotion    string   `json:"camera_motion,omitempty"` // video: static, pan_left, etc.
+	Duration        string   `json:"duration,omitempty"`      // video: 3s, 4s, 5s
 }
 
 type generateResponse struct {
@@ -67,6 +74,7 @@ type generateImageResult struct {
 	Width   int    `json:"width"`
 	Height  int    `json:"height"`
 	Format  string `json:"format"`
+	IsVideo bool   `json:"is_video,omitempty"`
 }
 
 func (a *API) handleGenerate(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +102,8 @@ func (a *API) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	requiresSource := req.Workflow == WorkflowSDXLImg2Img ||
 		req.Workflow == WorkflowSDXLPostprocess ||
 		req.Workflow == WorkflowSDXLClothingSwap ||
-		req.Workflow == WorkflowKontext
+		req.Workflow == WorkflowKontext ||
+		req.Workflow == WorkflowVideoImg2Vid
 	if requiresSource && req.SourceImageID == "" {
 		writeError(w, http.StatusBadRequest, "source_image_id is required for "+req.Workflow)
 		return
@@ -182,7 +191,82 @@ func (a *API) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	// Route to the right provider and tier based on workflow
 	providerName, tier := inferRouting(req.Workflow, contentRating, req.ProviderName, req.Tier)
 
-	// Generate images (one at a time since Bifrost returns one per request)
+	// --- Video generation path (separate from image batch loop) ---
+	if req.Workflow == WorkflowVideoImg2Vid {
+		videoReq := &bifrost.VideoGenRequest{
+			Prompt:          req.Prompt,
+			ReferenceImages: refs,
+			Width:           width,
+			Height:          height,
+			Steps:           steps,
+			CameraMotion:    req.CameraMotion,
+			Duration:        req.Duration,
+			Meta: bifrost.RequestMeta{
+				Tier:          tier,
+				ContentRating: contentRating,
+				ProviderName:  providerName,
+			},
+		}
+
+		videoData, _, err := a.Bifrost.GenerateVideoBytes(videoReq)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("video generation failed: %s", err))
+			return
+		}
+
+		// Fetch source image data for thumbnail
+		var thumbData []byte
+		if srcImg, _ := a.Images.Get(req.SourceImageID); srcImg != nil {
+			ci, _ := a.Images.GetCharacterImage(req.SourceImageID)
+			if ci != nil {
+				folderName := ci.CharacterID
+				if char, _ := a.Characters.Get(ci.CharacterID); char != nil && char.FolderName != "" {
+					folderName = char.FolderName
+				}
+				thumbPath := a.Ingester.OriginalPath(req.SourceImageID, folderName, srcImg.Format)
+				thumbData, _ = os.ReadFile(thumbPath)
+			}
+		}
+
+		charSlug := req.CharacterID
+		if char, _ := a.Characters.Get(req.CharacterID); char != nil && char.FolderName != "" {
+			charSlug = char.FolderName
+		}
+
+		var eraID *string
+		if req.EraID != "" {
+			eraID = &req.EraID
+		}
+
+		jobID := id.New()
+		ingestReq := &image.IngestRequest{
+			Filename:      fmt.Sprintf("video_%s.mp4", jobID),
+			Data:          videoData,
+			Source:        image.SourceComfyUI,
+			CharacterID:   req.CharacterID,
+			CharacterSlug: charSlug,
+			EraID:         eraID,
+			ThumbnailData: thumbData,
+		}
+
+		result, err := a.Ingester.IngestVideo(ingestReq)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("video ingest failed: %s", err))
+			return
+		}
+
+		writeJSON(w, http.StatusOK, generateResponse{
+			JobID: jobID,
+			Images: []generateImageResult{{
+				ImageID: result.ImageID,
+				Format:  result.Format,
+				IsVideo: true,
+			}},
+		})
+		return
+	}
+
+	// --- Image generation path ---
 	jobID := id.New()
 	var results []generateImageResult
 
@@ -282,6 +366,8 @@ func inferRouting(workflow, contentRating, explicitProvider, explicitTier string
 			provider = providerFlux
 		case workflow == WorkflowKontext:
 			provider = providerKontext
+		case workflow == WorkflowVideoImg2Vid:
+			provider = providerWan
 		case strings.HasPrefix(workflow, "sdxl_"):
 			provider = providerSDXL
 		case workflow == "" && contentRating == bifrost.ContentSFW:

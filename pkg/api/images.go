@@ -160,6 +160,8 @@ func (a *API) serveImageFile(w http.ResponseWriter, r *http.Request, imageID str
 		}
 		if thumb {
 			filePath = a.Ingester.ThumbnailPath(imageID, folderName)
+		} else if img.Format == "mp4" {
+			filePath = a.Ingester.VideoPath(imageID, folderName)
 		} else {
 			filePath = a.Ingester.OriginalPath(imageID, folderName, img.Format)
 		}
