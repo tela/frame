@@ -61,6 +61,7 @@ type seedEra struct {
 func cmdSeed() {
 	fs := flag.NewFlagSet("seed", flag.ExitOnError)
 	fileFlag := fs.String("file", "", "CSV file path for character/era seed data")
+	archiveFlag := fs.String("archive", "", "Restore seed data from a tar.gz archive")
 	// Accept --root so it can be passed through to config.Load.
 	// The FlagSet must know about it to avoid erroring on unrecognized flags.
 	rootFlag := fs.String("root", "", "Drive root directory")
@@ -75,6 +76,12 @@ func cmdSeed() {
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("config: %v", err)
+	}
+
+	// Archive restore mode — replaces DB and assets from snapshot
+	if *archiveFlag != "" {
+		restoreFromArchive(cfg.Root, *archiveFlag)
+		return
 	}
 
 	dbPath := filepath.Join(cfg.Root, "frame.db")
