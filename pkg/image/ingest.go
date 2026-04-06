@@ -148,6 +148,107 @@ func (ing *Ingester) Ingest(req *IngestRequest) (*IngestResult, error) {
 	}, nil
 }
 
+// IngestVideo processes an incoming video: hashes, deduplicates, writes to disk,
+// writes a thumbnail (from ThumbnailData or a placeholder), and creates database records.
+func (ing *Ingester) IngestVideo(req *IngestRequest) (*IngestResult, error) {
+	if req.CharacterID == "" {
+		return nil, fmt.Errorf("character_id is required for video ingest")
+	}
+
+	hash := sha256sum(req.Data)
+
+	existing, err := ing.store.GetByHash(hash)
+	if err != nil {
+		return nil, fmt.Errorf("check duplicate: %w", err)
+	}
+	if existing != nil {
+		ci := &CharacterImage{
+			ImageID:      existing.ID,
+			CharacterID:  req.CharacterID,
+			EraID:        req.EraID,
+			SetType:      SetStaging,
+			TriageStatus: TriagePending,
+			CreatedAt:    time.Now().UTC(),
+		}
+		ing.store.CreateCharacterImage(ci)
+		return &IngestResult{
+			ImageID:     existing.ID,
+			Hash:        existing.Hash,
+			Format:      existing.Format,
+			FileSize:    existing.FileSize,
+			IsDuplicate: true,
+		}, nil
+	}
+
+	videoID := id.New()
+	now := time.Now().UTC()
+
+	charFolder := req.CharacterSlug
+	if charFolder == "" {
+		charFolder = req.CharacterID
+	}
+
+	// Store video in videos/ subdir
+	videoDir := filepath.Join(ing.rootPath, "assets", "characters", charFolder, "videos")
+	if err := os.MkdirAll(videoDir, 0755); err != nil {
+		return nil, fmt.Errorf("create video dir: %w", err)
+	}
+	videoFile := filepath.Join(videoDir, videoID+".mp4")
+	if err := atomicWriteFile(videoFile, req.Data, 0644); err != nil {
+		return nil, fmt.Errorf("write video: %w", err)
+	}
+
+	// Write thumbnail from source image data (if provided)
+	thumbDir := filepath.Join(ing.rootPath, "assets", "characters", charFolder, "thumbs")
+	if err := os.MkdirAll(thumbDir, 0755); err != nil {
+		return nil, fmt.Errorf("create thumb dir: %w", err)
+	}
+	if len(req.ThumbnailData) > 0 {
+		if err := generateThumbnail(req.ThumbnailData, filepath.Join(thumbDir, videoID+".jpg")); err != nil {
+			// Non-fatal — video was stored, thumbnail failed
+		}
+	}
+
+	img := &Image{
+		ID:               videoID,
+		Hash:             hash,
+		OriginalFilename: req.Filename,
+		Format:           "mp4",
+		Width:            0,
+		Height:           0,
+		FileSize:         int64(len(req.Data)),
+		Source:            req.Source,
+		IngestedAt:       now,
+	}
+	if err := ing.store.Create(img); err != nil {
+		return nil, fmt.Errorf("create video record: %w", err)
+	}
+
+	ci := &CharacterImage{
+		ImageID:      videoID,
+		CharacterID:  req.CharacterID,
+		EraID:        req.EraID,
+		SetType:      SetStaging,
+		TriageStatus: TriagePending,
+		CreatedAt:    now,
+	}
+	if err := ing.store.CreateCharacterImage(ci); err != nil {
+		return nil, fmt.Errorf("create character video link: %w", err)
+	}
+
+	return &IngestResult{
+		ImageID:  videoID,
+		Hash:     hash,
+		Format:   "mp4",
+		FileSize: int64(len(req.Data)),
+	}, nil
+}
+
+// VideoPath returns the filesystem path for a character video.
+func (ing *Ingester) VideoPath(videoID, charFolder string) string {
+	return filepath.Join(ing.rootPath, "assets", "characters", charFolder, "videos", videoID+".mp4")
+}
+
 // OriginalPath returns the filesystem path for an original character image.
 func (ing *Ingester) OriginalPath(imageID, charFolder, format string) string {
 	return filepath.Join(ing.rootPath, "assets", "characters", charFolder, "images", imageID+"."+format)

@@ -12,9 +12,10 @@ import (
 
 // Client talks to a Bifrost instance for image generation.
 type Client struct {
-	baseURL    string
-	clientName string
-	httpClient *http.Client
+	baseURL     string
+	clientName  string
+	httpClient  *http.Client
+	videoClient *http.Client // longer timeout for video generation
 }
 
 // NewClient creates a Bifrost client pointing at the given base URL.
@@ -24,6 +25,9 @@ func NewClient(baseURL string) *Client {
 		clientName: "frame",
 		httpClient: &http.Client{
 			Timeout: 5 * time.Minute, // generation can take a while
+		},
+		videoClient: &http.Client{
+			Timeout: 15 * time.Minute, // video generation is much slower
 		},
 	}
 }
@@ -132,6 +136,89 @@ func (c *Client) GenerateImageBytes(req *ImageGenRequest) ([]byte, string, error
 	}
 
 	return nil, "", fmt.Errorf("bifrost image has no base64 or URL data")
+}
+
+// GenerateVideo sends a video generation request to Bifrost.
+func (c *Client) GenerateVideo(req *VideoGenRequest) (*VideoGenResponse, error) {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("marshal request: %w", err)
+	}
+
+	httpReq, err := http.NewRequest("POST", c.baseURL+"/v1/videos/generate", bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("X-Bifrost-Client", c.clientName)
+
+	resp, err := c.videoClient.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("bifrost video request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp ErrorResponse
+		if json.Unmarshal(respBody, &errResp) == nil && errResp.Error.Message != "" {
+			return nil, fmt.Errorf("bifrost video error: %s", errResp.Error.Message)
+		}
+		return nil, fmt.Errorf("bifrost video error: status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var genResp VideoGenResponse
+	if err := json.Unmarshal(respBody, &genResp); err != nil {
+		return nil, fmt.Errorf("unmarshal response: %w", err)
+	}
+
+	return &genResp, nil
+}
+
+// GenerateVideoBytes is a convenience method that generates a video and
+// returns the result as raw bytes along with its content type.
+func (c *Client) GenerateVideoBytes(req *VideoGenRequest) ([]byte, string, error) {
+	resp, err := c.GenerateVideo(req)
+	if err != nil {
+		return nil, "", err
+	}
+
+	video := resp.Video
+
+	if video.Base64 != "" {
+		data, err := base64.StdEncoding.DecodeString(video.Base64)
+		if err != nil {
+			return nil, "", fmt.Errorf("decode base64 video: %w", err)
+		}
+		ct := video.ContentType
+		if ct == "" {
+			ct = "video/mp4"
+		}
+		return data, ct, nil
+	}
+
+	if video.URL != "" {
+		vidResp, err := c.videoClient.Get(video.URL)
+		if err != nil {
+			return nil, "", fmt.Errorf("fetch video URL: %w", err)
+		}
+		defer vidResp.Body.Close()
+		data, err := io.ReadAll(vidResp.Body)
+		if err != nil {
+			return nil, "", fmt.Errorf("read video URL: %w", err)
+		}
+		ct := vidResp.Header.Get("Content-Type")
+		if ct == "" {
+			ct = "video/mp4"
+		}
+		return data, ct, nil
+	}
+
+	return nil, "", fmt.Errorf("bifrost video has no base64 or URL data")
 }
 
 // Chat sends a chat completion request to Bifrost's LLM endpoint.

@@ -164,6 +164,8 @@ export function Studio() {
         source_image_id: needsSource ? sourceImageId || undefined : undefined,
         pose_image_id: workflow === 'sdxl_pose_transfer' ? poseImageId || undefined : undefined,
         denoise_strength: workflow === 'sdxl_img2img' ? denoiseStrength : undefined,
+        camera_motion: mode === 'video' ? cameraMotion : undefined,
+        duration: mode === 'video' ? videoDuration : undefined,
       },
       {
         onSuccess: (data) => {
