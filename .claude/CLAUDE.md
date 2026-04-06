@@ -10,6 +10,8 @@ Frame has a CLI toolset. **Always use these instead of manual commands.**
 frame serve      # Start HTTP server (default if no subcommand)
 frame dev        # Start Go server + Vite dev server, ctrl-c kills both
 frame seed       # Create test characters, eras, wardrobe, LoRAs, looks
+frame seed-export # Export DB + assets as a seed archive (tar.gz)
+frame seed --archive <path>  # Restore from a seed archive
 frame stop       # Kill any running frame/vite processes
 frame status     # Show server, port, Vite, Fig, Bifrost connection state
 frame smoke      # Run smoke tests against running server (automated pass/fail)

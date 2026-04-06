@@ -22,6 +22,8 @@ func main() {
 		cmdDev()
 	case "seed":
 		cmdSeed()
+	case "seed-export":
+		cmdSeedExport()
 	case "smoke":
 		cmdSmoke()
 	case "stop":
@@ -48,6 +50,7 @@ Commands:
   serve     Start the HTTP server (default if no command given)
   dev       Start server + Vite dev server, ctrl-c kills both
   seed      Create test characters, eras, wardrobe, and LoRAs
+  seed-export  Export database + assets as a seed archive
   stop      Kill any running frame processes
   status    Show running state, ports, Fig/Bifrost connection
   smoke     Run smoke tests against a running server
