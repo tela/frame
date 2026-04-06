@@ -7,24 +7,27 @@ Frame is a portable digital asset manager for AI-generated character images. Go 
 Frame has a CLI toolset. **Always use these instead of manual commands.**
 
 ```
-frame serve      # Start HTTP server (default if no subcommand)
-frame dev        # Start Go server + Vite dev server, ctrl-c kills both
-frame seed       # Create test characters, eras, wardrobe, LoRAs, looks
-frame seed-export # Export DB + assets as a seed archive (tar.gz)
-frame seed --archive <path>  # Restore from a seed archive
-frame stop       # Kill any running frame/vite processes
-frame status     # Show server, port, Vite, Fig, Bifrost connection state
-frame smoke      # Run smoke tests against running server (automated pass/fail)
-frame build      # Rebuild frontend dist to internal/frontend/dist/
-frame version    # Print version
+# Production (encrypted drive)
+frame up          # Start Frame from the drive (port 7891)
+frame down        # Stop Frame production server
+frame status      # Show production and dev status
+frame deploy      # Build and deploy to /Volumes/FRAME
+
+# Development (local .dev/ root)
+frame dev up      # Start dev server (port 7890)
+frame dev down    # Stop dev server
+frame dev seed    # Seed the dev database
+frame dev seed --file <csv>       # Seed from CSV character data
+frame dev seed --archive <tar.gz> # Restore from a seed archive
+frame dev seed-export [-o <path>] # Export dev DB + assets as archive
+frame dev vite    # Start Vite dev server
+frame dev ui      # Start dev server + Vite together
 ```
 
-- Before testing the app manually, run `frame seed` to populate test data
-- Use `frame smoke` to verify the server is working (requires server + seed data)
-- Use `frame dev` for development (not separate `make dev` + `make dev-ui`)
-- Use `frame build` before `go build` to update the embedded frontend
+- Before testing the app manually, run `frame dev seed` to populate test data
+- Use `frame dev ui` for development (starts Go server + Vite together)
 - Use `frame status` to check if services are running, not manual curl/pgrep
-- Use `frame stop` to kill processes, not manual pkill
+- Use `frame dev down` to stop the dev server
 
 ## Conventions
 - **Atomic commits always** — one logical change per commit

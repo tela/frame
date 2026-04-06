@@ -4,12 +4,12 @@ Checklist for creating a comprehensive set of reference images across all seed c
 
 ## Workflow
 
-1. `frame seed` — create characters, eras, wardrobe, hairstyles, LoRAs
-2. `frame seed --file seed/characters.csv` — add CSV characters with detailed attributes
-3. `frame dev` — start the server
-4. Work through the checklist below in Studio
-5. `frame seed-export -o seed/golden.tar.gz` — snapshot when happy
-6. Restore anytime with `frame seed --archive seed/golden.tar.gz`
+1. `frame dev seed` — create characters, eras, wardrobe, hairstyles, LoRAs
+2. `frame dev seed --file seed/characters.csv` — add CSV characters with detailed attributes
+3. `frame dev ui` — start the dev server + Vite
+4. Work through the checklist below in Studio (http://localhost:5173)
+5. `frame dev seed-export -o seed/golden.tar.gz` — snapshot when happy
+6. Restore anytime with `frame dev seed --archive seed/golden.tar.gz`
 
 ---
 
@@ -116,14 +116,14 @@ These already have synthetic placeholder images from `frame seed`. Replace them 
 Once you're satisfied with the image quality:
 
 ```bash
-# Stop the server first
-frame stop
+# Stop the dev server first
+frame dev down
 
 # Export everything (DB + all images + stylist sessions)
-frame seed-export -o seed/golden.tar.gz
+frame dev seed-export -o seed/golden.tar.gz
 
-# Restore on a fresh drive or after a reset
-frame seed --archive seed/golden.tar.gz
+# Restore on a fresh instance or after a reset
+frame dev seed --archive seed/golden.tar.gz
 ```
 
 The archive includes:
