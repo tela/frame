@@ -1,4 +1,4 @@
-import { Link, useParams } from '@tanstack/react-router'
+import { Link, useNavigate, useParams } from '@tanstack/react-router'
 import { useCharacter, useDatasets, useCreateEra, useFigStatus, usePublishToFig } from '@/lib/api'
 import { useState } from 'react'
 import { PoseSetDashboard } from '@/components/pose-set-dashboard'
@@ -216,6 +216,7 @@ function CreateEraDialog({ open, onOpenChange, label, setLabel, ageRange, setAge
 }
 
 function EraCard({ characterId, era }: { characterId: string; era: EraWithStats }) {
+  const navigate = useNavigate()
   return (
     <Link
       to="/characters/$characterId/eras/$eraId"
@@ -243,15 +244,13 @@ function EraCard({ characterId, era }: { characterId: string; era: EraWithStats 
             {[era.age_range, era.time_period].filter(Boolean).join(' · ')}
           </p>
         )}
-        <Link
-          to="/characters/$characterId/eras/$eraId/refs"
-          params={{ characterId, eraId: era.id }}
-          onClick={(e) => e.stopPropagation()}
+        <button
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate({ to: '/characters/$characterId/eras/$eraId/refs', params: { characterId, eraId: era.id } }) }}
           className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-muted hover:text-accent transition-colors"
         >
           <span className="material-symbols-outlined text-[14px]">collections</span>
           Build References
-        </Link>
+        </button>
       </div>
     </Link>
   )

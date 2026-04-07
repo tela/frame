@@ -22,7 +22,8 @@ export function TagPicker({ open, onClose, imageIds, existingTags = [], refType 
   const activeFamilyId = activeFamily || families?.[0]?.id || ''
   const { data: taxonomy } = useFamilyTaxonomy(activeFamilyId, refType)
 
-  // Initialize selected from existing tags
+  // Initialize selected from existing tags when the dialog opens
+  const existingKey = existingTags.map(t => `${t.namespace}:${t.value}`).sort().join(',')
   useEffect(() => {
     const map = new Map<string, Set<string>>()
     for (const tag of existingTags) {
@@ -30,7 +31,8 @@ export function TagPicker({ open, onClose, imageIds, existingTags = [], refType 
       map.get(tag.namespace)!.add(tag.value)
     }
     setSelected(map)
-  }, [existingTags])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingKey])
 
   // Auto-select first namespace when taxonomy loads
   useEffect(() => {
