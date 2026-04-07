@@ -5,6 +5,7 @@ import { PoseSetDashboard } from '@/components/pose-set-dashboard'
 import { GoSeeLooks } from '@/components/go-see-looks'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { CharacterHero } from '@/components/character-hero'
+import { ERA_PRESETS } from '@/components/character-name-data'
 import { SkeletonHero, SkeletonGrid } from '@/components/skeleton'
 import { ProspectView } from '@/components/prospect-view'
 import { ShootsSection } from '@/components/shoots-section'
@@ -76,7 +77,11 @@ export function CharacterDetail() {
             </div>
 
             <div className="flex overflow-x-auto gap-6 pb-8 snap-x snap-mandatory mb-20" style={{ scrollbarWidth: 'none' }}>
-              {character.eras.map((era) => (
+              {[...character.eras].sort((a, b) => {
+                const ageA = parseInt(a.age_range) || 0
+                const ageB = parseInt(b.age_range) || 0
+                return ageA - ageB
+              }).map((era) => (
                 <EraCard key={era.id} characterId={character.id} era={era} />
               ))}
             </div>
@@ -177,7 +182,18 @@ function CreateEraDialog({ open, onOpenChange, label, setLabel, ageRange, setAge
           </div>
           <div>
             <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Age Range</label>
-            <input value={ageRange} onChange={(e) => setAgeRange(e.target.value)} className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none" placeholder="e.g. 22-26" />
+            <select value={ageRange} onChange={(e) => {
+              setAgeRange(e.target.value)
+              if (!label.trim()) {
+                const preset = ERA_PRESETS.find(p => p.ageRange === e.target.value)
+                if (preset) setLabel(preset.label)
+              }
+            }} className="w-full border border-border-subtle bg-transparent py-2.5 px-3 text-sm focus:border-on-surface focus:ring-0 focus:outline-none">
+              <option value="">Select age range...</option>
+              {ERA_PRESETS.map((p) => (
+                <option key={p.ageRange} value={p.ageRange}>{p.label} ({p.ageRange})</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="text-[11px] uppercase font-bold tracking-[0.1em] text-muted block mb-2">Time Period</label>
