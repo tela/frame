@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"compress/zlib"
+	"crypto/sha256"
 	"encoding/binary"
 	"encoding/csv"
 	"encoding/json"
@@ -141,7 +142,6 @@ func cmdSeed() {
 
 	now := time.Now().UTC()
 	nowStr := now.Format("2006-01-02T15:04:05Z")
-	charOffset := byte(0) // ensures unique pixel data per character
 
 	for _, sc := range characters {
 		charID := id.New()
@@ -198,8 +198,7 @@ func cmdSeed() {
 		}
 
 		// Ingest test images for the first era (8 per character)
-		charOffset += 70
-		seedCharacterImages(charStore, imgStore, ingester, charID, sc.displayName, c.Slug(), firstEraID, charOffset)
+		seedCharacterImages(charStore, imgStore, ingester, charID, sc.displayName, c.Slug(), firstEraID)
 	}
 
 	// Create shoots, datasets, and audit events for first character (Elara)
@@ -432,7 +431,7 @@ func cmdSeed() {
 // seedCharacterImages creates 8 placeholder images per character for the given era:
 // 2 face refs, 1 body ref, 3 curated (approved), 2 staging (pending).
 // Sets captions on the first 3 and the 6th image, and favorites the headshot.
-func seedCharacterImages(charStore *character.Store, imgStore *image.Store, ingester *image.Ingester, charID, displayName, charSlug, eraID string, colorOffset byte) {
+func seedCharacterImages(charStore *character.Store, imgStore *image.Store, ingester *image.Ingester, charID, displayName, charSlug, eraID string) {
 	captions := []string{
 		fmt.Sprintf("front-facing headshot of %s, neutral expression, studio lighting", displayName),
 		fmt.Sprintf("three-quarter portrait of %s, soft natural lighting", displayName),
@@ -444,8 +443,11 @@ func seedCharacterImages(charStore *character.Store, imgStore *image.Store, inge
 		"",
 	}
 	var imageIDs []string
+	// Use a hash of charID+imageIndex as the unique seed for each PNG.
+	// This guarantees no two images across any characters collide.
 	for j := 0; j < 8; j++ {
-		png := makeSeedPNG(byte(j*30+10)+colorOffset, byte(j*25+20)+colorOffset, byte(j*15+30)+colorOffset)
+		h := sha256.Sum256([]byte(fmt.Sprintf("%s:%d", charID, j)))
+		png := makeSeedPNG(h[0], h[1], h[2])
 		eraPtr := &eraID
 		result, err := ingester.Ingest(&image.IngestRequest{
 			Filename:      fmt.Sprintf("seed_%s_%d.png", displayName, j),
@@ -570,7 +572,6 @@ func seedFromCSV(charStore *character.Store, imgStore *image.Store, ingester *im
 	now := time.Now().UTC()
 	fmt.Printf("Seeding from %s (%d characters)...\n", path, len(order))
 
-	charColorOffset := byte(0)
 	for _, name := range order {
 		rows := groups[name]
 		first := rows[0]
@@ -656,19 +657,15 @@ func seedFromCSV(charStore *character.Store, imgStore *image.Store, ingester *im
 		}
 
 		// Create placeholder images for the first era (same as built-in seed)
-		charColorOffset += 50
-		seedCharacterImages(charStore, imgStore, ingester, charID, c.DisplayName, c.Slug(), firstEraID, charColorOffset)
+		seedCharacterImages(charStore, imgStore, ingester, charID, c.DisplayName, c.Slug(), firstEraID)
 	}
 
 	fmt.Println("\nSeed complete.")
 }
 
-// makeSeedPNG generates a valid 4x4 PNG with unique neutral grey data.
-// Each image gets a slightly different grey level to avoid hash collisions.
+// makeSeedPNG generates a valid 4x4 PNG with unique pixel data.
+// Uses all three color channels directly to maximize hash uniqueness.
 func makeSeedPNG(r, g, b byte) []byte {
-	// Use average of r,g,b to create a neutral grey — no color tint
-	grey := byte((int(r) + int(g) + int(b)) / 3)
-
 	var buf bytes.Buffer
 	buf.Write([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}) // PNG signature
 
@@ -681,12 +678,13 @@ func makeSeedPNG(r, g, b byte) []byte {
 	writePNGChunk(&buf, "IHDR", ihdr)
 
 	// IDAT: raw pixel data (filter byte + 4 RGB pixels per row)
+	// Use r,g,b directly with per-pixel variation to ensure uniqueness
 	var raw bytes.Buffer
 	for y := 0; y < 4; y++ {
 		raw.WriteByte(0) // filter: none
 		for x := 0; x < 4; x++ {
-			g := grey + byte(x+y) // slight variation for uniqueness
-			raw.Write([]byte{g, g, g})
+			offset := byte(x + y*4)
+			raw.Write([]byte{r + offset, g + offset, b + offset})
 		}
 	}
 	var compressed bytes.Buffer
