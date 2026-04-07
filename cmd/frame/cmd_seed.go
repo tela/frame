@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"compress/zlib"
-	"crypto/sha256"
 	"encoding/binary"
 	"encoding/csv"
 	"encoding/json"
@@ -419,7 +418,7 @@ func cmdSeed() {
 			if _, err := os.Stat(imgPath); err == nil {
 				continue // already exists
 			}
-			png := makeSeedPNG(byte(i*30+50), byte(i*20+60), byte(i*10+70))
+			png := makeSeedPNG(fmt.Sprintf("import-%s", dir), i)
 			os.WriteFile(imgPath, png, 0644)
 		}
 	}
@@ -443,11 +442,8 @@ func seedCharacterImages(charStore *character.Store, imgStore *image.Store, inge
 		"",
 	}
 	var imageIDs []string
-	// Use a hash of charID+imageIndex as the unique seed for each PNG.
-	// This guarantees no two images across any characters collide.
 	for j := 0; j < 8; j++ {
-		h := sha256.Sum256([]byte(fmt.Sprintf("%s:%d", charID, j)))
-		png := makeSeedPNG(h[0], h[1], h[2])
+		png := makeSeedPNG(charID, j)
 		eraPtr := &eraID
 		result, err := ingester.Ingest(&image.IngestRequest{
 			Filename:      fmt.Sprintf("seed_%s_%d.png", displayName, j),
@@ -663,9 +659,10 @@ func seedFromCSV(charStore *character.Store, imgStore *image.Store, ingester *im
 	fmt.Println("\nSeed complete.")
 }
 
-// makeSeedPNG generates a valid 4x4 PNG with unique pixel data.
-// Uses all three color channels directly to maximize hash uniqueness.
-func makeSeedPNG(r, g, b byte) []byte {
+// makeSeedPNG generates a valid 4x4 PNG that renders as flat light grey.
+// Every image looks identical but has a unique hash because we embed a
+// unique ID in a private PNG chunk (tEXt) that doesn't affect rendering.
+func makeSeedPNG(uniqueID string, index int) []byte {
 	var buf bytes.Buffer
 	buf.Write([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}) // PNG signature
 
@@ -677,14 +674,16 @@ func makeSeedPNG(r, g, b byte) []byte {
 	ihdr[9] = 2                                 // color type: RGB
 	writePNGChunk(&buf, "IHDR", ihdr)
 
-	// IDAT: raw pixel data (filter byte + 4 RGB pixels per row)
-	// Use r,g,b directly with per-pixel variation to ensure uniqueness
+	// tEXt chunk with unique key — invisible but makes the hash unique
+	textData := []byte(fmt.Sprintf("seed\x00%s:%d", uniqueID, index))
+	writePNGChunk(&buf, "tEXt", textData)
+
+	// IDAT: flat light grey (RGB 200,200,200) for all pixels
 	var raw bytes.Buffer
 	for y := 0; y < 4; y++ {
 		raw.WriteByte(0) // filter: none
 		for x := 0; x < 4; x++ {
-			offset := byte(x + y*4)
-			raw.Write([]byte{r + offset, g + offset, b + offset})
+			raw.Write([]byte{200, 200, 200})
 		}
 	}
 	var compressed bytes.Buffer
