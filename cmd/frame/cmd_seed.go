@@ -92,19 +92,18 @@ func cmdSeed() {
 	defer db.Close()
 
 	charStore := character.NewStore(db.DB)
+	imgStore := image.NewStore(db.DB)
+	ingester := image.NewIngester(imgStore, cfg.Root)
 
 	if *fileFlag != "" {
-		seedFromCSV(charStore, *fileFlag)
+		seedFromCSV(charStore, imgStore, ingester, *fileFlag)
 		return
 	}
-
-	imgStore := image.NewStore(db.DB)
 	mediaStore := media.NewStore(db.DB)
 	garmentStore := garment.NewStore(db.DB)
 	hairstyleStore := hairstyle.NewStore(db.DB)
 	loraStore := lora.NewStore(db.DB)
 	lookStore := look.NewStore(db.DB)
-	ingester := image.NewIngester(imgStore, cfg.Root)
 
 	fmt.Println("Seeding Frame database...")
 
@@ -200,76 +199,7 @@ func cmdSeed() {
 
 		// Ingest test images for the first era (8 per character)
 		charOffset += 70
-		var charImageIDs []string
-		captions := []string{
-			fmt.Sprintf("front-facing headshot of %s, neutral expression, studio lighting", sc.displayName),
-			fmt.Sprintf("three-quarter portrait of %s, soft natural lighting", sc.displayName),
-			fmt.Sprintf("full body standing pose of %s, clean background", sc.displayName),
-			"",
-			"",
-			fmt.Sprintf("%s in casual outfit, natural daylight, candid", sc.displayName),
-			"",
-			"",
-		}
-		for j := 0; j < 8; j++ {
-			png := makeSeedPNG(byte(j*30+10)+charOffset, byte(j*25+20)+charOffset, byte(j*15+30)+charOffset)
-			eraPtr := &firstEraID
-			result, err := ingester.Ingest(&image.IngestRequest{
-				Filename:      fmt.Sprintf("seed_%s_%d.png", sc.displayName, j),
-				Data:          png,
-				Source:        image.SourceComfyUI,
-				CharacterID:   charID,
-				CharacterSlug: c.Slug(),
-				EraID:         eraPtr,
-			})
-			if err != nil {
-				continue
-			}
-			charImageIDs = append(charImageIDs, result.ImageID)
-
-			update := &image.CharacterImageUpdate{}
-			switch {
-			case j == 0 || j == 1:
-				// Face refs — approved, reference set
-				update.RefType = strp("face")
-				update.RefRank = intp(j + 1)
-				update.SetType = setTypePtr(image.SetReference)
-				update.TriageStatus = triagePtr(image.TriageApproved)
-			case j == 2:
-				// Body ref
-				update.RefType = strp("body")
-				update.RefRank = intp(1)
-				update.SetType = setTypePtr(image.SetReference)
-				update.TriageStatus = triagePtr(image.TriageApproved)
-			case j == 3 || j == 4:
-				// Curated + approved
-				update.SetType = setTypePtr(image.SetCurated)
-				update.TriageStatus = triagePtr(image.TriageApproved)
-				r := 4
-				update.Rating = &r
-			case j == 5:
-				// Curated + approved with rating
-				update.SetType = setTypePtr(image.SetCurated)
-				update.TriageStatus = triagePtr(image.TriageApproved)
-				r := 5
-				update.Rating = &r
-			default:
-				// Pending triage — no set type change, stays staging/pending
-			}
-			if captions[j] != "" {
-				update.Caption = &captions[j]
-			}
-			imgStore.UpdateCharacterImage(result.ImageID, charID, update)
-		}
-
-		// Favorite the first image (headshot) — sets avatar
-		if len(charImageIDs) > 0 {
-			imgStore.ToggleFavorite(charImageIDs[0], charID, true)
-			charStore.SetAvatarImage(charID, charImageIDs[0])
-		}
-
-		fmt.Printf("    images: 8 ingested (2 face ref, 1 body ref, 3 curated, 2 pending)\n")
-		fmt.Printf("    captions: %d set, 1 favorited\n", len(captions)-countEmpty(captions))
+		seedCharacterImages(charStore, imgStore, ingester, charID, sc.displayName, c.Slug(), firstEraID, charOffset)
 	}
 
 	// Create shoots, datasets, and audit events for first character (Elara)
@@ -499,7 +429,77 @@ func cmdSeed() {
 	fmt.Println("\nSeed complete.")
 }
 
-func seedFromCSV(charStore *character.Store, path string) {
+// seedCharacterImages creates 8 placeholder images per character for the given era:
+// 2 face refs, 1 body ref, 3 curated (approved), 2 staging (pending).
+// Sets captions on the first 3 and the 6th image, and favorites the headshot.
+func seedCharacterImages(charStore *character.Store, imgStore *image.Store, ingester *image.Ingester, charID, displayName, charSlug, eraID string, colorOffset byte) {
+	captions := []string{
+		fmt.Sprintf("front-facing headshot of %s, neutral expression, studio lighting", displayName),
+		fmt.Sprintf("three-quarter portrait of %s, soft natural lighting", displayName),
+		fmt.Sprintf("full body standing pose of %s, clean background", displayName),
+		"",
+		"",
+		fmt.Sprintf("%s in casual outfit, natural daylight, candid", displayName),
+		"",
+		"",
+	}
+	var imageIDs []string
+	for j := 0; j < 8; j++ {
+		png := makeSeedPNG(byte(j*30+10)+colorOffset, byte(j*25+20)+colorOffset, byte(j*15+30)+colorOffset)
+		eraPtr := &eraID
+		result, err := ingester.Ingest(&image.IngestRequest{
+			Filename:      fmt.Sprintf("seed_%s_%d.png", displayName, j),
+			Data:          png,
+			Source:        image.SourceComfyUI,
+			CharacterID:   charID,
+			CharacterSlug: charSlug,
+			EraID:         eraPtr,
+		})
+		if err != nil {
+			continue
+		}
+		imageIDs = append(imageIDs, result.ImageID)
+
+		update := &image.CharacterImageUpdate{}
+		switch {
+		case j == 0 || j == 1:
+			update.RefType = strp("face")
+			update.RefRank = intp(j + 1)
+			update.SetType = setTypePtr(image.SetReference)
+			update.TriageStatus = triagePtr(image.TriageApproved)
+		case j == 2:
+			update.RefType = strp("body")
+			update.RefRank = intp(1)
+			update.SetType = setTypePtr(image.SetReference)
+			update.TriageStatus = triagePtr(image.TriageApproved)
+		case j == 3 || j == 4:
+			update.SetType = setTypePtr(image.SetCurated)
+			update.TriageStatus = triagePtr(image.TriageApproved)
+			r := 4
+			update.Rating = &r
+		case j == 5:
+			update.SetType = setTypePtr(image.SetCurated)
+			update.TriageStatus = triagePtr(image.TriageApproved)
+			r := 5
+			update.Rating = &r
+		default:
+			// Pending triage — stays staging/pending
+		}
+		if captions[j] != "" {
+			update.Caption = &captions[j]
+		}
+		imgStore.UpdateCharacterImage(result.ImageID, charID, update)
+	}
+
+	if len(imageIDs) > 0 {
+		imgStore.ToggleFavorite(imageIDs[0], charID, true)
+		charStore.SetAvatarImage(charID, imageIDs[0])
+	}
+
+	fmt.Printf("    images: 8 ingested (2 face ref, 1 body ref, 3 curated, 2 pending)\n")
+}
+
+func seedFromCSV(charStore *character.Store, imgStore *image.Store, ingester *image.Ingester, path string) {
 	f, err := os.Open(path)
 	if err != nil {
 		log.Fatalf("open csv: %v", err)
@@ -570,6 +570,7 @@ func seedFromCSV(charStore *character.Store, path string) {
 	now := time.Now().UTC()
 	fmt.Printf("Seeding from %s (%d characters)...\n", path, len(order))
 
+	charColorOffset := byte(0)
 	for _, name := range order {
 		rows := groups[name]
 		first := rows[0]
@@ -598,8 +599,12 @@ func seedFromCSV(charStore *character.Store, path string) {
 		}
 		fmt.Printf("  character: %s (%s) [%s]\n", c.DisplayName, charID[:8], c.Status)
 
+		var firstEraID string
 		for i, row := range rows {
 			eraID := id.New()
+			if i == 0 {
+				firstEraID = eraID
+			}
 			era := &character.Era{
 				ID:                eraID,
 				CharacterID:       charID,
@@ -649,6 +654,10 @@ func seedFromCSV(charStore *character.Store, path string) {
 			}
 			fmt.Printf("    era: %s (%s)\n", era.Label, era.AgeRange)
 		}
+
+		// Create placeholder images for the first era (same as built-in seed)
+		charColorOffset += 50
+		seedCharacterImages(charStore, imgStore, ingester, charID, c.DisplayName, c.Slug(), firstEraID, charColorOffset)
 	}
 
 	fmt.Println("\nSeed complete.")
